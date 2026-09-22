@@ -76,7 +76,26 @@ export default function App() {
     appDataRef.current = appData;
   }, [appData]);
 
-  const [currentPage, setCurrentPage] = useState<string>('home');
+  const [currentPage, setCurrentPage] = useState<string>(() => {
+    if (typeof window !== 'undefined') {
+      const hash = window.location.hash.replace('#', '').trim();
+      if (hash && hash !== 'login') return hash;
+      const saved = localStorage.getItem('rakeeza_current_page');
+      if (saved && saved.trim() && saved !== 'login') return saved.trim();
+    }
+    return 'home';
+  });
+
+  useEffect(() => {
+    if (currentPage && currentPage !== 'login') {
+      try {
+        localStorage.setItem('rakeeza_current_page', currentPage);
+        if (window.location.hash !== `#${currentPage}`) {
+          window.history.replaceState({ page: currentPage }, '', `#${currentPage}`);
+        }
+      } catch {}
+    }
+  }, [currentPage]);
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(true);
   const [isShareCatalogOpen, setIsShareCatalogOpen] = useState<boolean>(false);
 
@@ -260,13 +279,8 @@ export default function App() {
           return merged;
         });
 
-        if (meta?.actorCode && meta.actorCode !== currentCode) {
-          const actionMsg = meta.actionInfo?.details || 'تعديل وتحديث بيانات المنظومة';
-          showToast(
-            `⚡ مزامنة فورية: [كود ${meta.actorCode} - ${meta.actorName || 'مستخدم'} (${meta.actorRole === 'admin' ? 'المدير' : 'موظف'})] قام بـ: ${actionMsg}`,
-            'info'
-          );
-        }
+        // 🤫 Silent update: Never disturb the user with popup toasts on routine background syncs
+        // This ensures the user stays in flow and never feels interrupted or navigated away.
       },
     });
 
@@ -274,6 +288,32 @@ export default function App() {
       realtimeSync.stop();
     };
   }, [session?.company?.id, session?.user?.code, session?.user?.name]);
+
+  // ⚡ Dedicated 5-Second Silent Background Auto-Refresh Engine
+  // Fetches any new invoices, vouchers, transactions, items, and reports every 5 seconds
+  // without page reloads, screen flickering, or navigating away from the current view.
+  useEffect(() => {
+    if (!session?.company?.id) return;
+
+    const timer5s = setInterval(async () => {
+      if (typeof navigator !== 'undefined' && !navigator.onLine) return;
+
+      try {
+        const cloudRes = await fetchTenantDataCloud(session.company.id, session.user?.uid);
+        if (cloudRes.success && cloudRes.data) {
+          setAppData((prev) => {
+            const merged = mergeAppDataMonotonically(prev, cloudRes.data!, false);
+            saveAppData(merged, session.company.id);
+            return merged;
+          });
+        }
+      } catch (err) {
+        // Completely silent on background check - never kick user out
+      }
+    }, 5000);
+
+    return () => clearInterval(timer5s);
+  }, [session?.company?.id, session?.user?.uid]);
 
   // ☁️ Initialize and Validate Cloud Authentication Session on App Launch
   useEffect(() => {
@@ -413,7 +453,12 @@ export default function App() {
     if (loginResult.user.role === 'owner') {
       setCurrentPage('owner_panel');
     } else {
-      setCurrentPage('home');
+      const savedPage = localStorage.getItem('rakeeza_current_page');
+      if (savedPage && savedPage !== 'home' && savedPage !== 'login' && savedPage !== 'owner_panel') {
+        setCurrentPage(savedPage);
+      } else {
+        setCurrentPage('home');
+      }
     }
   };
 
@@ -424,6 +469,9 @@ export default function App() {
     } catch (e) {
       console.warn('Logout error:', e);
     }
+    try {
+      localStorage.removeItem('rakeeza_current_page');
+    } catch {}
     setSession(null);
     setCurrentPage('home');
     showToast('تم تسجيل الخروج بنجاح من المنظومة', 'info');
@@ -550,6 +598,9 @@ export default function App() {
     if (pushHistory) {
       window.history.pushState({ page }, '', `#${page}`);
     }
+    try {
+      localStorage.setItem('rakeeza_current_page', page);
+    } catch {}
     setCurrentPage(page);
     window.scrollTo({ top: 0, behavior: 'smooth' });
     if (window.innerWidth <= 768) {
@@ -583,6 +634,9 @@ export default function App() {
 
       // 3. Navigate back to previous page in app
       const targetPage = event.state?.page || window.location.hash.replace('#', '') || 'home';
+      try {
+        localStorage.setItem('rakeeza_current_page', targetPage);
+      } catch {}
       setCurrentPage(targetPage);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     };

@@ -41,6 +41,7 @@ export interface RealtimeSyncEvent {
   actorUser?: SyncActorUser;
   actionInfo?: SyncActionInfo;
   timestamp?: string;
+  isBackgroundSync?: boolean;
 }
 
 export interface RealtimeSyncInitOptions {
@@ -56,6 +57,7 @@ export interface RealtimeSyncInitOptions {
       actorName?: string;
       actorRole?: string;
       actionInfo?: SyncActionInfo;
+      isBackgroundSync?: boolean;
     }
   ) => void;
 }
@@ -104,6 +106,7 @@ export class RealtimeSyncService {
               actorName: event.actorUser?.name,
               actorRole: event.actorUser?.role,
               actionInfo: event.actionInfo,
+              isBackgroundSync: event.isBackgroundSync ?? true,
             });
           }
         });
@@ -228,6 +231,11 @@ export class RealtimeSyncService {
           if (Array.isArray(rawData.commissions)) remoteData.commissions = rawData.commissions;
           if (Array.isArray(rawData.productionOrders)) remoteData.productionOrders = rawData.productionOrders;
           if (Array.isArray(rawData.approvalRequests)) remoteData.approvalRequests = rawData.approvalRequests;
+          if (Array.isArray(rawData.physicalInventories)) remoteData.physicalInventories = rawData.physicalInventories;
+          if (Array.isArray(rawData.inventoryAdjustments)) remoteData.inventoryAdjustments = rawData.inventoryAdjustments;
+          if (Array.isArray(rawData.goodsIssueVouchers)) remoteData.goodsIssueVouchers = rawData.goodsIssueVouchers;
+          if (Array.isArray(rawData.fiscalClosings)) remoteData.fiscalClosings = rawData.fiscalClosings;
+          if (rawData.currentActiveFiscalYear) remoteData.currentActiveFiscalYear = rawData.currentActiveFiscalYear;
           if (rawData.catalogConfig) remoteData.catalogConfig = rawData.catalogConfig;
           if (rawData.advancedSettings) remoteData.advancedSettings = rawData.advancedSettings;
           if (typeof rawData.nextInvoiceNumber === 'number') remoteData.nextInvoiceNumber = rawData.nextInvoiceNumber;
@@ -427,8 +435,86 @@ export class RealtimeSyncService {
   private startPollingFallback() {
     if (this.pollTimer) clearInterval(this.pollTimer);
 
-    // Dynamic, high-frequency 2.5s polling fallback with zero battery drain
+    // ⚡ 5-Second Silent Background Sync Engine
+    // Fetches all new additions, invoices, vouchers, movements, and reports silently
+    // every 5000ms without refreshing the page, resetting forms, or interrupting the user's active view.
     this.pollTimer = setInterval(async () => {
+      // 1. Dual-check Firestore directly if available
+      const cleanId = (this.companyId || 'COMP-000001').trim();
+      try {
+        const docRef = doc(db, 'tenants', cleanId);
+        const snap = await getDoc(docRef);
+        if (snap.exists()) {
+          const rawData = snap.data() as any;
+          const myDeviceId = this.getDeviceId();
+          const timeSinceOurPush = Date.now() - this.lastLocalPushTimestamp;
+          if (!(rawData.lastModifiedDeviceId === myDeviceId && timeSinceOurPush < 1500)) {
+            const remoteVersion = typeof rawData.version === 'number' ? rawData.version : 0;
+            if (remoteVersion > this.currentVersion) {
+              const remoteData: Partial<AppData> = {};
+              if (Array.isArray(rawData.salesInvoices)) remoteData.salesInvoices = rawData.salesInvoices;
+              if (Array.isArray(rawData.purchaseInvoices)) remoteData.purchaseInvoices = rawData.purchaseInvoices;
+              if (Array.isArray(rawData.cashTransactions)) remoteData.cashTransactions = rawData.cashTransactions;
+              if (Array.isArray(rawData.items)) remoteData.items = rawData.items;
+              if (Array.isArray(rawData.customers)) remoteData.customers = rawData.customers;
+              if (Array.isArray(rawData.suppliers)) remoteData.suppliers = rawData.suppliers;
+              if (Array.isArray(rawData.accounts)) remoteData.accounts = rawData.accounts;
+              if (rawData.cashBox) remoteData.cashBox = rawData.cashBox;
+              if (Array.isArray(rawData.bankAccounts)) remoteData.bankAccounts = rawData.bankAccounts;
+              if (Array.isArray(rawData.journalEntries)) remoteData.journalEntries = rawData.journalEntries;
+              if (Array.isArray(rawData.cheques)) remoteData.cheques = rawData.cheques;
+              if (Array.isArray(rawData.quotations)) remoteData.quotations = rawData.quotations;
+              if (Array.isArray(rawData.auditLogs)) remoteData.auditLogs = rawData.auditLogs;
+              if (Array.isArray(rawData.users)) remoteData.users = rawData.users;
+              if (Array.isArray(rawData.branches)) remoteData.branches = rawData.branches;
+              if (Array.isArray(rawData.costCenters)) remoteData.costCenters = rawData.costCenters;
+              if (Array.isArray(rawData.employees)) remoteData.employees = rawData.employees;
+              if (Array.isArray(rawData.fixedAssets)) remoteData.fixedAssets = rawData.fixedAssets;
+              if (Array.isArray(rawData.boms)) remoteData.boms = rawData.boms;
+              if (Array.isArray(rawData.salesReps)) remoteData.salesReps = rawData.salesReps;
+              if (Array.isArray(rawData.productPrices)) remoteData.productPrices = rawData.productPrices;
+              if (Array.isArray(rawData.commissions)) remoteData.commissions = rawData.commissions;
+              if (Array.isArray(rawData.productionOrders)) remoteData.productionOrders = rawData.productionOrders;
+              if (Array.isArray(rawData.approvalRequests)) remoteData.approvalRequests = rawData.approvalRequests;
+              if (Array.isArray(rawData.physicalInventories)) remoteData.physicalInventories = rawData.physicalInventories;
+              if (Array.isArray(rawData.inventoryAdjustments)) remoteData.inventoryAdjustments = rawData.inventoryAdjustments;
+              if (Array.isArray(rawData.goodsIssueVouchers)) remoteData.goodsIssueVouchers = rawData.goodsIssueVouchers;
+              if (Array.isArray(rawData.fiscalClosings)) remoteData.fiscalClosings = rawData.fiscalClosings;
+              if (rawData.currentActiveFiscalYear) remoteData.currentActiveFiscalYear = rawData.currentActiveFiscalYear;
+              if (rawData.catalogConfig) remoteData.catalogConfig = rawData.catalogConfig;
+              if (rawData.advancedSettings) remoteData.advancedSettings = rawData.advancedSettings;
+              if (typeof rawData.nextInvoiceNumber === 'number') remoteData.nextInvoiceNumber = rawData.nextInvoiceNumber;
+              if (typeof rawData.nextPurchaseNumber === 'number') remoteData.nextPurchaseNumber = rawData.nextPurchaseNumber;
+              if (rawData.settings) remoteData.settings = rawData.settings;
+
+              this.handleIncomingSync({
+                type: 'REALTIME_SYNC',
+                version: remoteVersion,
+                data: remoteData as AppData,
+                actorUser: {
+                  id: rawData.lastModifiedUserId || 'user',
+                  name: rawData.lastModifiedBy || 'مستخدم آخر',
+                  code: rawData.lastModifiedUserCode || 2,
+                  role: rawData.lastModifiedUserCode === 1 ? 'admin' : 'user',
+                },
+                actionInfo: {
+                  action: rawData.lastAction || 'تحديث البيانات',
+                  module: rawData.lastModule || 'المنظومة',
+                  details: rawData.lastActionDetails || 'تحديث دوري كل 5 ثوانٍ',
+                  userCode: rawData.lastModifiedUserCode,
+                },
+                timestamp: rawData.lastModifiedAt || new Date().toISOString(),
+                isBackgroundSync: true,
+              });
+              this.setConnectedStatus(true);
+            }
+          }
+        }
+      } catch (err) {
+        // Silent catch
+      }
+
+      // 2. Server API fallback check
       const token = getStoredToken();
       const queryParams = new URLSearchParams({
         version: String(this.currentVersion),
@@ -454,11 +540,13 @@ export class RealtimeSyncService {
               actorUser: json.lastAction?.actorUser,
               actionInfo: json.lastAction?.actionInfo,
               timestamp: json.lastAction?.timestamp || new Date().toISOString(),
+              isBackgroundSync: true,
             });
           }
+          this.setConnectedStatus(true);
         }
       } catch {}
-    }, 2500);
+    }, 5000);
   }
 
   private handleIncomingSync(payload: RealtimeSyncEvent) {

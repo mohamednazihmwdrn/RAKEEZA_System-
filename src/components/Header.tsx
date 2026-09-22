@@ -265,7 +265,7 @@ export const Header: React.FC<HeaderProps> = ({
                 : syncStatus.pendingCount > 0
                 ? `يوجد ${syncStatus.pendingCount} عملية معلقة للمزامنة - انقر للمزامنة الفورية الآن`
                 : isRealtimeConnected
-                ? 'المزامنة السحابية اللحظية نشطة ومتصلة'
+                ? 'المزامنة السحابية اللحظية نشطة وتحديث تلقائي صامت كل 5 ثوانٍ بدون أي خروج من صفحتك'
                 : 'جاري الاتصال بالمزامنة اللحظية...'
             }
           >
