@@ -1,0 +1,82 @@
+{
+  "entities": {
+    "tenants": {
+      "description": "Tenant isolated business data including invoices, items, accounts, and transactions for real-time multi-device sync",
+      "fields": {
+        "companyId": { "type": "string", "description": "Unique identifier for the tenant company" },
+        "companyName": { "type": "string", "description": "Commercial name of the business" },
+        "salesInvoices": { "type": "array", "description": "Real-time list of sales invoices" },
+        "purchaseInvoices": { "type": "array", "description": "Real-time list of purchase invoices" },
+        "cashTransactions": { "type": "array", "description": "Real-time cash in and out transactions" },
+        "items": { "type": "array", "description": "Real-time inventory products and quantities" },
+        "customers": { "type": "array", "description": "Customers registry and balances" },
+        "suppliers": { "type": "array", "description": "Suppliers registry and balances" },
+        "accounts": { "type": "array", "description": "Chart of accounts and general ledger balances" },
+        "cashBox": { "type": "object", "description": "Live drawer, vodafone cash, instapay, and bank balances" },
+        "bankAccounts": { "type": "array", "description": "Bank accounts with current balances" },
+        "employees": { "type": "array", "description": "Employees directory and salaries" },
+        "auditLogs": { "type": "array", "description": "System activity logs" },
+        "journalEntries": { "type": "array", "description": "Daily double-entry journal records" },
+        "nextInvoiceNumber": { "type": "number", "description": "Auto-increment sales invoice counter" },
+        "nextPurchaseNumber": { "type": "number", "description": "Auto-increment purchase invoice counter" },
+        "updatedAt": { "type": "string", "description": "ISO timestamp of the most recent change" },
+        "lastModifiedBy": { "type": "string", "description": "User or device who performed the last write" }
+      }
+    },
+    "companies": {
+      "description": "Registered organizations and tenant accounts in the system",
+      "fields": {
+        "id": { "type": "string", "description": "Company ID" },
+        "code": { "type": "string", "description": "Company unique 3-4 digit code" },
+        "name": { "type": "string", "description": "Company name" },
+        "phone": { "type": "string", "description": "Admin phone number" },
+        "planId": { "type": "string", "description": "Active subscription plan id" },
+        "status": { "type": "string", "description": "Subscription status (trial, active, expired)" },
+        "operationsCount": { "type": "number", "description": "Total operation count" },
+        "createdAt": { "type": "string", "description": "Creation timestamp" }
+      }
+    },
+    "ownerSettings": {
+      "description": "Global settings, license codes, and trials registry",
+      "fields": {
+        "licenses": { "type": "array", "description": "Generated activation license codes" },
+        "trialRegistry": { "type": "array", "description": "Trial phone records and device fingerprints" },
+        "plans": { "type": "array", "description": "Available subscription plans" },
+        "updatedAt": { "type": "string", "description": "Last update timestamp" }
+      }
+    },
+    "salesShards": {
+      "description": "Sharded sales invoices partitioned by tenant companyId and fiscalYear in sub-collections (tenants/{companyId}/fiscal_years/{fiscalYear}/sales_invoices)",
+      "fields": {
+        "invoiceId": { "type": "string", "description": "Unique sales invoice identifier" },
+        "companyId": { "type": "string", "description": "Tenant company identifier" },
+        "fiscalYear": { "type": "string", "description": "Fiscal year partitioning key (e.g. 2024, 2025, 2026)" },
+        "invoiceNumber": { "type": "number", "description": "Fiscal year sequence number" },
+        "date": { "type": "string", "description": "Invoice issuance date" },
+        "customerId": { "type": "string", "description": "Customer reference" },
+        "customerName": { "type": "string", "description": "Customer display name" },
+        "items": { "type": "array", "description": "Invoice line items" },
+        "total": { "type": "number", "description": "Net invoice total" },
+        "paid": { "type": "number", "description": "Amount paid" },
+        "remaining": { "type": "number", "description": "Outstanding balance" },
+        "paymentType": { "type": "string", "description": "Cash or credit payment method" },
+        "shardedAt": { "type": "string", "description": "Timestamp when invoice was sharded" }
+      }
+    },
+    "archives": {
+      "description": "Historical cold storage manifests for data older than 2 years stored in Google Cloud Storage (tenants/{companyId}/archives)",
+      "fields": {
+        "id": { "type": "string", "description": "Archive unique identifier" },
+        "companyId": { "type": "string", "description": "Tenant company ID" },
+        "fiscalYear": { "type": "string", "description": "Archived fiscal year" },
+        "recordsCount": { "type": "number", "description": "Count of archived records" },
+        "storageBucket": { "type": "string", "description": "Google Cloud Storage bucket name" },
+        "storagePath": { "type": "string", "description": "Path in Google Cloud Storage" },
+        "downloadUrl": { "type": "string", "description": "Direct download / manifest reference URL" },
+        "checksum": { "type": "string", "description": "SHA-256 or MD5 integrity hash" },
+        "archivedAt": { "type": "string", "description": "ISO timestamp when archiving executed" },
+        "archivedBy": { "type": "string", "description": "User or service who triggered archive" }
+      }
+    }
+  }
+}

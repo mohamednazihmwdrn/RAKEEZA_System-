@@ -1,0 +1,8 @@
+{
+  "name": "Remix المحاسب الخاص",
+  "description": "نظام محاسبي متكامل للمبيعات والمشتريات والخزينة والمخزون والتقارير الشاملة",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
