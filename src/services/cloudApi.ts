@@ -2,6 +2,7 @@ import { AppData, TenantCompany, User } from '../types';
 import { getDefaultData } from '../utils/storage';
 import { doc, getDoc, setDoc, collection, getDocs, deleteDoc } from 'firebase/firestore';
 import { db } from '../firebase';
+import { sanitizeForFirestore } from './realtimeSync';
 
 const TOKEN_KEY = 'rakeeza_cloud_session_token';
 const LOCAL_SESSION_KEY = 'rakeeza_local_active_session';
@@ -164,15 +165,29 @@ export const DEFAULT_FIREBASE_COMPANIES = [
         phone: '01029190615',
       },
       {
-        id: 'u-cashier-1',
-        uid: 'UID-COMP-000001-USR-2',
-        code: 2,
-        userCode: 2,
-        username: 'cashier',
+        id: 'u-accountant-1',
+        uid: 'UID-COMP-000001-USR-4',
+        code: 4,
+        userCode: 4,
+        username: 'accountant',
         password: '123',
-        altPass: 'cashier123',
-        name: 'أحمد محمود (كاشير الفرع الرئيسي)',
-        role: 'cashier' as const,
+        altPass: '123',
+        name: 'محمود سعيد (المحاسب المالي)',
+        role: 'accountant' as const,
+        status: 'active' as const,
+        companyId: 'COMP-000001',
+        companyCode: '101',
+      },
+      {
+        id: 'u-sales-1',
+        uid: 'UID-COMP-000001-USR-5',
+        code: 5,
+        userCode: 5,
+        username: 'sales',
+        password: '123',
+        altPass: '123',
+        name: 'خالد عبد الرحمن (مسؤول المبيعات)',
+        role: 'sales_rep' as const,
         status: 'active' as const,
         companyId: 'COMP-000001',
         companyCode: '101',
@@ -187,6 +202,20 @@ export const DEFAULT_FIREBASE_COMPANIES = [
         altPass: '123',
         name: 'سامح إبراهيم (أمين المخزن المركزي)',
         role: 'warehouse_keeper' as const,
+        status: 'active' as const,
+        companyId: 'COMP-000001',
+        companyCode: '101',
+      },
+      {
+        id: 'u-cashier-1',
+        uid: 'UID-COMP-000001-USR-2',
+        code: 2,
+        userCode: 2,
+        username: 'cashier',
+        password: '123',
+        altPass: 'cashier123',
+        name: 'أحمد محمود (كاشير الفرع الرئيسي)',
+        role: 'cashier' as const,
         status: 'active' as const,
         companyId: 'COMP-000001',
         companyCode: '101',
@@ -440,6 +469,16 @@ export async function lookupCompanyInFirebase(companyCodeOrId: string): Promise<
       if ((!data.users || data.users.length === 0) && bound && (bound.companyId === data.id || bound.companyCode === data.code)) {
         data.users = bound.users;
       }
+      const predefined = DEFAULT_FIREBASE_COMPANIES.find((c) => c.id === data.id || c.code === data.code);
+      if (predefined?.users) {
+        if (!data.users) data.users = [];
+        const existingNames = new Set(data.users.map((u: any) => u.username?.toLowerCase()));
+        for (const u of predefined.users) {
+          if (!existingNames.has(u.username?.toLowerCase())) {
+            data.users.push(u);
+          }
+        }
+      }
       return data;
     }
   } catch (err) {
@@ -491,6 +530,13 @@ export async function lookupCompanyInFirebase(companyCodeOrId: string): Promise<
         } catch {}
         if (!d.users || d.users.length === 0) {
           d.users = (matched as any).users;
+        } else if ((matched as any)?.users) {
+          const existingUsernames = new Set(d.users.map((u: any) => u.username?.toLowerCase()));
+          for (const u of (matched as any).users) {
+            if (!existingUsernames.has(u.username?.toLowerCase())) {
+              d.users.push(u);
+            }
+          }
         }
         return d;
       }
@@ -1779,7 +1825,7 @@ export async function fetchTenantDataCloud(
       const data = JSON.parse(raw);
       if (data && (!data.companyId || data.companyId.toUpperCase() === cleanId.toUpperCase())) {
         const fullCached: AppData = {
-          ...getDefaultData(),
+          ...getDefaultData(cleanId),
           ...data,
           companyId: cleanId,
         };
@@ -1788,30 +1834,11 @@ export async function fetchTenantDataCloud(
     }
   } catch {}
 
-  // 4. Fallback: Initialize clean tenant ERP dataset for this verified company so user never gets undefined
-  const defaultInit: AppData = {
-    ...getDefaultData(),
-    companyId: cleanId,
-    settings: {
-      ...getDefaultData().settings,
-      companyName: session?.company?.name || 'منشأة جديدة',
-      phone1: session?.company?.phone || '',
-      taxNumber: session?.company?.taxNumber || '',
-      commercialReg: session?.company?.commercialReg || '',
-    },
-    users: session?.user ? [session.user] : (getDefaultData().users || []),
-    items: [],
-    salesInvoices: [],
-    purchaseInvoices: [],
-    customers: [],
-    suppliers: [],
-    cashTransactions: [],
+  // 4. Fallback only if no server/Firestore/localStorage data exists at all
+  return {
+    success: false,
+    error: 'تعذر استرجاع بيانات المنشأة السحابية، يرجى التحقق من الاتصال بالإنترنت.',
   };
-  try {
-    localStorage.setItem(`rakeeza_tenant_data_${cleanId}`, JSON.stringify(defaultInit));
-  } catch {}
-
-  return { success: true, data: defaultInit };
 }
 
 export async function saveTenantDataCloud(
@@ -1844,13 +1871,23 @@ export async function saveTenantDataCloud(
     localStorage.setItem(`rakeeza_tenant_data_${cleanId}`, JSON.stringify(data));
   } catch {}
 
-  // 2. Direct Cross-Device Cloud Persistence via Google Firestore with Strict UID stamping
+  // 2. Offline check: If device is offline, do NOT falsely report cloud synchronization
+  if (typeof navigator !== 'undefined' && !navigator.onLine) {
+    return {
+      success: false,
+      error: 'الجهاز غير متصل بالإنترنت حالياً (الوضع غير المتصل)',
+      data: data as AppData,
+    };
+  }
+
+  // 3. Direct Cross-Device Cloud Persistence via Google Firestore with Strict UID stamping
   try {
     const docRef = doc(db, 'tenants', cleanId);
+    const sanitizedData = sanitizeForFirestore(data);
     setDoc(
       docRef,
       {
-        ...data,
+        ...sanitizedData,
         companyId: cleanId,
         companyUid: sessionCompanyUid || `UID_COMP_${cleanId}`,
         authorUid: sessionUserUid || 'system',
@@ -1887,27 +1924,52 @@ export async function saveTenantDataCloud(
     }
   } catch {}
 
+  // 4. Authoritative Cloud Backend Persistence via Express API
   const token = getStoredToken();
-  if (token) {
-    try {
-      const res = await fetch('/api/tenant/data', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ data, companyId: cleanId, actionInfo }),
-      });
-
-      const contentType = res.headers.get('content-type') || '';
-      if (res.ok && contentType.includes('application/json')) {
-        const json = await res.json();
-        return json;
-      }
-    } catch {}
+  if (!token) {
+    return {
+      success: false,
+      error: 'غير مسجل الدخول، تم الحفظ محلياً فقط',
+      data: data as AppData,
+    };
   }
 
-  return { success: true, data: data as AppData };
+  try {
+    const res = await fetch('/api/tenant/data', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ data, companyId: cleanId, actionInfo }),
+    });
+
+    const contentType = res.headers.get('content-type') || '';
+    if (res.ok && contentType.includes('application/json')) {
+      const json = await res.json();
+      if (json.success) {
+        if (json.data) {
+          try {
+            localStorage.setItem(`rakeeza_tenant_data_${cleanId}`, JSON.stringify(json.data));
+          } catch {}
+        }
+        return json;
+      }
+      return { success: false, error: json.error || 'فشل حفظ البيانات في الخادم السحابي', data: data as AppData };
+    }
+
+    return {
+      success: false,
+      error: `خطأ في استجابة الخادم (${res.status})`,
+      data: data as AppData,
+    };
+  } catch (err: any) {
+    return {
+      success: false,
+      error: err?.message || 'تعذر الاتصال بالخادم السحابي، تم الحفظ محلياً',
+      data: data as AppData,
+    };
+  }
 }
 
 export async function activateTenantLicenseCloud(

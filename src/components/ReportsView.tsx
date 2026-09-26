@@ -18,6 +18,8 @@ import {
   purchaseReports,
   customerReports,
   salesReports,
+  inventoryReports,
+  financialReports,
   receiptsReports,
   paymentsReports,
   repsReports,
@@ -262,15 +264,17 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ pageId, onNavigate, on
   if (pageId === 'reports_group' || parts.length === 1) {
     const groups = [
       { id: 'reports_custom', label: '🛠️ مُصمم التقارير الديناميكي المخصص', icon: '⚡' },
-      { id: 'reports_vendors', label: '📁 الموردين (24 تقرير)', icon: '🏭' },
-      { id: 'reports_purchases', label: '📁 المشتريات (16 تقرير)', icon: '🛒' },
-      { id: 'reports_customers', label: '📁 العملاء (35 تقرير)', icon: '👥' },
-      { id: 'reports_sales', label: '📁 المبيعات (20 تقرير)', icon: '💰' },
-      { id: 'reports_receipts', label: '📁 المقبوضات (6 تقارير)', icon: '📥' },
-      { id: 'reports_payments', label: '📁 المدفوعات (10 تقارير)', icon: '📤' },
-      { id: 'reports_reps', label: '📁 المندوبين (26 تقرير)', icon: '👔' },
-      { id: 'reports_banks', label: '📁 البنوك والوسائل (6 تقارير)', icon: '🏦' },
-      { id: 'reports_misc', label: '📁 تقارير متنوعة (19 تقرير)', icon: '📊' },
+      { id: 'reports_vendors', label: `📁 تقارير الموردين (${vendorReports.length} تقرير)`, icon: '🏭' },
+      { id: 'reports_purchases', label: `📁 تقارير المشتريات (${purchaseReports.length} تقرير)`, icon: '🛒' },
+      { id: 'reports_customers', label: `📁 تقارير العملاء (${customerReports.length} تقرير)`, icon: '👥' },
+      { id: 'reports_sales', label: `📁 تقارير المبيعات (${salesReports.length} تقرير)`, icon: '💰' },
+      { id: 'reports_inventory', label: `📁 تقارير المخزون والمستودعات (${inventoryReports.length} تقرير)`, icon: '📦' },
+      { id: 'reports_financial', label: `📁 الأرباح والقوائم والضرائب (${financialReports.length} تقرير)`, icon: '📈' },
+      { id: 'reports_receipts', label: `📁 تقارير المقبوضات (${receiptsReports.length} تقارير)`, icon: '📥' },
+      { id: 'reports_payments', label: `📁 تقارير المدفوعات (${paymentsReports.length} تقارير)`, icon: '📤' },
+      { id: 'reports_reps', label: `📁 تقارير المندوبين (${repsReports.length} تقرير)`, icon: '👔' },
+      { id: 'reports_banks', label: `📁 تقارير البنوك والوسائل (${banksReports.length} تقارير)`, icon: '🏦' },
+      { id: 'reports_misc', label: `📁 تقارير محاسبية متنوعة (${miscReports.length} تقرير)`, icon: '📊' },
     ];
 
     return (
@@ -326,11 +330,13 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ pageId, onNavigate, on
       purchases: { label: 'المشتريات', reports: purchaseReports },
       customers: { label: 'العملاء', reports: customerReports },
       sales: { label: 'المبيعات', reports: salesReports },
+      inventory: { label: 'المخزون والمستودعات', reports: inventoryReports },
+      financial: { label: 'الأرباح والقوائم والضرائب', reports: financialReports },
       receipts: { label: 'المقبوضات', reports: receiptsReports },
       payments: { label: 'المدفوعات', reports: paymentsReports },
       reps: { label: 'المندوبين', reports: repsReports },
       banks: { label: 'البنوك والوسائل', reports: banksReports },
-      misc: { label: 'تقارير متنوعة', reports: miscReports },
+      misc: { label: 'تقارير محاسبية متنوعة', reports: miscReports },
     };
 
     const currentCat = categoryMaps[groupKey] || { label: groupKey, reports: [] };

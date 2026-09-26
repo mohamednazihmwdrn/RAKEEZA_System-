@@ -12,10 +12,14 @@ export interface OfflineMutation {
     module?: string;
     details?: string;
     userCode?: string | number;
+    deletedId?: string | number;
   };
 }
 
+export type SyncState = 'online_synced' | 'online_syncing' | 'offline' | 'error' | 'pending';
+
 export interface SyncStatus {
+  state: SyncState;
   isOnline: boolean;
   isSyncing: boolean;
   pendingCount: number;
@@ -40,7 +44,7 @@ class OfflineSyncManager {
       window.addEventListener('online', this.handleOnlineEvent);
       window.addEventListener('offline', this.handleOfflineEvent);
 
-      // Periodic check every 15 seconds to ensure queue is flushed once connection is healthy
+      // Periodic check every 10 seconds to auto-flush pending changes once connection is healthy
       this.checkInterval = setInterval(() => {
         if (this.isOnline && !this.isSyncing) {
           const queue = this.getQueue(this.activeCompanyId);
@@ -48,7 +52,7 @@ class OfflineSyncManager {
             this.flushQueue(this.activeCompanyId);
           }
         }
-      }, 15000);
+      }, 10000);
     }
   }
 
@@ -73,13 +77,54 @@ class OfflineSyncManager {
 
   public getStatus(): SyncStatus {
     const queue = this.getQueue(this.activeCompanyId);
+    const pendingCount = queue.length;
+
+    let state: SyncState = 'online_synced';
+    if (!this.isOnline) {
+      state = 'offline';
+    } else if (this.isSyncing) {
+      state = 'online_syncing';
+    } else if (this.lastError) {
+      state = 'error';
+    } else if (pendingCount > 0) {
+      state = 'pending';
+    } else {
+      state = 'online_synced';
+    }
+
     return {
+      state,
       isOnline: this.isOnline,
       isSyncing: this.isSyncing,
-      pendingCount: queue.length,
+      pendingCount,
       lastSyncTime: this.lastSyncTime,
       lastError: this.lastError,
     };
+  }
+
+  public setSyncing(syncing: boolean) {
+    this.isSyncing = syncing;
+    if (syncing) {
+      this.lastError = null;
+    }
+    this.notifySubscribers();
+  }
+
+  public setSyncError(errorMsg: string) {
+    this.isSyncing = false;
+    this.lastError = errorMsg;
+    this.notifySubscribers();
+  }
+
+  public markSynchronized() {
+    this.isSyncing = false;
+    this.lastError = null;
+    this.lastSyncTime = new Date().toLocaleTimeString('ar-EG', {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+    });
+    this.notifySubscribers();
   }
 
   private notifySubscribers() {
@@ -103,6 +148,7 @@ class OfflineSyncManager {
 
   private handleOfflineEvent = () => {
     this.isOnline = false;
+    this.isSyncing = false;
     this.notifySubscribers();
   };
 
@@ -125,7 +171,7 @@ class OfflineSyncManager {
   }
 
   /**
-   * Records a mutation to be synchronized
+   * Records a mutation to be synchronized safely with deduplication
    */
   public queueMutation(
     companyId: string,
@@ -135,38 +181,63 @@ class OfflineSyncManager {
     const cleanId = companyId || this.activeCompanyId;
     const queue = this.getQueue(cleanId);
 
+    // Deduplication check: if identical action and details is already queued in the last 2 seconds
+    const now = Date.now();
+    const isDuplicate = queue.some((m) => {
+      if (actionInfo && m.actionInfo) {
+        if (
+          m.actionInfo.action === actionInfo.action &&
+          m.actionInfo.details === actionInfo.details &&
+          m.actionInfo.deletedId === actionInfo.deletedId
+        ) {
+          const diff = now - new Date(m.timestamp).getTime();
+          return diff < 3000;
+        }
+      }
+      return false;
+    });
+
+    if (isDuplicate) {
+      return;
+    }
+
     const mutation: OfflineMutation = {
-      id: `mut-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+      id: `mut-${now}-${Math.random().toString(36).substring(2, 6)}`,
       companyId: cleanId,
       timestamp: new Date().toISOString(),
       data,
       actionInfo,
     };
 
-    // Replace or append (if queue gets large, keep latest snapshot)
     queue.push(mutation);
-    // Keep at most 100 mutations
+    // Keep at most 100 recent mutations
     const trimmed = queue.slice(-100);
     this.setQueue(cleanId, trimmed);
   }
 
   /**
-   * Flushes all queued mutations to the cloud server and Firestore
+   * Flushes all queued mutations to the authoritative cloud server and Firestore
    */
   public async flushQueue(
     companyId: string = this.activeCompanyId,
     forcedData?: Partial<AppData>
-  ): Promise<{ success: boolean; flushedCount: number; error?: string }> {
+  ): Promise<{ success: boolean; flushedCount: number; data?: AppData; error?: string }> {
     const cleanId = companyId || this.activeCompanyId;
+
+    if (this.isSyncing) {
+      return { success: true, flushedCount: 0 };
+    }
+
     const queue = this.getQueue(cleanId);
 
-    if (!navigator.onLine) {
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
       this.isOnline = false;
       this.notifySubscribers();
       return { success: false, flushedCount: 0, error: 'الجهاز غير متصل بالإنترنت حالياً' };
     }
 
     if (queue.length === 0 && !forcedData) {
+      this.markSynchronized();
       return { success: true, flushedCount: 0 };
     }
 
@@ -176,45 +247,53 @@ class OfflineSyncManager {
 
     try {
       // Find latest combined state
-      const latestData: Partial<AppData> = forcedData || {};
+      let combinedData: Partial<AppData> = forcedData || {};
       if (!forcedData && queue.length > 0) {
-        // Merge from newest to oldest or take latest snapshot
-        const lastMutation = queue[queue.length - 1];
-        Object.assign(latestData, lastMutation.data);
+        // Sequentially fold all queued mutations from oldest to newest
+        for (const mut of queue) {
+          if (mut.data) {
+            combinedData = { ...combinedData, ...mut.data };
+          }
+        }
       }
 
-      // 1. Sync to Express Cloud Backend
-      const saveRes = await saveTenantDataCloud(latestData, cleanId, {
+      // 1. Sync to Authoritative Express Cloud Backend
+      const saveRes = await saveTenantDataCloud(combinedData, cleanId, {
         action: 'مزامنة تلقائية للعمليات دون اتصال',
         module: 'المزامنة السحابية',
-        details: `مزامنة ${queue.length} عمليات مخزنة محلياً أثناء انقطاع الاتصال`,
+        details: `مزامنة ${queue.length} عملية مخزنة محلياً بعد استعادة الاتصال`,
       });
 
-      // 2. Broadcast via Firestore
-      await realtimeSync.broadcastChange(cleanId, latestData, {
-        action: 'مزامنة تلقائية',
+      if (!saveRes.success) {
+        throw new Error(saveRes.error || 'فشلت المزامنة مع الخادم السحابي');
+      }
+
+      // 2. Broadcast authoritative update via Firestore & BroadcastChannel
+      await realtimeSync.broadcastChange(cleanId, saveRes.data || combinedData, {
+        action: 'مزامنة تلقائية بعد استعادة الاتصال',
         module: 'المزامنة السحابية',
-        details: `تمت مزامنة العمليات بعد استعادة الاتصال`,
+        details: 'تمت مزامنة العمليات بعد استعادة الاتصال بنجاح',
       });
 
-      // Clear queue on success
+      // 3. Clear queue strictly on verified cloud success
       const count = queue.length;
       this.setQueue(cleanId, []);
-      this.lastSyncTime = new Date().toLocaleTimeString('ar-EG', {
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit',
-      });
-      this.isOnline = true;
-      this.isSyncing = false;
-      this.notifySubscribers();
+      this.markSynchronized();
 
-      return { success: true, flushedCount: count };
+      // 4. Update local React state with authoritative server data if callback is registered
+      if (saveRes.data && this.dataUpdateCallback) {
+        try {
+          this.dataUpdateCallback(saveRes.data);
+        } catch (cbErr) {
+          console.warn('Error in dataUpdateCallback during flush:', cbErr);
+        }
+      }
+
+      return { success: true, flushedCount: count, data: saveRes.data };
     } catch (err: any) {
-      this.lastError = err?.message || 'فشلت المزامنة مع الخادم السحابي';
-      this.isSyncing = false;
-      this.notifySubscribers();
-      return { success: false, flushedCount: 0, error: this.lastError };
+      const errMsg = err?.message || 'فشلت المزامنة مع الخادم السحابي';
+      this.setSyncError(errMsg);
+      return { success: false, flushedCount: 0, error: errMsg };
     }
   }
 

@@ -401,6 +401,14 @@ async function startServer() {
     const auth = (req as any).auth;
     let targetCompanyId = auth.session.companyId;
 
+    // Security: Non-owners cannot manipulate other companies
+    if (auth.session.role !== 'owner' && req.body.companyId && req.body.companyId !== auth.session.companyId) {
+      return res.status(403).json({
+        success: false,
+        error: 'انتهاك أمني: لا يمكنك الوصول أو الكتابة في بيانات شركة أخرى.',
+      });
+    }
+
     // Owner can edit any company
     if (auth.session.role === 'owner' && req.body.companyId) {
       targetCompanyId = req.body.companyId;
@@ -417,7 +425,23 @@ async function startServer() {
       role: auth.session.role,
     };
 
-    const saved = saveTenantDataStrict(targetCompanyId, req.body.data, actorUser, req.body.actionInfo);
+    // 🔒 Security Guard: Prevent privilege escalation by non-admins
+    const isMasterAdmin =
+      auth.session.role === 'owner' ||
+      auth.session.role === 'company_admin' ||
+      auth.session.role === 'admin';
+
+    const incomingData = req.body.data;
+    if (incomingData && !isMasterAdmin) {
+      // Non-admins cannot alter users list, roles, or security settings
+      const currentData = getTenantDataStrict(targetCompanyId);
+      if (currentData) {
+        incomingData.users = currentData.users;
+        incomingData.settings = currentData.settings;
+      }
+    }
+
+    const saved = saveTenantDataStrict(targetCompanyId, incomingData, actorUser, req.body.actionInfo);
     
     // Increment version & record last action for instant synchronization
     let curVer = 1;

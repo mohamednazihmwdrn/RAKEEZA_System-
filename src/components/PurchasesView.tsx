@@ -1,4 +1,21 @@
 import React, { useState } from 'react';
+import {
+  Plus,
+  RotateCcw,
+  Search,
+  Eye,
+  Pencil,
+  Trash2,
+  Printer,
+  DollarSign,
+  Building2,
+  User as UserIcon,
+  FileText,
+  CheckCircle2,
+  AlertCircle,
+  Save,
+  X,
+} from 'lucide-react';
 import { AppData, PurchaseInvoice, InvoiceItem } from '../types';
 import { Modal } from './Modal';
 import { printInvoiceWindow } from '../utils/printInvoice';
@@ -10,13 +27,15 @@ import { TableActionButtons } from './TableActionButtons';
 
 interface PurchasesViewProps {
   appData: AppData;
-  onUpdateData: (newData: AppData, actionInfo?: { action?: string; module?: string; details?: string }) => void;
+  onUpdateData: (newData: AppData, actionInfo?: { action?: string; module?: string; details?: string; deletedId?: string | number }) => void;
   showToast: (msg: string, type?: 'success' | 'error' | 'warning' | 'info') => void;
   onInspectItem?: (type: string, data: any) => void;
 }
 
 export const PurchasesView: React.FC<PurchasesViewProps> = ({ appData, onUpdateData, showToast }) => {
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedBranchFilter, setSelectedBranchFilter] = useState<string>('all');
+  const [selectedBranchId, setSelectedBranchId] = useState<string>(appData.activeBranchId || appData.branches?.[0]?.id || 'main');
   const [activeModal, setActiveModal] = useState<'create' | 'view' | 'pay' | null>(null);
   const [modalType, setModalType] = useState<'nagdi' | 'ajel' | 'return_nagdi' | 'return_ajel'>('nagdi');
   const [selectedInvoice, setSelectedInvoice] = useState<PurchaseInvoice | null>(null);
@@ -82,6 +101,9 @@ export const PurchasesView: React.FC<PurchasesViewProps> = ({ appData, onUpdateD
   });
 
   const filteredInvoices = appData.purchaseInvoices.filter((inv) => {
+    if (selectedBranchFilter !== 'all' && inv.branchId && inv.branchId !== selectedBranchFilter) {
+      return false;
+    }
     const s = searchTerm.toLowerCase();
     return (
       inv.id.toString().includes(s) ||
@@ -109,6 +131,7 @@ export const PurchasesView: React.FC<PurchasesViewProps> = ({ appData, onUpdateD
 
   const openCreateModal = (type: 'nagdi' | 'ajel' | 'return_nagdi' | 'return_ajel') => {
     setEditingInvoiceId(null);
+    setSelectedBranchId(appData.activeBranchId || appData.branches?.[0]?.id || 'main');
     setModalType(type);
     setSupplierName('');
     setPhone('');
@@ -139,6 +162,7 @@ export const PurchasesView: React.FC<PurchasesViewProps> = ({ appData, onUpdateD
 
   const openEditModal = (inv: PurchaseInvoice) => {
     setEditingInvoiceId(inv.id);
+    setSelectedBranchId(inv.branchId || appData.activeBranchId || appData.branches?.[0]?.id || 'main');
     setModalType(inv.type);
     setSupplierName(inv.supplierName || '');
     setPhone(inv.phone || '');
@@ -333,9 +357,14 @@ export const PurchasesView: React.FC<PurchasesViewProps> = ({ appData, onUpdateD
 
     const isEditing = editingInvoiceId !== null;
     const invId = isEditing ? editingInvoiceId : appData.nextPurchaseNumber;
+    const oldInvForMeta = isEditing ? appData.purchaseInvoices.find((i) => i.id === editingInvoiceId) : null;
+    const nowIso = new Date().toISOString();
 
     const newInvoice: PurchaseInvoice = {
       id: invId,
+      clientSyncId: isEditing ? ((oldInvForMeta as any)?.clientSyncId || `pur_${invId}_${Date.now()}`) : `pur_${invId}_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+      companyId: appData.companyId || 'COMP-000001',
+      branchId: selectedBranchId || appData.activeBranchId || 'main',
       supplierName: supplierName.trim(),
       phone: phone.trim(),
       supplierRepId: supplierRepId || undefined,
@@ -361,8 +390,12 @@ export const PurchasesView: React.FC<PurchasesViewProps> = ({ appData, onUpdateD
       type: modalType,
       paidAmount: effectivePaid,
       remainingAmount: effectiveRemaining,
-      createdAt: new Date().toISOString(),
-      createdBy: appData.users.find((u) => u.id === appData.currentUser)?.name || 'مدير النظام',
+      status: 'approved',
+      createdAt: isEditing ? (oldInvForMeta?.createdAt || nowIso) : nowIso,
+      updatedAt: nowIso,
+      createdBy: isEditing ? (oldInvForMeta?.createdBy || appData.users.find((u) => u.id === appData.currentUser)?.name || 'مدير النظام') : (appData.users.find((u) => u.id === appData.currentUser)?.name || 'مدير النظام'),
+      createdByUserId: appData.users.find((u) => u.id === appData.currentUser)?.id,
+      createdByUserCode: appData.users.find((u) => u.id === appData.currentUser)?.code || 1,
     };
 
     const updatedData = { ...appData };
@@ -565,11 +598,15 @@ export const PurchasesView: React.FC<PurchasesViewProps> = ({ appData, onUpdateD
       updatedData.cashTransactions = (updatedData.cashTransactions || []).filter((tx) => tx.invoiceId !== id);
     }
 
+    if (!updatedData.deletedRecords) updatedData.deletedRecords = {};
+    updatedData.deletedRecords[`purchaseInvoices_${id}`] = Date.now();
+
     updatedData.purchaseInvoices = updatedData.purchaseInvoices.filter((i) => i.id !== id);
     onUpdateData(updatedData, {
-      action: `حذف فاتورة مشتريات #${id}`,
+      action: 'delete_purchase',
       module: 'المشتريات',
-      details: `تم حذف فاتورة الشراء رقم #${id} وتسوية رصيد المخزون`,
+      details: `تم حذف فاتورة الشراء رقم #${id} وتسوية رصيد المخزون والطرف المالي`,
+      deletedId: id,
     });
     showToast(`تم حذف فاتورة المشتريات رقم #${id} وتسوية رصيد الأصناف بالمخزن بنجاح`, 'success');
   };
@@ -607,8 +644,15 @@ export const PurchasesView: React.FC<PurchasesViewProps> = ({ appData, onUpdateD
       const supp = updatedData.suppliers.find((s) => s.name === inv.supplierName);
       if (supp) supp.balance = (supp.balance || 0) - payAmount;
 
+      const nowIso = new Date().toISOString();
+      const currentUserObj = updatedData.users?.find((u) => u.id === updatedData.currentUser) || updatedData.users?.[0];
+      const newCashId = updatedData.nextCashId || 1;
+      updatedData.nextCashId = newCashId + 1;
+
       updatedData.cashTransactions.push({
-        id: updatedData.nextCashId++,
+        id: newCashId,
+        companyId: appData.companyId || 'COMP-000001',
+        branchId: inv.branchId || appData.activeBranchId || 'main',
         date: new Date().toISOString().split('T')[0],
         type: 'pay',
         method: payMethod,
@@ -616,11 +660,17 @@ export const PurchasesView: React.FC<PurchasesViewProps> = ({ appData, onUpdateD
         note: `سداد دفعة فاتورة مشتريات #${inv.id} (${getMethodLabel(payMethod)}) - المورد: ${inv.supplierName}`,
         supplierName: inv.supplierName,
         invoiceId: inv.id,
+        status: 'approved',
+        createdAt: nowIso,
+        updatedAt: nowIso,
+        createdBy: currentUserObj?.name || 'مستخدم النظام',
+        createdByUserId: currentUserObj?.id,
+        createdByUserCode: currentUserObj?.code || 1,
       });
 
       onUpdateData(updatedData, {
-        action: `سداد دفعة للمورد #${inv.id}`,
-        module: 'المشتريات',
+        action: 'purchase_payment',
+        module: 'المشتريات والخزينة',
         details: `سداد مبلغ ${payAmount} ج.م للمورد ${inv.supplierName} عبر ${getMethodLabel(payMethod)}`,
       });
       setActiveModal(null);
@@ -739,31 +789,35 @@ export const PurchasesView: React.FC<PurchasesViewProps> = ({ appData, onUpdateD
   return (
     <div className="space-y-4">
       {/* Action Bar */}
-      <div className="bg-white p-3 sm:p-4 rounded-2xl shadow-xs flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between">
+      <div className="bg-white p-3 sm:p-4 rounded-xl shadow-xs border border-slate-200/90 flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between">
         <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2">
           <button
             onClick={() => openCreateModal('nagdi')}
-            className="min-h-[42px] bg-[#2e7d32] hover:bg-[#1b5e20] active:bg-[#124116] text-white px-3 sm:px-4 py-2 rounded-xl text-xs md:text-sm font-bold transition cursor-pointer flex items-center justify-center gap-1 shadow-xs"
+            className="min-h-[40px] bg-emerald-700 hover:bg-emerald-800 active:bg-emerald-900 text-white px-3 sm:px-4 py-2 rounded-lg text-xs md:text-sm font-semibold transition cursor-pointer flex items-center justify-center gap-1.5 shadow-xs"
           >
-            ➕ شراء نقدي
+            <Plus className="w-4 h-4 shrink-0" />
+            <span>شراء نقدي</span>
           </button>
           <button
             onClick={() => openCreateModal('ajel')}
-            className="min-h-[42px] bg-[#f57f17] hover:bg-[#e65100] active:bg-[#b74100] text-white px-3 sm:px-4 py-2 rounded-xl text-xs md:text-sm font-bold transition cursor-pointer flex items-center justify-center gap-1 shadow-xs"
+            className="min-h-[40px] bg-amber-600 hover:bg-amber-700 active:bg-amber-800 text-white px-3 sm:px-4 py-2 rounded-lg text-xs md:text-sm font-semibold transition cursor-pointer flex items-center justify-center gap-1.5 shadow-xs"
           >
-            ➕ شراء أجل
+            <Plus className="w-4 h-4 shrink-0" />
+            <span>شراء أجل</span>
           </button>
           <button
             onClick={() => openCreateModal('return_nagdi')}
-            className="min-h-[42px] bg-[#c62828] hover:bg-[#b71c1c] active:bg-[#8e1414] text-white px-3 sm:px-4 py-2 rounded-xl text-xs md:text-sm font-bold transition cursor-pointer flex items-center justify-center gap-1 shadow-xs"
+            className="min-h-[40px] bg-rose-600 hover:bg-rose-700 active:bg-rose-800 text-white px-3 sm:px-4 py-2 rounded-lg text-xs md:text-sm font-semibold transition cursor-pointer flex items-center justify-center gap-1.5 shadow-xs"
           >
-            ↩ مرتجع نقدي
+            <RotateCcw className="w-4 h-4 shrink-0" />
+            <span>مرتجع نقدي</span>
           </button>
           <button
             onClick={() => openCreateModal('return_ajel')}
-            className="min-h-[42px] bg-slate-600 hover:bg-slate-700 active:bg-slate-800 text-white px-3 sm:px-4 py-2 rounded-xl text-xs md:text-sm font-bold transition cursor-pointer flex items-center justify-center gap-1 shadow-xs"
+            className="min-h-[40px] bg-slate-600 hover:bg-slate-700 active:bg-slate-800 text-white px-3 sm:px-4 py-2 rounded-lg text-xs md:text-sm font-semibold transition cursor-pointer flex items-center justify-center gap-1.5 shadow-xs"
           >
-            ↩ مرتجع أجل
+            <RotateCcw className="w-4 h-4 shrink-0" />
+            <span>مرتجع أجل</span>
           </button>
           <TableActionButtons
             onPrint={handlePrintPurchasesList}
@@ -772,28 +826,45 @@ export const PurchasesView: React.FC<PurchasesViewProps> = ({ appData, onUpdateD
             exportTitle="تصدير المشتريات إلى Excel"
           />
         </div>
-        <div className="w-full sm:w-auto min-w-[220px]">
-          <input
-            type="text"
-            placeholder="🔍 بحث برقم الفاتورة أو اسم المورد..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full min-h-[42px] px-3.5 py-2 border-2 border-gray-200 rounded-xl text-xs focus:border-[#1a237e] focus:outline-none"
-          />
+        <div className="w-full sm:w-auto flex flex-col sm:flex-row items-stretch sm:items-center gap-2 min-w-[220px]">
+          {appData.branches && appData.branches.length > 1 && (
+            <select
+              value={selectedBranchFilter}
+              onChange={(e) => setSelectedBranchFilter(e.target.value)}
+              className="min-h-[40px] px-3 py-2 border border-slate-300 bg-slate-50 text-slate-800 font-semibold rounded-lg text-xs focus:ring-2 focus:ring-blue-600/30 focus:border-blue-600 focus:outline-none cursor-pointer"
+            >
+              <option value="all">جميع الفروع ({appData.purchaseInvoices?.length || 0})</option>
+              {appData.branches.map((b) => (
+                <option key={b.id} value={b.id}>
+                  {b.name} ({appData.purchaseInvoices?.filter((i) => i.branchId === b.id).length || 0})
+                </option>
+              ))}
+            </select>
+          )}
+          <div className="relative w-full sm:w-64">
+            <Search className="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <input
+              type="text"
+              placeholder="بحث برقم الفاتورة أو اسم المورد..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full min-h-[40px] pr-9 pl-3 py-2 border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-blue-600/30 focus:border-blue-600 focus:outline-none"
+            />
+          </div>
         </div>
       </div>
 
       {/* Mobile Card List View (< md) */}
       <div className="block md:hidden space-y-3">
         {filteredInvoices.length === 0 ? (
-          <div className="bg-white rounded-2xl p-6 text-center text-gray-400 text-sm">
+          <div className="bg-white rounded-xl p-6 text-center text-slate-400 text-sm border border-slate-200">
             لا توجد فواتير مشتريات مسجلة
           </div>
         ) : (
           filteredInvoices.map((inv) => (
             <div
               key={inv.id}
-              className="bg-white rounded-2xl p-4 shadow-xs border border-slate-200 space-y-3 hover:border-indigo-300 transition"
+              className="bg-white rounded-xl p-4 shadow-xs border border-slate-200 space-y-3 hover:border-blue-300 transition"
             >
               {/* Top Row: Invoice ID, Date & Type Badge */}
               <div className="flex items-center justify-between border-b border-slate-100 pb-2">
@@ -804,16 +875,16 @@ export const PurchasesView: React.FC<PurchasesViewProps> = ({ appData, onUpdateD
                   }}
                   className="flex items-center gap-1.5 cursor-pointer"
                 >
-                  <span className="text-[#1a237e] font-black text-sm">#{inv.id}</span>
-                  <span className="text-slate-400 text-xs">| {inv.date}</span>
+                  <span className="text-blue-700 font-bold font-mono text-sm">#{inv.id}</span>
+                  <span className="text-slate-400 text-xs font-mono">| {inv.date}</span>
                 </div>
                 <span
-                  className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold ${
+                  className={`px-2 py-0.5 rounded text-[11px] font-bold border ${
                     inv.type === 'nagdi'
-                      ? 'bg-emerald-100 text-emerald-800'
+                      ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
                       : inv.type === 'ajel'
-                      ? 'bg-orange-100 text-orange-800'
-                      : 'bg-rose-100 text-rose-800'
+                      ? 'bg-amber-50 text-amber-700 border-amber-200'
+                      : 'bg-rose-50 text-rose-700 border-rose-200'
                   }`}
                 >
                   {inv.type === 'nagdi'
@@ -831,20 +902,27 @@ export const PurchasesView: React.FC<PurchasesViewProps> = ({ appData, onUpdateD
                 <div>
                   <div className="font-bold text-slate-900 text-sm">{inv.supplierName}</div>
                   {inv.salesRep && (
-                    <div className="text-[11px] text-indigo-700 font-medium mt-0.5">👔 مسؤول: {inv.salesRep}</div>
+                    <div className="text-[11px] text-blue-700 font-medium flex items-center gap-1 mt-0.5">
+                      <UserIcon className="w-3 h-3 text-blue-500" />
+                      <span>مسؤول: {inv.salesRep}</span>
+                    </div>
                   )}
                   {inv.notes && (
-                    <div className="text-[11px] text-slate-500 italic mt-0.5 line-clamp-1">📝 {inv.notes}</div>
+                    <div className="text-[11px] text-slate-500 italic mt-0.5 line-clamp-1 flex items-center gap-1">
+                      <FileText className="w-3 h-3 text-slate-400 shrink-0" />
+                      <span>{inv.notes}</span>
+                    </div>
                   )}
                   {inv.type === 'ajel' && inv.remainingAmount !== undefined && (
-                    <div className="text-[11px] mt-1">
+                    <div className="text-[11px] mt-1 font-mono">
                       {inv.remainingAmount > 0 ? (
-                        <span className="text-amber-800 font-bold bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200">
+                        <span className="text-amber-800 font-bold bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
                           متبقي للمورد: {inv.remainingAmount.toFixed(2)} ج.م
                         </span>
                       ) : (
-                        <span className="text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded-md">
-                          ✓ مسددة بالكامل
+                        <span className="text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 inline-flex items-center gap-1">
+                          <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                          <span>مسددة بالكامل</span>
                         </span>
                       )}
                     </div>
@@ -852,21 +930,22 @@ export const PurchasesView: React.FC<PurchasesViewProps> = ({ appData, onUpdateD
                 </div>
                 <div className="text-left shrink-0">
                   <div className="text-xs text-slate-500">القيمة الإجمالية</div>
-                  <div className="font-black text-[#1a237e] text-base font-mono">
+                  <div className="font-bold text-blue-700 text-base font-mono tabular-nums">
                     {(inv.total || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })} ج.م
                   </div>
                 </div>
               </div>
 
-              {/* Action Buttons with 44px min-height */}
+              {/* Action Buttons with 40px min-height */}
               <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 pt-1">
                 {inv.type === 'ajel' && (inv.remainingAmount ?? (inv.total - (inv.paidAmount || 0))) > 0 && (
                   <button
                     onClick={() => handleOpenPayModal(inv)}
-                    className="min-h-[44px] bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs transition flex items-center justify-center gap-1 shadow-xs"
+                    className="min-h-[40px] bg-emerald-700 hover:bg-emerald-800 text-white font-semibold rounded-lg text-xs transition flex items-center justify-center gap-1.5 shadow-xs cursor-pointer"
                     title="تسديد دفعة للمورد"
                   >
-                    💰 سداد
+                    <DollarSign className="w-4 h-4" />
+                    <span>سداد</span>
                   </button>
                 )}
                 <button
@@ -874,27 +953,31 @@ export const PurchasesView: React.FC<PurchasesViewProps> = ({ appData, onUpdateD
                     setSelectedInvoice(inv);
                     setActiveModal('view');
                   }}
-                  className="min-h-[44px] bg-slate-100 hover:bg-slate-200 text-[#1a237e] font-bold rounded-xl text-xs transition flex items-center justify-center gap-1"
+                  className="min-h-[40px] bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold rounded-lg text-xs transition flex items-center justify-center gap-1.5 cursor-pointer"
                 >
-                  📋 عرض
+                  <Eye className="w-3.5 h-3.5 text-blue-700" />
+                  <span>عرض</span>
                 </button>
                 <button
                   onClick={() => openEditModal(inv)}
-                  className="min-h-[44px] bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold rounded-xl text-xs transition flex items-center justify-center gap-1"
+                  className="min-h-[40px] bg-blue-50 hover:bg-blue-100 text-blue-700 font-semibold rounded-lg text-xs transition flex items-center justify-center gap-1.5 cursor-pointer"
                 >
-                  ✏️ تعديل
+                  <Pencil className="w-3.5 h-3.5" />
+                  <span>تعديل</span>
                 </button>
                 <button
                   onClick={() => handlePrintInvoice(inv)}
-                  className="min-h-[44px] bg-teal-50 hover:bg-teal-100 text-teal-800 font-bold rounded-xl text-xs transition flex items-center justify-center gap-1"
+                  className="min-h-[40px] bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-lg text-xs transition flex items-center justify-center gap-1.5 cursor-pointer"
                 >
-                  🖨️ طباعة
+                  <Printer className="w-3.5 h-3.5 text-slate-600" />
+                  <span>طباعة</span>
                 </button>
                 <button
                   onClick={() => handleDeleteInvoice(inv.id)}
-                  className="min-h-[44px] bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold rounded-xl text-xs transition flex items-center justify-center gap-1"
+                  className="min-h-[40px] bg-rose-50 hover:bg-rose-100 text-rose-700 font-semibold rounded-lg text-xs transition flex items-center justify-center gap-1.5 cursor-pointer"
                 >
-                  🗑️ حذف
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span>حذف</span>
                 </button>
               </div>
             </div>
@@ -903,23 +986,24 @@ export const PurchasesView: React.FC<PurchasesViewProps> = ({ appData, onUpdateD
       </div>
 
       {/* Invoices Desktop Table (>= md) */}
-      <div className="hidden md:block bg-white rounded-2xl p-4 shadow-xs overflow-x-auto">
+      <div className="hidden md:block bg-white rounded-xl shadow-xs border border-slate-200/90 overflow-x-auto">
         <table className="w-full text-right text-xs md:text-sm border-collapse">
           <thead>
-            <tr className="bg-[#1a237e] text-white">
-              <th className="p-3 rounded-r-lg">رقم الفاتورة</th>
-              <th className="p-3">المورد</th>
-              <th className="p-3">التاريخ</th>
-              <th className="p-3">القيمة (ج.م)</th>
-              <th className="p-3">المسدد / المتبقي</th>
-              <th className="p-3">النوع</th>
-              <th className="p-3 rounded-l-lg">الإجراءات</th>
+            <tr className="bg-[#0f2756] text-white">
+              <th className="p-3 font-semibold">رقم الفاتورة</th>
+              <th className="p-3 font-semibold">المورد</th>
+              {appData.branches && appData.branches.length > 1 && <th className="p-3 font-semibold">الفرع</th>}
+              <th className="p-3 font-semibold">التاريخ</th>
+              <th className="p-3 font-semibold">القيمة (ج.م)</th>
+              <th className="p-3 font-semibold">المسدد / المتبقي</th>
+              <th className="p-3 font-semibold">النوع</th>
+              <th className="p-3 font-semibold">الإجراءات</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-100">
+          <tbody className="divide-y divide-slate-100">
             {filteredInvoices.length === 0 ? (
               <tr>
-                <td colSpan={7} className="text-center py-8 text-gray-400">
+                <td colSpan={8} className="text-center py-8 text-slate-400">
                   لا توجد فواتير مشتريات مسجلة
                 </td>
               </tr>
@@ -934,31 +1018,47 @@ export const PurchasesView: React.FC<PurchasesViewProps> = ({ appData, onUpdateD
                         setSelectedInvoice(inv);
                         setActiveModal('view');
                       }}
-                      className="p-3 text-[#1a237e] font-bold cursor-pointer hover:underline"
+                      className="p-3 text-blue-700 font-bold font-mono cursor-pointer hover:underline"
                     >
                       #{inv.id}
                     </td>
                     <td className="p-3">
-                      <div className="font-bold text-gray-900">{inv.supplierName}</div>
+                      <div className="font-bold text-slate-900">{inv.supplierName}</div>
                       {inv.salesRep && (
-                        <div className="text-[11px] text-indigo-700 font-medium">👔 {inv.salesRep}</div>
+                        <div className="text-[11px] text-blue-700 font-medium flex items-center gap-1 mt-0.5">
+                          <UserIcon className="w-3 h-3 text-blue-500" />
+                          <span>مسؤول: {inv.salesRep}</span>
+                        </div>
                       )}
                       {inv.notes && (
-                        <div className="text-[10px] text-gray-500 italic truncate max-w-[160px]" title={inv.notes}>
-                          📝 {inv.notes}
+                        <div className="text-[10px] text-slate-500 italic truncate max-w-[160px] flex items-center gap-1 mt-0.5" title={inv.notes}>
+                          <FileText className="w-3 h-3 text-slate-400 shrink-0" />
+                          <span>{inv.notes}</span>
                         </div>
                       )}
                     </td>
-                    <td className="p-3">{inv.date}</td>
-                    <td className="p-3 font-semibold">{inv.total.toFixed(2)}</td>
+                    {appData.branches && appData.branches.length > 1 && (
+                      <td className="p-3">
+                        <span className="text-[11px] font-bold px-2 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-100">
+                          {appData.branches.find((b) => b.id === inv.branchId)?.name || 'الفرع الرئيسي'}
+                        </span>
+                      </td>
+                    )}
+                    <td className="p-3 font-mono text-slate-600">{inv.date}</td>
+                    <td className="p-3 font-bold font-mono text-slate-900 tabular-nums">
+                      {(inv.total || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </td>
                     <td className="p-3">
                       {inv.type === 'ajel' ? (
-                        <div className="text-xs space-y-0.5">
-                          <div className="text-emerald-700 font-semibold">مسدد: {paid.toFixed(2)}</div>
+                        <div className="text-xs space-y-0.5 font-mono">
+                          <div className="text-emerald-700 font-semibold tabular-nums">مسدد: {paid.toFixed(2)}</div>
                           {rem > 0 ? (
-                            <div className="text-rose-600 font-bold">متبقي: {rem.toFixed(2)}</div>
+                            <div className="text-rose-600 font-bold tabular-nums">متبقي: {rem.toFixed(2)}</div>
                           ) : (
-                            <div className="text-emerald-600 font-bold text-[11px]">✓ مسددة بالكامل</div>
+                            <div className="text-emerald-600 font-bold text-[11px] inline-flex items-center gap-1 font-sans">
+                              <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                              <span>مسددة بالكامل</span>
+                            </div>
                           )}
                         </div>
                       ) : (
@@ -967,12 +1067,12 @@ export const PurchasesView: React.FC<PurchasesViewProps> = ({ appData, onUpdateD
                     </td>
                     <td className="p-3">
                       <span
-                        className={`px-2 py-1 rounded-full text-[11px] font-bold ${
+                        className={`inline-block px-2 py-0.5 rounded text-[11px] font-bold border ${
                           inv.type === 'nagdi'
-                            ? 'bg-emerald-100 text-emerald-800'
+                            ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
                             : inv.type === 'ajel'
-                            ? 'bg-orange-100 text-orange-800'
-                            : 'bg-rose-100 text-rose-800'
+                            ? 'bg-amber-50 text-amber-700 border-amber-200'
+                            : 'bg-rose-50 text-rose-700 border-rose-200'
                         }`}
                       >
                         {inv.type === 'nagdi'
@@ -985,14 +1085,14 @@ export const PurchasesView: React.FC<PurchasesViewProps> = ({ appData, onUpdateD
                       </span>
                     </td>
                     <td className="p-3">
-                      <div className="flex gap-1">
+                      <div className="flex items-center gap-1.5">
                         {inv.type === 'ajel' && rem > 0 && (
                           <button
                             onClick={() => handleOpenPayModal(inv)}
-                            className="bg-emerald-600 text-white p-2 rounded-lg text-xs hover:bg-emerald-700 transition cursor-pointer"
+                            className="w-8 h-8 rounded-lg bg-emerald-700 text-white hover:bg-emerald-800 flex items-center justify-center transition cursor-pointer"
                             title="تسديد دفعة للمورد"
                           >
-                            💰
+                            <DollarSign className="w-3.5 h-3.5" />
                           </button>
                         )}
                         <button
@@ -1000,31 +1100,31 @@ export const PurchasesView: React.FC<PurchasesViewProps> = ({ appData, onUpdateD
                             setSelectedInvoice(inv);
                             setActiveModal('view');
                           }}
-                          className="bg-[#1a237e] text-white p-2 rounded-lg text-xs hover:bg-[#0d47a1] transition cursor-pointer"
+                          className="w-8 h-8 rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 flex items-center justify-center transition cursor-pointer border border-blue-200"
                           title="عرض الفاتورة"
                         >
-                          📋
+                          <Eye className="w-3.5 h-3.5" />
                         </button>
                         <button
                           onClick={() => openEditModal(inv)}
-                          className="bg-indigo-600 text-white p-2 rounded-lg text-xs hover:bg-indigo-700 transition cursor-pointer"
+                          className="w-8 h-8 rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 flex items-center justify-center transition cursor-pointer border border-blue-200"
                           title="تعديل الفاتورة"
                         >
-                          ✏️
+                          <Pencil className="w-3.5 h-3.5" />
                         </button>
                         <button
                           onClick={() => handlePrintInvoice(inv)}
-                          className="bg-teal-700 text-white p-2 rounded-lg text-xs hover:bg-teal-800 transition cursor-pointer"
+                          className="w-8 h-8 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 flex items-center justify-center transition cursor-pointer border border-slate-200"
                           title="طباعة"
                         >
-                          🖨️
+                          <Printer className="w-3.5 h-3.5" />
                         </button>
                         <button
                           onClick={() => handleDeleteInvoice(inv.id)}
-                          className="bg-[#c62828] text-white p-2 rounded-lg text-xs hover:bg-[#b71c1c] transition cursor-pointer"
+                          className="w-8 h-8 rounded-lg bg-rose-50 text-rose-700 hover:bg-rose-100 flex items-center justify-center transition cursor-pointer border border-rose-200"
                           title="حذف"
                         >
-                          🗑️
+                          <Trash2 className="w-3.5 h-3.5" />
                         </button>
                       </div>
                     </td>
@@ -1046,16 +1146,18 @@ export const PurchasesView: React.FC<PurchasesViewProps> = ({ appData, onUpdateD
             <button
               type="button"
               onClick={handleSaveInvoice}
-              className="min-h-[46px] bg-[#2e7d32] hover:bg-[#1b5e20] active:bg-[#124116] text-white px-8 py-3 rounded-xl font-black text-sm cursor-pointer transition shadow-md flex items-center justify-center gap-2 flex-1 sm:flex-initial"
+              className="min-h-[42px] bg-emerald-700 hover:bg-emerald-800 active:bg-emerald-900 text-white px-6 py-2.5 rounded-lg font-semibold text-xs sm:text-sm cursor-pointer transition shadow-xs flex items-center justify-center gap-2 flex-1 sm:flex-initial"
             >
-              <span>💾</span> حفظ فاتورة المشتريات وتحديث المخزون
+              <Save className="w-4 h-4" />
+              <span>حفظ فاتورة المشتريات وتحديث المخزون</span>
             </button>
             <button
               type="button"
               onClick={() => setActiveModal(null)}
-              className="min-h-[46px] bg-gray-400 hover:bg-gray-500 active:bg-gray-600 text-white px-6 py-3 rounded-xl font-bold text-sm cursor-pointer transition flex-1 sm:flex-initial text-center"
+              className="min-h-[42px] bg-slate-200 hover:bg-slate-300 active:bg-slate-400 text-slate-800 px-5 py-2.5 rounded-lg font-semibold text-xs sm:text-sm cursor-pointer transition flex items-center justify-center gap-1.5 flex-1 sm:flex-initial text-center"
             >
-              إلغاء
+              <X className="w-4 h-4" />
+              <span>إلغاء</span>
             </button>
           </div>
         }
@@ -1077,6 +1179,24 @@ export const PurchasesView: React.FC<PurchasesViewProps> = ({ appData, onUpdateD
 
           {/* Header Controls */}
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+            {appData.branches && appData.branches.length > 1 && (
+              <div>
+                <label className="block font-bold mb-1 text-indigo-950 flex items-center gap-1">
+                  <span>🏢</span> الفرع المستلم
+                </label>
+                <select
+                  value={selectedBranchId}
+                  onChange={(e) => setSelectedBranchId(e.target.value)}
+                  className="w-full p-2 border-2 border-indigo-200 bg-indigo-50/40 rounded-xl focus:border-[#1a237e] focus:outline-none text-xs md:text-sm font-bold"
+                >
+                  {appData.branches.map((b) => (
+                    <option key={b.id} value={b.id}>
+                      {b.name} {b.isMain ? '(الرئيسي)' : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
             <div className="relative">
               <label className="block font-bold mb-1 text-gray-700">المورد / الشركة</label>
               <input

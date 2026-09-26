@@ -62,6 +62,41 @@ export interface RealtimeSyncInitOptions {
   ) => void;
 }
 
+export function sanitizeForFirestore(data: Partial<AppData>): Record<string, any> {
+  const clean: any = { ...data };
+
+  // 1. Never send recursive JSON backup copies to Firestore
+  if (Array.isArray(clean.backups)) {
+    clean.backups = clean.backups.map((b: any) => ({
+      id: b.id,
+      date: b.date,
+      label: b.label,
+      type: b.type,
+      sizeKB: b.sizeKB,
+      dataPreview: b.dataPreview,
+    }));
+  }
+
+  // 2. Cap real-time audit logs to 100 entries to prevent Firestore document inflation
+  if (Array.isArray(clean.auditLogs)) {
+    clean.auditLogs = clean.auditLogs.slice(0, 100);
+  }
+
+  // 3. Exclude heavy closed years archive from the active live operational document
+  if ('closedFiscalYears' in clean) {
+    delete clean.closedFiscalYears;
+  }
+
+  // 4. Protect against heavy base64 logos
+  if (clean.settings && clean.settings.logo && typeof clean.settings.logo === 'string') {
+    if (clean.settings.logo.length > 150000) {
+      clean.settings = { ...clean.settings, logo: '' };
+    }
+  }
+
+  return clean;
+}
+
 export class RealtimeSyncService {
   private firestoreUnsub: Unsubscribe | null = null;
   private eventSource: EventSource | null = null;
@@ -238,6 +273,7 @@ export class RealtimeSyncService {
           if (rawData.currentActiveFiscalYear) remoteData.currentActiveFiscalYear = rawData.currentActiveFiscalYear;
           if (rawData.catalogConfig) remoteData.catalogConfig = rawData.catalogConfig;
           if (rawData.advancedSettings) remoteData.advancedSettings = rawData.advancedSettings;
+          if (rawData.deletedRecords) remoteData.deletedRecords = rawData.deletedRecords;
           if (typeof rawData.nextInvoiceNumber === 'number') remoteData.nextInvoiceNumber = rawData.nextInvoiceNumber;
           if (typeof rawData.nextPurchaseNumber === 'number') remoteData.nextPurchaseNumber = rawData.nextPurchaseNumber;
           if (rawData.settings) remoteData.settings = rawData.settings;
@@ -483,6 +519,7 @@ export class RealtimeSyncService {
               if (rawData.currentActiveFiscalYear) remoteData.currentActiveFiscalYear = rawData.currentActiveFiscalYear;
               if (rawData.catalogConfig) remoteData.catalogConfig = rawData.catalogConfig;
               if (rawData.advancedSettings) remoteData.advancedSettings = rawData.advancedSettings;
+              if (rawData.deletedRecords) remoteData.deletedRecords = rawData.deletedRecords;
               if (typeof rawData.nextInvoiceNumber === 'number') remoteData.nextInvoiceNumber = rawData.nextInvoiceNumber;
               if (typeof rawData.nextPurchaseNumber === 'number') remoteData.nextPurchaseNumber = rawData.nextPurchaseNumber;
               if (rawData.settings) remoteData.settings = rawData.settings;

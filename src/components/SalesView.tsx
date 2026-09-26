@@ -1,4 +1,24 @@
 import React, { useState } from 'react';
+import {
+  Plus,
+  RotateCcw,
+  Search,
+  Eye,
+  Pencil,
+  Trash2,
+  Printer,
+  MessageSquare,
+  DollarSign,
+  Building2,
+  User as UserIcon,
+  FileText,
+  CheckCircle2,
+  AlertCircle,
+  Tag,
+  Calendar,
+  Save,
+  X,
+} from 'lucide-react';
 import { AppData, SaleInvoice, InvoiceItem } from '../types';
 import { Modal } from './Modal';
 import { printInvoiceWindow } from '../utils/printInvoice';
@@ -12,13 +32,15 @@ import { generateInvoiceWhatsAppMessage, openWhatsAppChat } from '../services/wh
 
 interface SalesViewProps {
   appData: AppData;
-  onUpdateData: (newData: AppData, actionInfo?: { action?: string; module?: string; details?: string }) => void;
+  onUpdateData: (newData: AppData, actionInfo?: { action?: string; module?: string; details?: string; deletedId?: string | number }) => void;
   showToast: (msg: string, type?: 'success' | 'error' | 'warning' | 'info') => void;
   onInspectItem?: (type: string, data: any) => void;
 }
 
 export const SalesView: React.FC<SalesViewProps> = ({ appData, onUpdateData, showToast, onInspectItem }) => {
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedBranchFilter, setSelectedBranchFilter] = useState<string>('all');
+  const [selectedBranchId, setSelectedBranchId] = useState<string>(appData.activeBranchId || appData.branches?.[0]?.id || 'main');
   const [activeModal, setActiveModal] = useState<'create' | 'edit' | 'view' | 'pay' | null>(null);
   const [modalType, setModalType] = useState<'nagdi' | 'ajel' | 'return_nagdi' | 'return_ajel'>('nagdi');
   const [selectedInvoice, setSelectedInvoice] = useState<SaleInvoice | null>(null);
@@ -100,6 +122,9 @@ export const SalesView: React.FC<SalesViewProps> = ({ appData, onUpdateData, sho
   });
 
   const filteredInvoices = appData.salesInvoices.filter((inv) => {
+    if (selectedBranchFilter !== 'all' && inv.branchId && inv.branchId !== selectedBranchFilter) {
+      return false;
+    }
     const s = searchTerm.toLowerCase();
     return (
       inv.id.toString().includes(s) ||
@@ -112,6 +137,7 @@ export const SalesView: React.FC<SalesViewProps> = ({ appData, onUpdateData, sho
 
   const openCreateModal = (type: 'nagdi' | 'ajel' | 'return_nagdi' | 'return_ajel') => {
     setEditingInvoiceId(null);
+    setSelectedBranchId(appData.activeBranchId || appData.branches?.[0]?.id || 'main');
     setModalType(type);
     setSalesPricingType('cash');
     setSelectedItemId('');
@@ -151,6 +177,7 @@ export const SalesView: React.FC<SalesViewProps> = ({ appData, onUpdateData, sho
 
   const openEditModal = (inv: SaleInvoice) => {
     setEditingInvoiceId(inv.id);
+    setSelectedBranchId(inv.branchId || appData.activeBranchId || appData.branches?.[0]?.id || 'main');
     setModalType(inv.type);
     setSalesPricingType((inv.salesType as any) || (inv.type === 'ajel' ? 'wholesale' : 'cash'));
     setSelectedItemId('');
@@ -480,9 +507,14 @@ export const SalesView: React.FC<SalesViewProps> = ({ appData, onUpdateData, sho
 
     const isEditing = editingInvoiceId !== null;
     const invId = isEditing ? editingInvoiceId : appData.nextInvoiceNumber;
+    const oldInvForMeta = isEditing ? appData.salesInvoices.find((i) => i.id === editingInvoiceId) : null;
+    const nowIso = new Date().toISOString();
 
     const newInvoice: SaleInvoice = {
       id: invId,
+      clientSyncId: isEditing ? ((oldInvForMeta as any)?.clientSyncId || `sale_${invId}_${Date.now()}`) : `sale_${invId}_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+      companyId: appData.companyId || 'COMP-000001',
+      branchId: selectedBranchId || appData.activeBranchId || 'main',
       customerName: customerName.trim(),
       phone: phone.trim(),
       customerRepId: customerRepId || undefined,
@@ -509,8 +541,12 @@ export const SalesView: React.FC<SalesViewProps> = ({ appData, onUpdateData, sho
       salesType: salesPricingType,
       paidAmount: effectivePaid,
       remainingAmount: effectiveRemaining,
-      createdAt: new Date().toISOString(),
-      createdBy: appData.users.find((u) => u.id === appData.currentUser)?.name || 'مدير النظام',
+      status: 'approved',
+      createdAt: isEditing ? (oldInvForMeta?.createdAt || nowIso) : nowIso,
+      updatedAt: nowIso,
+      createdBy: isEditing ? (oldInvForMeta?.createdBy || currentUser?.name || 'مدير النظام') : (currentUser?.name || 'مدير النظام'),
+      createdByUserId: currentUser?.id,
+      createdByUserCode: currentUser?.code || 1,
     };
     (newInvoice as any).feeDescription = feeDesc.trim() || undefined;
 
@@ -749,11 +785,15 @@ export const SalesView: React.FC<SalesViewProps> = ({ appData, onUpdateData, sho
       updatedData.cashTransactions = (updatedData.cashTransactions || []).filter((tx) => tx.invoiceId !== id);
     }
 
+    if (!updatedData.deletedRecords) updatedData.deletedRecords = {};
+    updatedData.deletedRecords[`salesInvoices_${id}`] = Date.now();
+
     updatedData.salesInvoices = updatedData.salesInvoices.filter((i) => i.id !== id);
     onUpdateData(updatedData, {
-      action: 'delete',
+      action: 'delete_invoice',
       module: 'المبيعات',
       details: `حذف فاتورة مبيعات رقم #${id} واسترجاع الأصناف للمخزون`,
+      deletedId: id,
     });
     showToast(`تم حذف الفاتورة رقم #${id} وإعادة كميات الأصناف كاملة إلى رصيد المخزن بنجاح`, 'success');
   };
@@ -789,8 +829,15 @@ export const SalesView: React.FC<SalesViewProps> = ({ appData, onUpdateData, sho
       const cust = updatedData.customers.find((c) => c.name === inv.customerName);
       if (cust) cust.balance = (cust.balance || 0) - payAmount;
 
+      const nowIso = new Date().toISOString();
+      const currentUserObj = updatedData.users?.find((u) => u.id === updatedData.currentUser) || updatedData.users?.[0];
+      const newCashId = updatedData.nextCashId || 1;
+      updatedData.nextCashId = newCashId + 1;
+
       updatedData.cashTransactions.push({
-        id: updatedData.nextCashId++,
+        id: newCashId,
+        companyId: appData.companyId || 'COMP-000001',
+        branchId: inv.branchId || appData.activeBranchId || 'main',
         date: new Date().toISOString().split('T')[0],
         type: 'receive',
         method: payMethod,
@@ -798,9 +845,19 @@ export const SalesView: React.FC<SalesViewProps> = ({ appData, onUpdateData, sho
         note: `تسديد فاتورة مبيعات #${inv.id} - العميل: ${inv.customerName}`,
         customerName: inv.customerName,
         invoiceId: inv.id,
+        status: 'approved',
+        createdAt: nowIso,
+        updatedAt: nowIso,
+        createdBy: currentUserObj?.name || 'مستخدم النظام',
+        createdByUserId: currentUserObj?.id,
+        createdByUserCode: currentUserObj?.code || 1,
       });
 
-      onUpdateData(updatedData);
+      onUpdateData(updatedData, {
+        action: 'invoice_payment',
+        module: 'المبيعات والخزينة',
+        details: `تسديد مبلغ ${payAmount} ج.م من الفاتورة رقم #${inv.id}`,
+      });
       setActiveModal(null);
       showToast(`تم تسديد ${payAmount} ج.م للفاتورة #${inv.id} بنجاح`, 'success');
     }
@@ -934,31 +991,35 @@ export const SalesView: React.FC<SalesViewProps> = ({ appData, onUpdateData, sho
   return (
     <div className="space-y-4">
       {/* Action Bar */}
-      <div className="bg-white p-3 sm:p-4 rounded-2xl shadow-xs flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between">
+      <div className="bg-white p-3 sm:p-4 rounded-xl shadow-xs border border-slate-200/90 flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between">
         <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2">
           <button
             onClick={() => openCreateModal('nagdi')}
-            className="min-h-[42px] bg-[#2e7d32] hover:bg-[#1b5e20] active:bg-[#124116] text-white px-3 sm:px-4 py-2 rounded-xl text-xs md:text-sm font-bold transition cursor-pointer flex items-center justify-center gap-1 shadow-xs"
+            className="min-h-[40px] bg-emerald-700 hover:bg-emerald-800 active:bg-emerald-900 text-white px-3 sm:px-4 py-2 rounded-lg text-xs md:text-sm font-semibold transition cursor-pointer flex items-center justify-center gap-1.5 shadow-xs"
           >
-            ➕ بيع نقدي
+            <Plus className="w-4 h-4 shrink-0" />
+            <span>بيع نقدي</span>
           </button>
           <button
             onClick={() => openCreateModal('ajel')}
-            className="min-h-[42px] bg-[#f57f17] hover:bg-[#e65100] active:bg-[#b74100] text-white px-3 sm:px-4 py-2 rounded-xl text-xs md:text-sm font-bold transition cursor-pointer flex items-center justify-center gap-1 shadow-xs"
+            className="min-h-[40px] bg-amber-600 hover:bg-amber-700 active:bg-amber-800 text-white px-3 sm:px-4 py-2 rounded-lg text-xs md:text-sm font-semibold transition cursor-pointer flex items-center justify-center gap-1.5 shadow-xs"
           >
-            ➕ بيع أجل
+            <Plus className="w-4 h-4 shrink-0" />
+            <span>بيع أجل</span>
           </button>
           <button
             onClick={() => openCreateModal('return_nagdi')}
-            className="min-h-[42px] bg-[#c62828] hover:bg-[#b71c1c] active:bg-[#8e1414] text-white px-3 sm:px-4 py-2 rounded-xl text-xs md:text-sm font-bold transition cursor-pointer flex items-center justify-center gap-1 shadow-xs"
+            className="min-h-[40px] bg-rose-600 hover:bg-rose-700 active:bg-rose-800 text-white px-3 sm:px-4 py-2 rounded-lg text-xs md:text-sm font-semibold transition cursor-pointer flex items-center justify-center gap-1.5 shadow-xs"
           >
-            ↩ مرتجع نقدي
+            <RotateCcw className="w-4 h-4 shrink-0" />
+            <span>مرتجع نقدي</span>
           </button>
           <button
             onClick={() => openCreateModal('return_ajel')}
-            className="min-h-[42px] bg-slate-600 hover:bg-slate-700 active:bg-slate-800 text-white px-3 sm:px-4 py-2 rounded-xl text-xs md:text-sm font-bold transition cursor-pointer flex items-center justify-center gap-1 shadow-xs"
+            className="min-h-[40px] bg-slate-600 hover:bg-slate-700 active:bg-slate-800 text-white px-3 sm:px-4 py-2 rounded-lg text-xs md:text-sm font-semibold transition cursor-pointer flex items-center justify-center gap-1.5 shadow-xs"
           >
-            ↩ مرتجع أجل
+            <RotateCcw className="w-4 h-4 shrink-0" />
+            <span>مرتجع أجل</span>
           </button>
           <TableActionButtons
             onPrint={handlePrintSalesList}
@@ -967,14 +1028,31 @@ export const SalesView: React.FC<SalesViewProps> = ({ appData, onUpdateData, sho
             exportTitle="تصدير المبيعات إلى Excel"
           />
         </div>
-        <div className="w-full sm:w-auto min-w-[220px]">
-          <input
-            type="text"
-            placeholder="🔍 بحث برقم الفاتورة أو اسم العميل..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full min-h-[42px] px-3.5 py-2 border-2 border-gray-200 rounded-xl text-xs focus:border-[#1a237e] focus:outline-none"
-          />
+        <div className="w-full sm:w-auto flex flex-col sm:flex-row items-stretch sm:items-center gap-2 min-w-[220px]">
+          {appData.branches && appData.branches.length > 1 && (
+            <select
+              value={selectedBranchFilter}
+              onChange={(e) => setSelectedBranchFilter(e.target.value)}
+              className="min-h-[40px] px-3 py-2 border border-slate-300 bg-slate-50 text-slate-800 font-semibold rounded-lg text-xs focus:ring-2 focus:ring-blue-600/30 focus:border-blue-600 focus:outline-none cursor-pointer"
+            >
+              <option value="all">جميع الفروع ({appData.salesInvoices?.length || 0})</option>
+              {appData.branches.map((b) => (
+                <option key={b.id} value={b.id}>
+                  {b.name} ({appData.salesInvoices?.filter((i) => i.branchId === b.id).length || 0})
+                </option>
+              ))}
+            </select>
+          )}
+          <div className="relative w-full sm:w-64">
+            <Search className="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <input
+              type="text"
+              placeholder="بحث برقم الفاتورة أو العميل..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full min-h-[40px] pr-9 pl-3 py-2 border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-blue-600/30 focus:border-blue-600 focus:outline-none"
+            />
+          </div>
         </div>
       </div>
 
@@ -1043,70 +1121,88 @@ export const SalesView: React.FC<SalesViewProps> = ({ appData, onUpdateData, sho
                 </div>
 
                 {/* Status & Payment breakdown if Ajel */}
-                <div className="flex items-center justify-between text-xs bg-slate-50 p-2.5 rounded-xl">
+                <div className="flex items-center justify-between text-xs bg-slate-50 p-2.5 rounded-lg border border-slate-100">
                   <span
-                    className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${
+                    className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-bold border ${
                       isPaidFull
-                        ? 'bg-emerald-100 text-emerald-800'
+                        ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
                         : inv.paidAmount > 0
-                        ? 'bg-amber-100 text-amber-800'
-                        : 'bg-rose-100 text-rose-800'
+                        ? 'bg-amber-50 text-amber-700 border-amber-200'
+                        : 'bg-rose-50 text-rose-700 border-rose-200'
                     }`}
                   >
-                    {isPaidFull ? '✅ مدفوع بالكامل' : inv.paidAmount > 0 ? '⚠️ مدفوع جزئياً' : '❌ غير مدفوع'}
+                    {isPaidFull ? (
+                      <>
+                        <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                        <span>مدفوع بالكامل</span>
+                      </>
+                    ) : inv.paidAmount > 0 ? (
+                      <>
+                        <AlertCircle className="w-3 h-3 text-amber-600" />
+                        <span>مدفوع جزئياً</span>
+                      </>
+                    ) : (
+                      <span>غير مدفوع</span>
+                    )}
                   </span>
 
                   {inv.type === 'ajel' && (
-                    <div className="text-[11px] text-slate-600">
+                    <div className="text-[11px] text-slate-600 font-mono">
                       <span>المدفوع: <strong className="text-emerald-700">{inv.paidAmount.toFixed(0)}</strong></span>
-                      <span className="mx-1">/</span>
-                      <span>المتبقي: <strong className="text-red-700 font-bold">{(inv.total - inv.paidAmount).toFixed(0)}</strong></span>
+                      <span className="mx-1 font-sans text-slate-300">/</span>
+                      <span>المتبقي: <strong className="text-rose-700 font-bold">{(inv.total - inv.paidAmount).toFixed(0)}</strong></span>
                     </div>
                   )}
                 </div>
 
-                {/* Action Buttons with 44px min-height */}
+                {/* Action Buttons with 40px min-height */}
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 pt-1">
                   <button
                     onClick={() => {
                       setSelectedInvoice(inv);
                       setActiveModal('view');
                     }}
-                    className="min-h-[44px] bg-slate-100 hover:bg-slate-200 text-[#1a237e] font-bold rounded-xl text-xs transition flex items-center justify-center gap-1"
+                    className="min-h-[40px] bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold rounded-lg text-xs transition flex items-center justify-center gap-1.5 cursor-pointer"
                   >
-                    📋 عرض
+                    <Eye className="w-3.5 h-3.5 text-blue-700" />
+                    <span>عرض</span>
                   </button>
                   <button
                     onClick={() => openEditModal(inv)}
-                    className="min-h-[44px] bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold rounded-xl text-xs transition flex items-center justify-center gap-1"
+                    className="min-h-[40px] bg-blue-50 hover:bg-blue-100 text-blue-700 font-semibold rounded-lg text-xs transition flex items-center justify-center gap-1.5 cursor-pointer"
                   >
-                    ✏️ تعديل
+                    <Pencil className="w-3.5 h-3.5" />
+                    <span>تعديل</span>
                   </button>
                   <button
                     onClick={() => handlePrintInvoice(inv)}
-                    className="min-h-[44px] bg-teal-50 hover:bg-teal-100 text-teal-800 font-bold rounded-xl text-xs transition flex items-center justify-center gap-1"
+                    className="min-h-[40px] bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-lg text-xs transition flex items-center justify-center gap-1.5 cursor-pointer"
                   >
-                    🖨️ طباعة
+                    <Printer className="w-3.5 h-3.5 text-slate-600" />
+                    <span>طباعة</span>
                   </button>
                   <button
                     onClick={() => handleWhatsAppShare(inv)}
-                    className="min-h-[44px] bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-bold rounded-xl text-xs transition flex items-center justify-center gap-1"
+                    className="min-h-[40px] bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-semibold rounded-lg text-xs transition flex items-center justify-center gap-1.5 cursor-pointer"
                     title="إرسال عبر واتساب"
                   >
-                    💬 واتساب
+                    <MessageSquare className="w-3.5 h-3.5" />
+                    <span>واتساب</span>
                   </button>
                   <button
                     onClick={() => handleDeleteInvoice(inv.id)}
-                    className="min-h-[44px] bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold rounded-xl text-xs transition flex items-center justify-center gap-1"
+                    className="min-h-[40px] bg-rose-50 hover:bg-rose-100 text-rose-700 font-semibold rounded-lg text-xs transition flex items-center justify-center gap-1.5 cursor-pointer"
                   >
-                    🗑️ حذف
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>حذف</span>
                   </button>
                   {inv.type === 'ajel' && !isPaidFull && (
                     <button
                       onClick={() => handleOpenPayModal(inv)}
-                      className="min-h-[44px] bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs transition flex items-center justify-center gap-1 shadow-xs col-span-2 sm:col-span-4"
+                      className="min-h-[40px] bg-emerald-700 hover:bg-emerald-800 active:bg-emerald-900 text-white font-semibold rounded-lg text-xs transition flex items-center justify-center gap-1.5 shadow-xs col-span-2 sm:col-span-4 cursor-pointer"
                     >
-                      💰 تسديد دفعة من الفاتورة الآجلة
+                      <DollarSign className="w-4 h-4" />
+                      <span>تسديد دفعة من الفاتورة الآجلة</span>
                     </button>
                   )}
                 </div>
@@ -1117,23 +1213,24 @@ export const SalesView: React.FC<SalesViewProps> = ({ appData, onUpdateData, sho
       </div>
 
       {/* Invoices Desktop Table (>= md) */}
-      <div className="hidden md:block bg-white rounded-2xl p-4 shadow-xs overflow-x-auto">
+      <div className="hidden md:block bg-white rounded-xl shadow-xs border border-slate-200/90 overflow-x-auto">
         <table className="w-full text-right text-xs md:text-sm border-collapse">
           <thead>
-            <tr className="bg-[#1a237e] text-white">
-              <th className="p-3 rounded-r-lg">رقم الفاتورة</th>
-              <th className="p-3">العميل</th>
-              <th className="p-3">التاريخ</th>
-              <th className="p-3">القيمة (ج.م)</th>
-              <th className="p-3">النوع</th>
-              <th className="p-3">الحالة</th>
-              <th className="p-3 rounded-l-lg">الإجراءات</th>
+            <tr className="bg-[#0f2756] text-white">
+              <th className="p-3 font-semibold">رقم الفاتورة</th>
+              <th className="p-3 font-semibold">العميل</th>
+              {appData.branches && appData.branches.length > 1 && <th className="p-3 font-semibold">الفرع</th>}
+              <th className="p-3 font-semibold">التاريخ</th>
+              <th className="p-3 font-semibold">القيمة (ج.م)</th>
+              <th className="p-3 font-semibold">النوع</th>
+              <th className="p-3 font-semibold">الحالة</th>
+              <th className="p-3 font-semibold">الإجراءات</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-100">
+          <tbody className="divide-y divide-slate-100">
             {filteredInvoices.length === 0 ? (
               <tr>
-                <td colSpan={7} className="text-center py-8 text-gray-400">
+                <td colSpan={8} className="text-center py-8 text-slate-400">
                   لا توجد فواتير مبيعات مسجلة
                 </td>
               </tr>
@@ -1147,31 +1244,44 @@ export const SalesView: React.FC<SalesViewProps> = ({ appData, onUpdateData, sho
                         setSelectedInvoice(inv);
                         setActiveModal('view');
                       }}
-                      className="p-3 text-[#1a237e] font-bold cursor-pointer hover:underline"
+                      className="p-3 text-blue-700 font-bold font-mono cursor-pointer hover:underline"
                     >
                       #{inv.id}
                     </td>
                     <td className="p-3">
-                      <div className="font-bold text-gray-900">{inv.customerName}</div>
+                      <div className="font-bold text-slate-900">{inv.customerName}</div>
                       {inv.salesRep && (
-                        <div className="text-[11px] text-indigo-700 font-medium">👔 {inv.salesRep}</div>
+                        <div className="text-[11px] text-blue-700 font-medium flex items-center gap-1 mt-0.5">
+                          <UserIcon className="w-3 h-3 text-blue-500" />
+                          <span>مندوب: {inv.salesRep}</span>
+                        </div>
                       )}
                       {inv.notes && (
-                        <div className="text-[10px] text-gray-500 italic truncate max-w-[160px]" title={inv.notes}>
-                          📝 {inv.notes}
+                        <div className="text-[10px] text-slate-500 italic truncate max-w-[160px] flex items-center gap-1 mt-0.5" title={inv.notes}>
+                          <FileText className="w-3 h-3 text-slate-400 shrink-0" />
+                          <span>{inv.notes}</span>
                         </div>
                       )}
                     </td>
-                    <td className="p-3">{inv.date}</td>
-                    <td className="p-3 font-semibold">{inv.total.toFixed(2)}</td>
+                    {appData.branches && appData.branches.length > 1 && (
+                      <td className="p-3">
+                        <span className="text-[11px] font-bold px-2 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-100">
+                          {appData.branches.find((b) => b.id === inv.branchId)?.name || 'الفرع الرئيسي'}
+                        </span>
+                      </td>
+                    )}
+                    <td className="p-3 font-mono text-slate-600">{inv.date}</td>
+                    <td className="p-3 font-bold font-mono text-slate-900 tabular-nums">
+                      {(inv.total || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </td>
                     <td className="p-3">
                       <span
-                        className={`px-2 py-1 rounded-full text-[11px] font-bold ${
+                        className={`inline-block px-2 py-0.5 rounded text-[11px] font-bold border ${
                           inv.type === 'nagdi'
-                            ? 'bg-emerald-100 text-emerald-800'
+                            ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
                             : inv.type === 'ajel'
-                            ? 'bg-orange-100 text-orange-800'
-                            : 'bg-rose-100 text-rose-800'
+                            ? 'bg-amber-50 text-amber-700 border-amber-200'
+                            : 'bg-rose-50 text-rose-700 border-rose-200'
                         }`}
                       >
                         {inv.type === 'nagdi'
@@ -1185,65 +1295,77 @@ export const SalesView: React.FC<SalesViewProps> = ({ appData, onUpdateData, sho
                     </td>
                     <td className="p-3">
                       <span
-                        className={`px-2 py-1 rounded-full text-[11px] font-bold ${
+                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-bold border ${
                           isPaidFull
-                            ? 'bg-emerald-100 text-emerald-800'
+                            ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
                             : inv.paidAmount > 0
-                            ? 'bg-amber-100 text-amber-800'
-                            : 'bg-rose-100 text-rose-800'
+                            ? 'bg-amber-50 text-amber-700 border-amber-200'
+                            : 'bg-rose-50 text-rose-700 border-rose-200'
                         }`}
                       >
-                        {isPaidFull ? 'مكتمل' : inv.paidAmount > 0 ? 'مدفوع جزئياً' : 'غير مدفوع'}
+                        {isPaidFull ? (
+                          <>
+                            <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                            <span>مكتمل</span>
+                          </>
+                        ) : inv.paidAmount > 0 ? (
+                          <>
+                            <AlertCircle className="w-3 h-3 text-amber-600" />
+                            <span>مدفوع جزئياً</span>
+                          </>
+                        ) : (
+                          <span>غير مدفوع</span>
+                        )}
                       </span>
                     </td>
                     <td className="p-3">
-                      <div className="flex gap-1">
+                      <div className="flex items-center gap-1.5">
                         <button
                           onClick={() => {
                             setSelectedInvoice(inv);
                             setActiveModal('view');
                           }}
-                          className="bg-[#1a237e] text-white p-2 rounded-lg text-xs hover:bg-[#0d47a1] transition cursor-pointer"
+                          className="w-8 h-8 rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 flex items-center justify-center transition cursor-pointer border border-blue-200"
                           title="عرض الفاتورة"
                         >
-                          📋
+                          <Eye className="w-3.5 h-3.5" />
                         </button>
                         <button
                           onClick={() => handlePrintInvoice(inv)}
-                          className="bg-teal-700 text-white p-2 rounded-lg text-xs hover:bg-teal-800 transition cursor-pointer"
+                          className="w-8 h-8 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 flex items-center justify-center transition cursor-pointer border border-slate-200"
                           title="طباعة"
                         >
-                          🖨️
+                          <Printer className="w-3.5 h-3.5" />
                         </button>
                         <button
                           onClick={() => handleWhatsAppShare(inv)}
-                          className="bg-[#25D366] text-white p-2 rounded-lg text-xs hover:bg-[#128C7E] transition cursor-pointer font-bold"
-                          title="إرسال الفاتورة عبر واتساب"
+                          className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100 flex items-center justify-center transition cursor-pointer border border-emerald-200"
+                          title="إرسال عبر واتساب"
                         >
-                          💬
+                          <MessageSquare className="w-3.5 h-3.5" />
                         </button>
                         <button
                           onClick={() => openEditModal(inv)}
-                          className="bg-blue-600 text-white p-2 rounded-lg text-xs hover:bg-blue-700 transition cursor-pointer"
+                          className="w-8 h-8 rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 flex items-center justify-center transition cursor-pointer border border-blue-200"
                           title="تعديل الفاتورة"
                         >
-                          ✏️
+                          <Pencil className="w-3.5 h-3.5" />
                         </button>
                         {inv.type === 'ajel' && !isPaidFull && (
                           <button
                             onClick={() => handleOpenPayModal(inv)}
-                            className="bg-[#2e7d32] text-white p-2 rounded-lg text-xs hover:bg-[#1b5e20] transition cursor-pointer"
+                            className="w-8 h-8 rounded-lg bg-emerald-700 text-white hover:bg-emerald-800 flex items-center justify-center transition cursor-pointer"
                             title="تسديد المتبقي"
                           >
-                            💰
+                            <DollarSign className="w-3.5 h-3.5" />
                           </button>
                         )}
                         <button
                           onClick={() => handleDeleteInvoice(inv.id)}
-                          className="bg-[#c62828] text-white p-2 rounded-lg text-xs hover:bg-[#b71c1c] transition cursor-pointer"
+                          className="w-8 h-8 rounded-lg bg-rose-50 text-rose-700 hover:bg-rose-100 flex items-center justify-center transition cursor-pointer border border-rose-200"
                           title="حذف"
                         >
-                          🗑️
+                          <Trash2 className="w-3.5 h-3.5" />
                         </button>
                       </div>
                     </td>
@@ -1265,16 +1387,18 @@ export const SalesView: React.FC<SalesViewProps> = ({ appData, onUpdateData, sho
             <button
               type="button"
               onClick={handleSaveInvoice}
-              className="min-h-[46px] bg-[#2e7d32] hover:bg-[#1b5e20] active:bg-[#124116] text-white px-8 py-3 rounded-xl font-black text-sm cursor-pointer transition shadow-md flex items-center justify-center gap-2 flex-1 sm:flex-initial"
+              className="min-h-[42px] bg-emerald-700 hover:bg-emerald-800 active:bg-emerald-900 text-white px-6 py-2.5 rounded-lg font-semibold text-xs sm:text-sm cursor-pointer transition shadow-xs flex items-center justify-center gap-2 flex-1 sm:flex-initial"
             >
-              <span>💾</span> {editingInvoiceId !== null ? 'تحديث وحفظ فاتورة المبيعات' : 'حفظ فاتورة المبيعات وترحيل الحسابات'}
+              <Save className="w-4 h-4" />
+              <span>{editingInvoiceId !== null ? 'تحديث وحفظ فاتورة المبيعات' : 'حفظ فاتورة المبيعات وترحيل الحسابات'}</span>
             </button>
             <button
               type="button"
               onClick={() => setActiveModal(null)}
-              className="min-h-[46px] bg-gray-400 hover:bg-gray-500 active:bg-gray-600 text-white px-6 py-3 rounded-xl font-bold text-sm cursor-pointer transition flex-1 sm:flex-initial text-center"
+              className="min-h-[42px] bg-slate-200 hover:bg-slate-300 active:bg-slate-400 text-slate-800 px-5 py-2.5 rounded-lg font-semibold text-xs sm:text-sm cursor-pointer transition flex items-center justify-center gap-1.5 flex-1 sm:flex-initial text-center"
             >
-              إلغاء
+              <X className="w-4 h-4" />
+              <span>إلغاء</span>
             </button>
           </div>
         }
@@ -1295,6 +1419,24 @@ export const SalesView: React.FC<SalesViewProps> = ({ appData, onUpdateData, sho
           </div>
           {/* Header Controls */}
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+            {appData.branches && appData.branches.length > 1 && (
+              <div>
+                <label className="block font-bold mb-1 text-indigo-950 flex items-center gap-1">
+                  <span>🏢</span> الفرع المصدر
+                </label>
+                <select
+                  value={selectedBranchId}
+                  onChange={(e) => setSelectedBranchId(e.target.value)}
+                  className="w-full p-2 border-2 border-indigo-200 bg-indigo-50/40 rounded-xl focus:border-[#1a237e] focus:outline-none text-xs md:text-sm font-bold"
+                >
+                  {appData.branches.map((b) => (
+                    <option key={b.id} value={b.id}>
+                      {b.name} {b.isMain ? '(الرئيسي)' : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
             <div className="relative">
               <label className="block font-bold mb-1 text-gray-700">العميل</label>
               <input

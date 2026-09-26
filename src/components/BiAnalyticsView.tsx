@@ -1,5 +1,6 @@
 import React from 'react';
 import { AppData } from '../types';
+import { auditCompanyFinancialIntegrity } from '../utils/accounting';
 
 interface BiAnalyticsViewProps {
   appData: AppData;
@@ -7,22 +8,14 @@ interface BiAnalyticsViewProps {
 }
 
 export const BiAnalyticsView: React.FC<BiAnalyticsViewProps> = ({ appData, onNavigate }) => {
-  // BI KPIs
-  const totalSalesVal = appData.salesInvoices.reduce((s, inv) => s + (inv.total || 0), 0);
-  const totalPurchasesVal = appData.purchaseInvoices.reduce((s, inv) => s + (inv.total || 0), 0);
+  // Real GAAP Business Accounting Audit
+  const audit = auditCompanyFinancialIntegrity(appData);
 
-  // Profit Margins
-  const totalCost = appData.salesInvoices.reduce((sum, inv) => {
-    const invCost = inv.items.reduce((iSum, item) => {
-      const original = appData.items.find((i) => i.name === item.name);
-      return iSum + ((original?.purchasePrice || item.price * 0.75) * item.qty);
-    }, 0);
-    return sum + (inv.type.includes('return') ? -invCost : invCost);
-  }, 0);
-
-  const grossProfit = totalSalesVal - totalCost;
-  const marginPercentage = totalSalesVal > 0 ? (grossProfit / totalSalesVal) * 100 : 0;
-  const avgInvoiceValue = appData.salesInvoices.length > 0 ? totalSalesVal / appData.salesInvoices.length : 0;
+  const totalSalesVal = audit.netSales;
+  const totalPurchasesVal = audit.netPurchases;
+  const grossProfit = audit.grossProfit;
+  const marginPercentage = audit.grossMarginPct;
+  const avgInvoiceValue = appData.salesInvoices.length > 0 ? audit.grossSales / appData.salesInvoices.length : 0;
 
   // Inventory Intelligence: Low Stock / Reorder Alerts
   const reorderAlertItems = appData.items.filter((item) => {

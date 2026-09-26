@@ -160,23 +160,23 @@ export const PWAInstallButton: React.FC<Props> = ({ variant = 'header', classNam
           type="button"
           onClick={handleInstallClick}
           disabled={isInstalling}
-          className={`w-full flex items-center justify-between p-2.5 rounded-xl text-right transition cursor-pointer hover:bg-slate-100 group ${className}`}
+          className={`w-full flex items-center justify-between p-2.5 rounded-xl text-right transition cursor-pointer hover:bg-slate-100/90 active:scale-[0.98] group ${className}`}
         >
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-amber-500/15 border border-amber-400/40 flex items-center justify-center text-base shrink-0 group-hover:scale-105 transition-transform">
-              📲
+            <div className="w-8 h-8 rounded-lg bg-purple-500/15 border border-purple-400/40 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform text-purple-600">
+              <Smartphone className="w-4 h-4" />
             </div>
             <div className="flex flex-col text-right">
-              <span className="text-xs font-black text-slate-900 group-hover:text-indigo-900">
+              <span className="text-xs font-black text-slate-900 group-hover:text-purple-900">
                 تثبيت التطبيق على الجهاز
               </span>
               <span className="text-[10px] text-slate-500 font-medium">
-                تنزيل PWA بالشعار الرسمي على الهاتف أو الحاسوب
+                تشغيل المنظومة كتطبيق أصيل بشعار ركيزة
               </span>
             </div>
           </div>
-          <span className="text-[10px] bg-amber-400 text-slate-950 font-black px-2 py-0.5 rounded-md shadow-2xs">
-            تثبيت
+          <span className="text-[10px] bg-purple-100 text-purple-900 font-bold px-2 py-0.5 rounded-md shadow-2xs border border-purple-200">
+            تطبيق PWA
           </span>
         </button>
 

@@ -16,7 +16,7 @@ import {
   createNewTenantCompany,
   generateLicenseActivationCode,
 } from '../src/utils/multiTenantService';
-import { getDefaultData } from '../src/utils/storage';
+import { getDefaultData, mergeAppDataMonotonically } from '../src/utils/storage';
 import { sendOtpVerificationEmail } from './emailService';
 
 const DATA_DIR = path.join(process.cwd(), 'data');
@@ -1354,9 +1354,13 @@ export function saveTenantDataStrict(
     auditLogs = [newLog, ...auditLogs].slice(0, 500);
   }
 
+  const isExplicitDelete =
+    actionInfo?.action === 'delete' ||
+    actionInfo?.action === 'delete_invoice' ||
+    actionInfo?.action === 'delete_item';
+
   const merged: AppData = {
-    ...current,
-    ...updatedData,
+    ...mergeAppDataMonotonically(current, updatedData, isExplicitDelete, actionInfo),
     companyId,
     auditLogs,
   };

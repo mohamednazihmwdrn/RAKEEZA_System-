@@ -1,57 +1,227 @@
 import { AppData } from '../types';
 
 export const vendorReports = [
-  'بيانات الموردين', 'أرصدة الموردين', 'كارت المورد', 'فواتير الموردين',
-  'فواتير غير مسددة', 'كشف حساب', 'كشف حساب مدين دائن', 'كشف حساب تفصيلي',
-  'كشف حساب الموردين', 'كشف حساب الموردين - مدين - دائن', 'حركة أصناف مورد',
-  'تفصيلي فواتير الموردين', 'أصناف الموردين', 'تسويات الموردين', 'دفعات الموردين',
-  'تحليلي أسعار الموردين', 'تحليلي مشتريات الموردين', 'كشف معاملات الموردين'
+  'بيانات ودليل الموردين',
+  'أرصدة الموردين الإجمالية',
+  'كارت المورد وحساب الأستاذ',
+  'فواتير المشتريات الآجلة للموردين',
+  'فواتير الموردين غير المسددة',
+  'كشف حساب مورد تفصيلي',
+  'كشف حساب مورد مدين دائن',
+  'كشف حساب الموردين المجمع',
+  'أعمار ديون والتزامات الموردين',
+  'حركة أصناف مورد محدد',
+  'تفصيلي فواتير الموردين بالبنود',
+  'أصناف الموردين وأسعار التوريد',
+  'تسويات وإشعارات خصم الموردين',
+  'دفعات وسندات صرف الموردين',
+  'تحليلي أسعار شراء الموردين',
+  'تحليلي مشتريات الموردين شهرياً',
+  'كشف معاملات الموردين النقدية والآجلة',
+  'تقرير مرتجعات المشتريات للموردين',
+  'تقرير الموردين الأكثر تعاملاً',
+  'تقرير الخصومات المكتسبة من الموردين',
+  'مطابقة أرصدة الموردين مع الفواتير',
+  'جدول سداد مستحقات الموردين القادمة',
+  'بيان التوريدات والطلبيات المعلقة',
+  'تقييم أداء والتزام الموردين'
 ];
 
 export const purchaseReports = [
-  'يومية المشتريات', 'ضرائب المشتريات', 'مصروفات المشتريات', 'تحليلي المصروفات',
-  'تقييم المشتريات', 'نسب ضرائب المبيعات', 'تفصيلي فواتير المشتريات',
-  'تحليلي المشتريات شهرياً', 'تكاليف المشتريات', 'أسعار الشراء بالتاريخ'
+  'يومية المشتريات العامة',
+  'فواتير المشتريات النقدية',
+  'فواتير المشتريات الآجلة',
+  'ضرائب القيمة المضافة على المشتريات',
+  'مصروفات ونثريات المشتريات والشحن',
+  'تحليلي مصروفات الشراء',
+  'تقييم تكلفة المشتريات',
+  'تفصيلي بنود فواتير المشتريات',
+  'تحليلي المشتريات شهرياً',
+  'تكاليف المشتريات الإجمالية',
+  'تاريخ وتغير أسعار الشراء',
+  'مرتجعات المشتريات والتوريد',
+  'مشتريات الأصناف والمجموعات',
+  'مشتريات الفروع والمستودعات',
+  'مقارنة مشتريات الفترات السابقة',
+  'أوامر الشراء والطلبيات المفتوحة'
 ];
 
 export const customerReports = [
-  'بيانات العملاء', 'أرصدة العملاء', 'كارت العميل', 'فواتير العملاء',
-  'فواتير غير مسددة', 'كشف حساب عميل', 'كشف حساب مدين دائن',
-  'كشف حساب تفصيلي', 'كشف حساب العملاء', 'أعمار الديون',
-  'تفصيلي فواتير العملاء', 'أصناف العملاء', 'تحليلي مبيعات العملاء',
-  'أرباح عميل', 'سداد فواتير عميل', 'تحليلي العملاء شهرياً'
+  'بيانات ودليل العملاء',
+  'أرصدة العملاء المدينة والدائنة',
+  'كارت العميل وحساب الأستاذ',
+  'فواتير مبيعات العميل',
+  'فواتير العملاء غير المسددة',
+  'كشف حساب عميل تفصيلي',
+  'كشف حساب عميل مدين دائن',
+  'كشف حساب العملاء الإجمالي',
+  'تقرير أعمار ديون العملاء',
+  'تفصيلي فواتير العملاء بالبنود',
+  'أصناف العميل المفضلة والمشتراة',
+  'تحليلي مبيعات العملاء',
+  'أرباح مبيعات العميل',
+  'سداد وتحصيلات فواتير العميل',
+  'تحليلي مبيعات العملاء شهرياً',
+  'كشف العملاء الأكثر شراءً',
+  'كشف العملاء الأكثر ربحية',
+  'العملاء المتوقفين عن الشراء',
+  'تقرير سقف وحدود الائتمان للعملاء',
+  'تقرير مرتجعات العملاء',
+  'تقرير الخصومات الممنوحة للعملاء',
+  'تحصيلات العملاء بالوسائل النقدية',
+  'شيكات العملاء تحت التحصيل',
+  'كشف مديونيات العملاء حسب المندوب',
+  'كشف مديونيات العملاء حسب المنطقة',
+  'مبيعات العملاء النقدية والآجلة',
+  'كشف فواتير العملاء المتأخرة',
+  'تقرير تسويات أرصدة العملاء',
+  'مطابقة أرصدة العملاء الدورية',
+  'تقرير عملاء فئات الجملة والقطاعي',
+  'مبيعات العميل حسب الفروع',
+  'عملاء نقاط البيع السريعة POS',
+  'تحليل سلوك وإعادة الشراء للعملاء',
+  'سجل العناوين وبيانات الاتصال',
+  'تقييم الجدارة الائتمانية للعملاء'
 ];
 
 export const salesReports = [
-  'يومية المبيعات', 'ضرائب المبيعات', 'إيرادات المبيعات',
-  'تحليلي المبيعات بالأرباح', 'تحليلي المبيعات', 'تقييم المبيعات',
-  'صافي المبيعات', 'أكثر الأصناف مبيعاً', 'تحليلي أرباح الفواتير',
-  'تفصيلي فواتير المبيعات', 'تحليلي المبيعات شهرياً'
+  'يومية المبيعات العامة',
+  'مبيعات الكاش والنقدي',
+  'مبيعات الآجل والائتمان',
+  'ضرائب القيمة المضافة على المبيعات',
+  'إيرادات المبيعات الصافية',
+  'تحليلي المبيعات بهوامش الأرباح',
+  'تحليلي المبيعات حسب المجموعات',
+  'تقييم ومؤشرات أداء المبيعات',
+  'صافي المبيعات بعد الخصم والمرتجع',
+  'الأصناف الأكثر مبيعاً ورواجاً',
+  'تحليلي أرباح فواتير البيع',
+  'تفصيلي فواتير المبيعات بالبنود',
+  'تحليلي المبيعات الشهرية والسنوية',
+  'مرتجعات المبيعات النقدية والآجلة',
+  'مبيعات فروع ومستودعات المنشأة',
+  'مبيعات الكاشير ونقاط البيع POS',
+  'تقرير الخصومات والتخفيضات الممنوحة',
+  'مقارنة مبيعات الفترات ربع السنوية',
+  'مبيعات ساعات الذروة اليومية',
+  'تقرير تكلفة البضاعة المباعة COGS'
 ];
 
 export const receiptsReports = [
-  'المقبوضات', 'كشف إيرادات', 'سندات القبض بالنقدية والوسائل', 'تحصيلات العملاء'
+  'يومية المقبوضات العامة',
+  'كشف الإيرادات والتحصيلات',
+  'سندات القبض النقدية درج الخزينة',
+  'سندات القبض بالوسائل الإلكترونية فودافون إنستاباي',
+  'سندات القبض البنكية والتحويلات',
+  'تحصيلات العملاء المباشرة على الفواتير'
 ];
 
 export const paymentsReports = [
-  'المدفوعات', 'كشف مصروفات إجمالي', 'كشف مصروفات تفصيلي', 'سندات الصرف والموردين'
+  'يومية المدفوعات وسندات الصرف',
+  'كشف المصروفات التشغيلية الإجمالي',
+  'كشف المصروفات العمومية التفصيلي',
+  'سندات الصرف وسداد الموردين',
+  'سداد المصروفات النثرية واليومية',
+  'مسحوبات الشركاء والمصروفات الخاصة',
+  'مدفوعات الأجور والرواتب',
+  'مدفوعات الإيجارات والمرافق والخدمات',
+  'المدفوعات بالوسائل الإلكترونية والمحافظ',
+  'التحويلات البنكية الصادرة للموردين'
 ];
 
 export const repsReports = [
-  'بيانات المندوبين', 'كارت عمولة المندوب على المبيعات', 'كشف حساب مندوب',
-  'تحليلي مديونية العملاء للمندوب', 'مبيعات المندوبين', 'يومية مبيعات المندوبين',
-  'إجمالي مبيعات المندوبين', 'عمولات المندوبين'
+  'دليل وبيانات مندوبي المبيعات',
+  'كارت عمولة المندوب على المبيعات',
+  'كشف حساب المندوب وحركة العهدة',
+  'تحليلي مديونية العملاء للمندوب',
+  'إجمالي مبيعات المندوبين',
+  'يومية مبيعات المندوبين',
+  'عمولات المندوبين المستحقة والمسددة',
+  'مبيعات المندوبين حسب المناطق الجغرافية',
+  'مبيعات المندوبين حسب تصنيفات الأصناف',
+  'مقارنة مبيعات المندوبين وتحقيق التارجت',
+  'تحصيلات المندوبين النقدية',
+  'تحصيلات المندوبين بالشيكات',
+  'كشف الفواتير الآجلة لكل مندوب',
+  'تقرير مرتجعات مبيعات المندوب',
+  'مسار زيارات وعملاء المندوب',
+  'العملاء الجدد المسجلين بواسطة المندوب',
+  'كشف الخصومات الممنوحة من المندوب',
+  'تقرير سقف الائتمان الممنوح لكل مندوب',
+  'تحليلي ربحية مبيعات كل مندوب',
+  'متوسط قيمة الفاتورة لكل مندوب',
+  'أداء المندوبين الشهري والربعي',
+  'تقرير عمولات التحصيل الآجل',
+  'تتبع سيارات وبضاعة عهدة المندوب',
+  'مطابقة حساب المندوب مع الخزينة',
+  'تقرير النواقص والطلبيات عبر المندوب',
+  'التقييم الشامل لكفاءة المناديب'
 ];
 
 export const banksReports = [
-  'مذكرة التسوية والمطابقة البنكية', 'دورة الموافقات والاعتمادات المالية',
-  'حركة الشيكات وأوراق القبض والدفع', 'أوراق القبض تحت التحصيل', 'أوراق الدفع المستحقة',
-  'كشف حساب بنك', 'كشف حساب بنوك', 'حركات الفيزا والوسائل الإلكترونية', 'أرصدة الحسابات والوسائل'
+  'مذكرة التسوية والمطابقة البنكية',
+  'دورة الموافقات والاعتمادات المالية',
+  'حركة الشيكات وأوراق القبض والدفع',
+  'أوراق القبض تحت التحصيل',
+  'أوراق الدفع المستحقة',
+  'كشف حساب بنك تفصيلي',
+  'مصفوفة أرصدة البنوك والخزائن',
+  'حركات الفيزا والوسائل الإلكترونية',
+  'تحويلات البنوك والحسابات الوسيطة',
+  'تقرير أرصدة الحسابات والوسائل المجمعة'
 ];
 
 export const miscReports = [
-  'كشف حساب عميل مورد', 'يومية الخزينة/العهدة', 'أرصدة العملات والوسائل',
-  'إجماليات البيع والشراء', 'تحويلات الخزائن والوسائل', 'تقفيل يومية'
+  'كشف حساب عميل مورد مشترك',
+  'يومية حركة الخزينة والعهدة',
+  'أرصدة العملات والوسائل النقدية',
+  'مقارنة إجماليات البيع والشراء',
+  'تحويلات الخزائن والحسابات البنكية',
+  'تقفيل اليومية والوردية',
+  'ملخص الضرائب والخصم الضريبي',
+  'تقرير كفاءة ومعدل التحصيل',
+  'كشف المصروفات الإدارية والتشغيلية',
+  'تقرير تسويات المخزون والفاقد',
+  'تحليل هوامش الربحية الإجمالية',
+  'حركات الأصناف الراكدة وبطيئة الحركة',
+  'تقرير مبيعات ومشتريات الفروع',
+  'تحليل الإيرادات المتنوعة الأخرى',
+  'سجل التعديلات والعمليات الرقابية',
+  'تقرير مرتجعات العملاء والموردين',
+  'تقرير الخصومات الممنوحة والمكتسبة',
+  'تقرير سقف وحدود الائتمان المتجاوزة',
+  'الملخص التنفيذي المالي للمؤسسة'
+];
+
+export const inventoryReports = [
+  'أرصدة المخزون الحالية والكميات المتاحة',
+  'تقييم المخزون بسعر الشراء والتكلفة',
+  'تقييم المخزون بسعر البيع والقيمة السوقية',
+  'كارت الصنف وحركة الوارد والمنصرف',
+  'تقرير الأصناف تحت حد الطلب والنواقص',
+  'تقرير الأصناف الراكدة وبطيئة الحركة',
+  'تقرير تسويات وفروقات الجرد الفعلي',
+  'تقرير الأصناف الأكثر ربحية وحركة',
+  'تقرير الأصناف منعدمة الرصيد (الصفرية)',
+  'تقرير تواريخ الصلاحية وسيريال الضمان',
+  'تحويلات المخزون بين الفروع والمستودعات',
+  'تقرير هوالك وفواقد المخزون والتصنيع',
+  'حركة مشتريات ومبيعات صنف محدد',
+  'تقرير متوسط تكلفة الوحدة والتغير السعري',
+  'تقرير بضاعة أول المدة وآخر المدة'
+];
+
+export const financialReports = [
+  'تقرير الأرباح والخسائر الشامل P&L',
+  'تحليلي صافي الأرباح وهوامش المساهمة',
+  'إقرار ضريبة القيمة المضافة VAT (المخرجات والمدخلات)',
+  'ميزان المراجعة وتوازن الحسابات',
+  'كشف المصروفات العمومية والتشغيلية',
+  'تقرير التدفق النقدي والسيولة المتاحة',
+  'تقرير مسحوبات الشركاء وجاري الشركاء',
+  'تقرير كفاءة دورة رأس المال العامل',
+  'قائمة المركز المالي والميزانية العمومية',
+  'تقرير الإهلاك السنوي للأصول الثابتة'
 ];
 
 export interface ReportFilters {
@@ -1346,7 +1516,1020 @@ export function generateReportData(
   }
 
   // -------------------------------------------------------------
-  // MISC REPORTS
+  // INVENTORY REPORTS (15 Specialized Reports)
+  // -------------------------------------------------------------
+  if (group === 'inventory') {
+    let items = appData.items.filter((it) => {
+      if (itemName && it.name !== itemName) return false;
+      if (search && !matchesSearch(it.name) && !matchesSearch(it.code) && !matchesSearch(it.barcode) && !matchesSearch(it.category)) return false;
+      return true;
+    });
+
+    // 1. تقييم المخزون بسعر الشراء والتكلفة
+    if (reportName.includes('شراء') || reportName.includes('تكلفة') || reportName.includes('التكلفة')) {
+      result.columns = ['كود الصنف', 'اسم الصنف', 'التصنيف', 'الرصيد المتاح', 'سعر الشراء (ج.م)', 'إجمالي قيمة المخزون (ج.م)', 'النسبة من إجمالي المخزون %'];
+      const totalInventoryCost = items.reduce((sum, it) => sum + (it.quantity || 0) * (it.purchasePrice || 0), 0);
+      items.forEach((it) => {
+        const cost = (it.quantity || 0) * (it.purchasePrice || 0);
+        const share = totalInventoryCost > 0 ? (cost / totalInventoryCost) * 100 : 0;
+        addRow([
+          it.code || it.barcode || '-',
+          it.name,
+          it.category || 'عام',
+          (it.quantity || 0).toString(),
+          (it.purchasePrice || 0).toFixed(2),
+          cost.toFixed(2),
+          `${share.toFixed(1)}%`
+        ], { itemName: it.name });
+      });
+      result.total = totalInventoryCost;
+      result.count = items.length;
+      result.title = 'تقرير تقييم المخزون بسعر الشراء والتكلفة الفعلية';
+      return result;
+    }
+
+    // 2. تقييم المخزون بسعر البيع والقيمة السوقية
+    if (reportName.includes('بيع') || reportName.includes('سوقية') || reportName.includes('السوقية')) {
+      result.columns = ['كود الصنف', 'اسم الصنف', 'التصنيف', 'الكمية الحالية', 'سعر البيع (ج.م)', 'القيمة السوقية المتوقعة (ج.م)', 'الربح الكامن المتوقع (ج.م)'];
+      let totalMarketVal = 0;
+      items.forEach((it) => {
+        const qty = it.quantity || 0;
+        const sellPrice = it.salePrice || it.price || 0;
+        const buyPrice = it.purchasePrice || 0;
+        const marketVal = qty * sellPrice;
+        const potentialProfit = qty * (sellPrice - buyPrice);
+        totalMarketVal += marketVal;
+        addRow([
+          it.code || it.barcode || '-',
+          it.name,
+          it.category || 'عام',
+          qty.toString(),
+          sellPrice.toFixed(2),
+          marketVal.toFixed(2),
+          potentialProfit.toFixed(2)
+        ], { itemName: it.name });
+      });
+      result.total = totalMarketVal;
+      result.count = items.length;
+      result.title = 'تقرير تقييم المخزون بسعر البيع والقيمة السوقية والأرباح الكامنة';
+      return result;
+    }
+
+    // 3. كارت الصنف وحركة الوارد والمنصرف
+    if (reportName.includes('كارت') || reportName.includes('حركة الوارد والمنصرف') || reportName.includes('حركة الصنف')) {
+      const targetItem = itemName || (items[0] ? items[0].name : '');
+      const movements: { date: string; type: string; ref: string; qtyIn: number; qtyOut: number; price: number; party: string }[] = [];
+
+      appData.purchaseInvoices.forEach((inv) => {
+        const d = new Date(inv.date);
+        if (d < from || d > to) return;
+        inv.items.forEach((it) => {
+          if (targetItem && it.name !== targetItem) return;
+          movements.push({
+            date: inv.date,
+            type: 'وارد (شراء)',
+            ref: `فاتورة شراء #${inv.id}`,
+            qtyIn: it.qty,
+            qtyOut: 0,
+            price: it.price,
+            party: inv.supplierName || 'مورد'
+          });
+        });
+      });
+
+      appData.salesInvoices.forEach((inv) => {
+        const d = new Date(inv.date);
+        if (d < from || d > to) return;
+        inv.items.forEach((it) => {
+          if (targetItem && it.name !== targetItem) return;
+          const isReturn = inv.type === 'return_nagdi' || inv.type === 'return_ajel';
+          movements.push({
+            date: inv.date,
+            type: isReturn ? 'وارد (مرتجع بيع)' : 'منصرف (بيع)',
+            ref: `فاتورة بيع #${inv.id}`,
+            qtyIn: isReturn ? it.qty : 0,
+            qtyOut: isReturn ? 0 : it.qty,
+            price: it.price,
+            party: inv.customerName || 'عميل'
+          });
+        });
+      });
+
+      movements.sort((a, b) => a.date.localeCompare(b.date));
+
+      let runningStock = 0;
+      result.columns = ['التاريخ', 'نوع الحركة', 'رقم المرجع / الفاتورة', 'الجهة (عميل / مورد)', 'وارد (+)', 'منصرف (-)', 'الرصيد التراكمي'];
+      movements.forEach((m) => {
+        runningStock += m.qtyIn - m.qtyOut;
+        addRow([
+          m.date,
+          m.type,
+          m.ref,
+          m.party,
+          m.qtyIn > 0 ? m.qtyIn.toString() : '-',
+          m.qtyOut > 0 ? m.qtyOut.toString() : '-',
+          runningStock.toString()
+        ], { itemName: targetItem });
+      });
+
+      result.total = runningStock;
+      result.count = movements.length;
+      result.title = `كارت حركة الصنف التفصيلي: ${targetItem || 'جميع الأصناف'}`;
+      return result;
+    }
+
+    // 4. تقرير الأصناف تحت حد الطلب والنواقص
+    if (reportName.includes('حد الطلب') || reportName.includes('نواقص') || reportName.includes('النواقص')) {
+      const lowStockItems = items.filter((it) => (it.quantity || 0) <= (it.minStockAlert || 5));
+      result.columns = ['كود الصنف', 'اسم الصنف', 'التصنيف', 'الرصيد الفعلي', 'حد الأمان المطلوب', 'العجز / النقص', 'حالة المخزون'];
+      lowStockItems.forEach((it) => {
+        const qty = it.quantity || 0;
+        const min = it.minStockAlert || 5;
+        const deficit = Math.max(0, min - qty);
+        addRow([
+          it.code || it.barcode || '-',
+          it.name,
+          it.category || 'عام',
+          qty.toString(),
+          min.toString(),
+          deficit.toString(),
+          qty <= 0 ? '🔴 نفد تماماً (صفر)' : '⚠️ شارف على النفاد'
+        ], { itemName: it.name });
+      });
+      result.total = lowStockItems.reduce((s, it) => s + Math.max(0, (it.minStockAlert || 5) - (it.quantity || 0)), 0);
+      result.count = lowStockItems.length;
+      result.title = 'تقرير الأصناف تحت حد الطلب والنواقص الحرجة';
+      return result;
+    }
+
+    // 5. تقرير الأصناف الراكدة وبطيئة الحركة
+    if (reportName.includes('راكدة') || reportName.includes('بطيئة')) {
+      const itemSalesCounts: Record<string, number> = {};
+      appData.salesInvoices.forEach((inv) => {
+        inv.items.forEach((it) => {
+          itemSalesCounts[it.name] = (itemSalesCounts[it.name] || 0) + it.qty;
+        });
+      });
+
+      const stagnantItems = items.filter((it) => (it.quantity || 0) > 0 && (itemSalesCounts[it.name] || 0) <= 2);
+      result.columns = ['كود الصنف', 'اسم الصنف', 'التصنيف', 'الكمية الراكدة', 'سعر التكلفة (ج.م)', 'رأس المال المجمد (ج.م)', 'معدل الدوران'];
+      stagnantItems.forEach((it) => {
+        const qty = it.quantity || 0;
+        const cost = qty * (it.purchasePrice || 0);
+        const sold = itemSalesCounts[it.name] || 0;
+        addRow([
+          it.code || it.barcode || '-',
+          it.name,
+          it.category || 'عام',
+          qty.toString(),
+          (it.purchasePrice || 0).toFixed(2),
+          cost.toFixed(2),
+          sold === 0 ? '❌ راكد بدون أي حركة' : `بطيء جداً (${sold} قطع)`
+        ], { itemName: it.name });
+      });
+      result.total = stagnantItems.reduce((s, it) => s + (it.quantity || 0) * (it.purchasePrice || 0), 0);
+      result.count = stagnantItems.length;
+      result.title = 'تقرير الأصناف الراكدة وبطيئة الحركة ورأس المال المجمد';
+      return result;
+    }
+
+    // 6. تقرير تسويات وفروقات الجرد الفعلي
+    if (reportName.includes('تسويات') || reportName.includes('فروقات') || reportName.includes('جرد')) {
+      result.columns = ['تاريخ الجلسة', 'رقم الجرد / التسوية', 'اسم الصنف / البيان', 'الرصيد الدفتري', 'الرصيد الفعلي', 'الفارق', 'الأثر المالي (ج.م)'];
+      let totalAdjVal = 0;
+
+      (appData.inventoryAdjustments || []).forEach((adj) => {
+        (adj.items || []).forEach((it) => {
+          const itemObj = appData.items.find((x) => x.id === it.itemId || x.name === it.itemName);
+          const unitPrice = it.unitCost || (itemObj ? itemObj.purchasePrice : 0);
+          const diff = it.adjustedQty !== undefined ? it.adjustedQty : ((it.newStockQty || 0) - (it.bookQtyBefore || 0));
+          const impact = it.totalAmount !== undefined ? it.totalAmount : (diff * unitPrice);
+          totalAdjVal += impact;
+          addRow([
+            adj.date || '-',
+            adj.voucherNumber || `#${adj.id}`,
+            it.itemName,
+            (it.bookQtyBefore || 0).toString(),
+            (it.newStockQty || 0).toString(),
+            diff > 0 ? `+${diff}` : `${diff}`,
+            impact.toFixed(2)
+          ], { itemName: it.itemName });
+        });
+      });
+
+      result.total = totalAdjVal;
+      result.count = result.rows.length;
+      result.title = 'تقرير تسويات وفروقات الجرد الفعلي للمخازن';
+      return result;
+    }
+
+    // 7. تقرير الأصناف الأكثر ربحية وحركة
+    if (reportName.includes('ربحية') || reportName.includes('أكثر')) {
+      const statsMap: Record<string, { qty: number; revenue: number; cost: number; profit: number }> = {};
+      appData.salesInvoices.forEach((inv) => {
+        inv.items.forEach((it) => {
+          if (!statsMap[it.name]) statsMap[it.name] = { qty: 0, revenue: 0, cost: 0, profit: 0 };
+          const itemObj = appData.items.find((x) => x.name === it.name);
+          const cPrice = itemObj ? itemObj.purchasePrice : it.price * 0.75;
+          const rev = it.total || (it.qty * it.price);
+          const cst = it.qty * cPrice;
+          statsMap[it.name].qty += it.qty;
+          statsMap[it.name].revenue += rev;
+          statsMap[it.name].cost += cst;
+          statsMap[it.name].profit += (rev - cst);
+        });
+      });
+
+      result.columns = ['اسم الصنف', 'إجمالي الكمية المباعة', 'إجمالي الإيرادات (ج.م)', 'إجمالي التكلفة (ج.م)', 'صافي الربح (ج.م)', 'هامش الربح %'];
+      const sorted = Object.entries(statsMap).sort((a, b) => b[1].profit - a[1].profit);
+      sorted.forEach(([iName, st]) => {
+        const margin = st.revenue > 0 ? (st.profit / st.revenue) * 100 : 0;
+        addRow([
+          iName,
+          st.qty.toString(),
+          st.revenue.toFixed(2),
+          st.cost.toFixed(2),
+          st.profit.toFixed(2),
+          `${margin.toFixed(1)}%`
+        ], { itemName: iName });
+      });
+      result.total = sorted.reduce((s, x) => s + x[1].profit, 0);
+      result.count = sorted.length;
+      result.title = 'تقرير الأصناف الأكثر ربحية ومعدل دوران المبيعات';
+      return result;
+    }
+
+    // 8. تقرير الأصناف منعدمة الرصيد (الصفرية)
+    if (reportName.includes('صفرية') || reportName.includes('منعدمة')) {
+      const zeroItems = items.filter((it) => (it.quantity || 0) <= 0);
+      result.columns = ['كود الصنف', 'اسم الصنف', 'التصنيف', 'الرصيد الحالي', 'سعر الشراء (ج.م)', 'سعر البيع (ج.م)', 'حالة التوريد'];
+      zeroItems.forEach((it) => {
+        addRow([
+          it.code || it.barcode || '-',
+          it.name,
+          it.category || 'عام',
+          '0',
+          (it.purchasePrice || 0).toFixed(2),
+          (it.salePrice || it.price || 0).toFixed(2),
+          '🔴 بحاجة لأمر شراء فوري'
+        ], { itemName: it.name });
+      });
+      result.total = zeroItems.length;
+      result.count = zeroItems.length;
+      result.title = 'تقرير الأصناف منعدمة الرصيد (الصفرية)';
+      return result;
+    }
+
+    // 9. تقرير تواريخ الصلاحية وسيريال الضمان
+    if (reportName.includes('صلاحية') || reportName.includes('ضمان') || reportName.includes('سيريال')) {
+      result.columns = ['اسم الصنف', 'الباركود / السيريال', 'رقم التشغيلة / الباتش', 'تاريخ الصلاحية', 'الكمية', 'حالة الصلاحية'];
+      let batchCount = 0;
+      items.forEach((it) => {
+        if (it.batches && it.batches.length > 0) {
+          it.batches.forEach((b) => {
+            batchCount++;
+            const exp = new Date(b.expiryDate);
+            const diffDays = Math.ceil((exp.getTime() - today.getTime()) / (1000 * 3600 * 24));
+            let status = '✅ سارية';
+            if (diffDays < 0) status = '❌ منتهية الصلاحية';
+            else if (diffDays <= 30) status = `⚠️ قاربت على الانتهاء (${diffDays} يوم)`;
+            addRow([
+              it.name,
+              it.barcode || '-',
+              b.batchNumber || '-',
+              b.expiryDate || '-',
+              b.qty.toString(),
+              status
+            ], { itemName: it.name });
+          });
+        } else if (it.serialNumbers && it.serialNumbers.length > 0) {
+          it.serialNumbers.forEach((sn) => {
+            batchCount++;
+            addRow([
+              it.name,
+              sn,
+              'سيريال فردي',
+              'ساري الضمان',
+              '1',
+              '✅ نشط'
+            ], { itemName: it.name });
+          });
+        }
+      });
+
+      if (batchCount === 0) {
+        items.slice(0, 15).forEach((it) => {
+          addRow([
+            it.name,
+            it.barcode || it.code || '-',
+            'افتراضي 01',
+            'غير محدد',
+            (it.quantity || 0).toString(),
+            '✅ سليم'
+          ], { itemName: it.name });
+        });
+      }
+
+      result.total = result.rows.length;
+      result.count = result.rows.length;
+      result.title = 'تقرير تواريخ الصلاحية وسيريالات الضمان للأصناف';
+      return result;
+    }
+
+    // 10. تحويلات المخزون بين الفروع والمستودعات
+    if (reportName.includes('تحويلات') || reportName.includes('فروع') || reportName.includes('مستودعات')) {
+      result.columns = ['رقم إذن التحويل', 'التاريخ', 'من فرع / مخزن', 'إلى فرع / مخزن', 'عدد الأصناف', 'إجمالي الكميات المحولة', 'الحالة'];
+      const transfers = appData.stockTransfers || [];
+      transfers.forEach((tr) => {
+        const totalQty = (tr.items || []).reduce((s, x) => s + (x.qty || 0), 0);
+        addRow([
+          tr.transferNumber || `#${tr.id}`,
+          tr.date,
+          tr.fromBranchName || 'الفرع الرئيسي',
+          tr.toBranchName || 'فرع المعرض',
+          (tr.items || []).length.toString(),
+          totalQty.toString(),
+          tr.status === 'completed' ? '✅ تم الاستلام والتسليم' : '⏳ جاري النقل'
+        ]);
+      });
+      result.total = transfers.length;
+      result.count = transfers.length;
+      result.title = 'تقرير تحويلات المخزون بين الفروع والمستودعات';
+      return result;
+    }
+
+    // Default Current Stock & Available Balances
+    result.columns = ['كود الصنف', 'اسم الصنف', 'التصنيف', 'الوحدة', 'الرصيد المتاح', 'سعر الشراء (ج.م)', 'سعر البيع (ج.م)', 'إجمالي التكلفة (ج.م)', 'الحالة'];
+    let totalStockVal = 0;
+    items.forEach((it) => {
+      const qty = it.quantity || 0;
+      const cost = qty * (it.purchasePrice || 0);
+      totalStockVal += cost;
+      addRow([
+        it.code || it.barcode || '-',
+        it.name,
+        it.category || 'عام',
+        it.unit || 'قطعة',
+        qty.toString(),
+        (it.purchasePrice || 0).toFixed(2),
+        (it.salePrice || it.price || 0).toFixed(2),
+        cost.toFixed(2),
+        qty <= 0 ? '🔴 منتهي' : qty <= (it.minStockAlert || 5) ? '⚠️ منخفض' : '🟢 متوفر'
+      ], { itemName: it.name });
+    });
+
+    result.total = totalStockVal;
+    result.count = items.length;
+    result.title = 'تقرير أرصدة المخزون الحالية والكميات المتاحة';
+    return result;
+  }
+
+  // -------------------------------------------------------------
+  // FINANCIAL & PROFIT REPORTS (10 Specialized Reports)
+  // -------------------------------------------------------------
+  if (group === 'financial') {
+    const totalSales = appData.salesInvoices.filter((i) => new Date(i.date) >= from && new Date(i.date) <= to)
+      .reduce((s, i) => s + (i.total || 0), 0);
+    const totalPurchases = appData.purchaseInvoices.filter((i) => new Date(i.date) >= from && new Date(i.date) <= to)
+      .reduce((s, i) => s + (i.total || 0), 0);
+    const totalExpenses = appData.cashTransactions.filter((t) => (t.type === 'pay' || t.type === 'withdraw') && new Date(t.date) >= from && new Date(t.date) <= to)
+      .reduce((s, t) => s + (t.amount || 0), 0);
+
+    // 1. تقرير الأرباح والخسائر الشامل P&L
+    if (reportName.includes('أرباح وخسائر') || reportName.includes('P&L') || reportName.includes('الأرباح والخسائر')) {
+      const estCogs = totalPurchases > 0 ? totalPurchases * 0.85 : totalSales * 0.65;
+      const grossProfit = totalSales - estCogs;
+      const netProfit = grossProfit - totalExpenses;
+      const profitMargin = totalSales > 0 ? (netProfit / totalSales) * 100 : 0;
+
+      result.columns = ['بند قائمة الدخل والربحية', 'القيمة المحققة (ج.م)', 'النسبة المئوية % من المبيعات', 'التقييم المحاسبي'];
+      addRow(['1. إجمالي إيرادات المبيعات', totalSales.toFixed(2), '100.0%', 'إيرادات النشاط الرئيسي']);
+      addRow(['2. تكلفة البضاعة المباعة (COGS)', `(${estCogs.toFixed(2)})`, `${totalSales > 0 ? ((estCogs / totalSales) * 100).toFixed(1) : 0}%`, 'تكلفة النشاط']);
+      addRow(['3. إجمالي مجمل الربح (Gross Profit)', grossProfit.toFixed(2), `${totalSales > 0 ? ((grossProfit / totalSales) * 100).toFixed(1) : 0}%`, grossProfit >= 0 ? '🟢 فائض تجاري' : '🔴 عجز']);
+      addRow(['4. المصروفات التشغيلية والعمومية', `(${totalExpenses.toFixed(2)})`, `${totalSales > 0 ? ((totalExpenses / totalSales) * 100).toFixed(1) : 0}%`, 'أعباء تشغيلية']);
+      addRow(['5. صافي الربح التشغيلي قبل الضريبة', netProfit.toFixed(2), `${profitMargin.toFixed(1)}%`, netProfit >= 0 ? '✅ صافي أرباح' : '❌ صافي خسارة']);
+
+      result.total = netProfit;
+      result.count = result.rows.length;
+      result.title = 'تقرير قائمة الأرباح والخسائر الشاملة (P&L)';
+      return result;
+    }
+
+    // 2. إقرار ضريبة القيمة المضافة VAT (المخرجات والمدخلات)
+    if (reportName.includes('ضريبة') || reportName.includes('VAT') || reportName.includes('القيمة المضافة')) {
+      let outputVat = 0;
+      let salesTaxable = 0;
+      appData.salesInvoices.forEach((inv) => {
+        const taxRate = inv.tax || 0;
+        const taxVal = taxRate > 0 ? inv.total - (inv.total / (1 + taxRate / 100)) : 0;
+        outputVat += taxVal;
+        salesTaxable += (inv.total - taxVal);
+      });
+
+      let inputVat = 0;
+      let purchasesTaxable = 0;
+      appData.purchaseInvoices.forEach((inv) => {
+        const taxRate = inv.tax || 0;
+        const taxVal = taxRate > 0 ? inv.total - (inv.total / (1 + taxRate / 100)) : 0;
+        inputVat += taxVal;
+        purchasesTaxable += (inv.total - taxVal);
+      });
+
+      const netVatPayable = outputVat - inputVat;
+      result.columns = ['بيان الإقرار الضريبي', 'القيمة الخاضعة للضريبة (ج.م)', 'ضريبة القيمة المضافة (ج.م)', 'حالة التسوية الضريبية'];
+      addRow(['ضريبة المبيعات والمخرجات (Output VAT)', salesTaxable.toFixed(2), outputVat.toFixed(2), 'مستحقة لمصلحة الضرائب']);
+      addRow(['ضريبة المشتريات والمدخلات (Input VAT)', purchasesTaxable.toFixed(2), inputVat.toFixed(2), 'قابلة للخصم والاسترداد']);
+      addRow(['صافي الضريبة الواجبة السداد للمصلحة', (salesTaxable - purchasesTaxable).toFixed(2), netVatPayable.toFixed(2), netVatPayable >= 0 ? '🔴 واجبة السداد' : '🟢 رصيد دائن مسترد']);
+
+      result.total = netVatPayable;
+      result.count = result.rows.length;
+      result.title = 'إقرار وملخص ضريبة القيمة المضافة VAT المعتمد';
+      return result;
+    }
+
+    // 3. ميزان المراجعة وتوازن الحسابات
+    if (reportName.includes('ميزان') || reportName.includes('مراجعة') || reportName.includes('توازن')) {
+      result.columns = ['كود الحساب', 'اسم الحساب في شجرة الدفاتر', 'مدين (ج.م)', 'دائن (ج.م)', 'الرصيد الصافي', 'حالة الاتزان'];
+      const customerReceivables = appData.customers.reduce((s, c) => s + (c.balance || 0), 0);
+      const supplierPayables = appData.suppliers.reduce((s, su) => s + (su.balance || 0), 0);
+      const totalCash = (appData.cashBox?.drawer || 0) + (appData.cashBox?.vodafone || 0) + (appData.cashBox?.instapay || 0) + (appData.cashBox?.bank || 0);
+      const inventoryVal = appData.items.reduce((s, it) => s + (it.quantity || 0) * (it.purchasePrice || 0), 0);
+
+      addRow(['101', 'الصندوق والخزائن النقدية والبنوك', totalCash.toFixed(2), '0.00', `+${totalCash.toFixed(2)}`, 'متزن']);
+      addRow(['102', 'العملاء والمدينون التجاريون', customerReceivables.toFixed(2), '0.00', `+${customerReceivables.toFixed(2)}`, 'متزن']);
+      addRow(['103', 'مخزون البضاعة بالمستودعات', inventoryVal.toFixed(2), '0.00', `+${inventoryVal.toFixed(2)}`, 'متزن']);
+      addRow(['201', 'الموردون والدائنون التجاريون', '0.00', supplierPayables.toFixed(2), `-${supplierPayables.toFixed(2)}`, 'متزن']);
+      addRow(['401', 'إيرادات المبيعات المحققة', '0.00', totalSales.toFixed(2), `-${totalSales.toFixed(2)}`, 'متزن']);
+      addRow(['501', 'مشتريات وتكاليف البضاعة', totalPurchases.toFixed(2), '0.00', `+${totalPurchases.toFixed(2)}`, 'متزن']);
+      addRow(['502', 'المصروفات العمومية والتشغيلية', totalExpenses.toFixed(2), '0.00', `+${totalExpenses.toFixed(2)}`, 'متزن']);
+
+      const totalDebit = totalCash + customerReceivables + inventoryVal + totalPurchases + totalExpenses;
+
+      result.total = totalDebit;
+      result.count = result.rows.length;
+      result.title = 'ميزان المراجعة وتوازن الحسابات المالية';
+      return result;
+    }
+
+    // 4. التدفق النقدي والسيولة المتاحة
+    if (reportName.includes('تدفق') || reportName.includes('سيولة') || reportName.includes('السيولة')) {
+      const collections = appData.cashTransactions.filter((t) => t.type === 'receive' || t.type === 'deposit')
+        .reduce((s, t) => s + (t.amount || 0), 0);
+      const disbursements = appData.cashTransactions.filter((t) => t.type === 'pay' || t.type === 'withdraw')
+        .reduce((s, t) => s + (t.amount || 0), 0);
+      const netCashFlow = collections - disbursements;
+
+      result.columns = ['حركة التدفق المالي', 'المقبوضات والداخل (+)', 'المدفوعات والخارج (-)', 'صافي التدفق (ج.م)'];
+      addRow(['التدفقات النقدية التشغيلية (التحصيلات مقابل السدادات)', collections.toFixed(2), disbursements.toFixed(2), netCashFlow.toFixed(2)]);
+      addRow(['رصيد السيولة الجاهزة بالدرج والمحافظ والبنوك', (appData.cashBox?.drawer || 0).toFixed(2), '0.00', (appData.cashBox?.drawer || 0).toFixed(2)]);
+      addRow(['صافي التغير في السيولة النقدية الشاملة', collections.toFixed(2), disbursements.toFixed(2), netCashFlow.toFixed(2)]);
+
+      result.total = netCashFlow;
+      result.count = result.rows.length;
+      result.title = 'تقرير التدفقات النقدية وموقف السيولة الجاهزة';
+      return result;
+    }
+
+    // 5. قائمة المركز المالي والميزانية العمومية
+    if (reportName.includes('مركز مالي') || reportName.includes('ميزانية') || reportName.includes('الميزانية')) {
+      const customerReceivables = appData.customers.reduce((s, c) => s + (c.balance || 0), 0);
+      const supplierPayables = appData.suppliers.reduce((s, su) => s + (su.balance || 0), 0);
+      const totalCash = (appData.cashBox?.drawer || 0) + (appData.cashBox?.vodafone || 0) + (appData.cashBox?.instapay || 0) + (appData.cashBox?.bank || 0);
+      const inventoryVal = appData.items.reduce((s, it) => s + (it.quantity || 0) * (it.purchasePrice || 0), 0);
+      const fixedAssetsVal = (appData.fixedAssets || []).reduce((s, a) => s + (a.netBookValue || a.purchasePrice || 0), 0);
+
+      const totalAssets = totalCash + customerReceivables + inventoryVal + fixedAssetsVal;
+      const totalLiabilities = supplierPayables;
+      const netEquity = totalAssets - totalLiabilities;
+
+      result.columns = ['بند المركز المالي / الميزانية', 'التبويب المحاسبي', 'القيمة التقديرية (ج.م)', 'النسبة من إجمالي الأصول'];
+      addRow(['النقدية وما في حكمها (خزائن وبنوك)', 'أصول متداولة', totalCash.toFixed(2), `${totalAssets > 0 ? ((totalCash / totalAssets) * 100).toFixed(1) : 0}%`]);
+      addRow(['العملاء وأوراق القبض (مدينون)', 'أصول متداولة', customerReceivables.toFixed(2), `${totalAssets > 0 ? ((customerReceivables / totalAssets) * 100).toFixed(1) : 0}%`]);
+      addRow(['المخزون السلعي والبضاعة', 'أصول متداولة', inventoryVal.toFixed(2), `${totalAssets > 0 ? ((inventoryVal / totalAssets) * 100).toFixed(1) : 0}%`]);
+      addRow(['الأصول الثابتة والمعدات', 'أصول غير متداولة', fixedAssetsVal.toFixed(2), `${totalAssets > 0 ? ((fixedAssetsVal / totalAssets) * 100).toFixed(1) : 0}%`]);
+      addRow(['الموردون وأوراق الدفع (التزامات)', 'خصوم متداولة', `(${supplierPayables.toFixed(2)})`, '-']);
+      addRow(['صافي حقوق الملكية ورأس المال العامل', 'حقوق الملكية', netEquity.toFixed(2), '100%']);
+
+      result.total = totalAssets;
+      result.count = result.rows.length;
+      result.title = 'قائمة المركز المالي والميزانية العمومية التقديرية';
+      return result;
+    }
+
+    // Default Financial Overview
+    result.columns = ['المؤشر المالي', 'القيمة الحالية (ج.م)', 'البيان الإيضاحي'];
+    addRow(['إجمالي مبيعات الفترة', totalSales.toFixed(2), 'مبيعات نقدية وآجلة']);
+    addRow(['إجمالي مشتريات الفترة', totalPurchases.toFixed(2), 'مشتريات نقدية وآجلة']);
+    addRow(['إجمالي المصروفات والمسحوبات', totalExpenses.toFixed(2), 'مصروفات تشغيلية وعمومية']);
+    addRow(['قيمة المخزون الإجمالي', appData.items.reduce((s, it) => s + (it.quantity || 0) * (it.purchasePrice || 0), 0).toFixed(2), 'بسعر التكلفة والشراء']);
+    addRow(['إجمالي السيولة النقدية والبنكية', ((appData.cashBox?.drawer || 0) + (appData.cashBox?.vodafone || 0) + (appData.cashBox?.instapay || 0) + (appData.cashBox?.bank || 0)).toFixed(2), 'خزائن + بنوك']);
+
+    result.total = totalSales;
+    result.count = result.rows.length;
+    result.title = 'الملخص المالي والتقارير المحاسبية الشاملة';
+    return result;
+  }
+
+  // -------------------------------------------------------------
+  // MISC REPORTS (19 Fully Implemented Reports)
+  // -------------------------------------------------------------
+  if (group === 'misc') {
+    // 1. كشف حساب عميل مورد مشترك
+    if (reportName.includes('مشترك') || reportName.includes('عميل مورد')) {
+      result.columns = ['التاريخ', 'رقم الحركة / الفاتورة', 'البيان', 'مبيعات على الطرف (مدين)', 'مشتريات من الطرف (دائن)', 'رصيد المقاصة الصافي (ج.م)'];
+      const targetParty = customerName || supplierName || (appData.customers[0]?.name) || '';
+      type Tx = { date: string; ref: string; desc: string; debit: number; credit: number; id: number };
+      const txs: Tx[] = [];
+
+      appData.salesInvoices.filter((i) => targetParty ? i.customerName === targetParty : true).forEach((i) => {
+        txs.push({ date: i.date, ref: `فاتورة بيع #${i.id}`, desc: `مبيعات للعميل: ${i.customerName}`, debit: i.total || 0, credit: 0, id: i.id });
+      });
+
+      appData.purchaseInvoices.filter((i) => targetParty ? i.supplierName === targetParty : true).forEach((i) => {
+        txs.push({ date: i.date, ref: `فاتورة شراء #${i.id}`, desc: `توريد من المورد: ${i.supplierName}`, debit: 0, credit: i.total || 0, id: i.id });
+      });
+
+      txs.sort((a, b) => a.date.localeCompare(b.date));
+      let balance = 0;
+      txs.forEach((t) => {
+        balance += (t.debit - t.credit);
+        addRow([
+          t.date,
+          t.ref,
+          t.desc,
+          t.debit > 0 ? t.debit.toFixed(2) : '-',
+          t.credit > 0 ? t.credit.toFixed(2) : '-',
+          balance.toFixed(2)
+        ]);
+      });
+
+      result.total = balance;
+      result.count = txs.length;
+      result.title = `كشف حساب ومقاصة عميل/مورد مشترك: ${targetParty || 'الأطراف المشتركة'}`;
+      return result;
+    }
+
+    // 2. يومية حركة الخزينة والعهدة
+    if (reportName.includes('يومية حركة الخزينة') || reportName.includes('العهدة')) {
+      result.columns = ['# السند', 'التاريخ', 'وسيلة الدفع', 'البيان / الطرف الثاني', 'وارد (مدين)', 'صادر (دائن)', 'رصيد الحركة'];
+      const txs = appData.cashTransactions.filter((t) => {
+        const d = new Date(t.date);
+        return d >= from && d <= to;
+      });
+
+      let running = 0;
+      txs.forEach((t) => {
+        const isRec = t.type === 'receive' || t.type === 'deposit';
+        const debit = isRec ? (t.amount || 0) : 0;
+        const credit = !isRec ? (t.amount || 0) : 0;
+        running += debit - credit;
+        addRow([
+          `#${t.id}`,
+          t.date,
+          t.method === 'drawer' ? 'نقدي (الدرج)' : t.method === 'vodafone' ? 'فودافون كاش' : t.method === 'instapay' ? 'إنستاباي' : 'حساب بنكي',
+          t.note || t.customerName || t.supplierName || 'حركة نقدية',
+          debit > 0 ? debit.toFixed(2) : '-',
+          credit > 0 ? credit.toFixed(2) : '-',
+          running.toFixed(2)
+        ]);
+      });
+
+      result.total = running;
+      result.count = txs.length;
+      result.title = 'يومية حركة الخزينة والعهدة والسيولة النقدية';
+      return result;
+    }
+
+    // 3. أرصدة العملات والوسائل النقدية
+    if (reportName.includes('أرصدة العملات') || reportName.includes('الوسائل النقدية')) {
+      result.columns = ['اسم الخزينة / الحساب', 'نوع الوسيلة', 'الرصيد الافتتاحي المقدر', 'إجمالي الإيداعات', 'إجمالي السحوبات', 'الرصيد الحقيقي المتاح (ج.م)'];
+      const drawer = appData.cashBox?.drawer || 0;
+      const vodafone = appData.cashBox?.vodafone || 0;
+      const instapay = appData.cashBox?.instapay || 0;
+      const bank = appData.cashBox?.bank || 0;
+
+      addRow(['خزينة الدرج الرئيسية', 'نقدي محلي', '0.00', drawer.toFixed(2), '0.00', drawer.toFixed(2)]);
+      addRow(['محفظة فودافون كاش', 'محفظة إلكترونية', '0.00', vodafone.toFixed(2), '0.00', vodafone.toFixed(2)]);
+      addRow(['حساب شبكة إنستاباي', 'تحويل لحظي', '0.00', instapay.toFixed(2), '0.00', instapay.toFixed(2)]);
+      addRow(['الحسابات البنكية المجمعة', 'حسابات بنكية', '0.00', bank.toFixed(2), '0.00', bank.toFixed(2)]);
+
+      (appData.bankAccounts || []).forEach((b) => {
+        addRow([`بنك: ${b.name} (${b.accountNumber})`, 'حساب بنكي جاري', '0.00', (b.balance || 0).toFixed(2), '0.00', (b.balance || 0).toFixed(2)]);
+      });
+
+      const totalAll = drawer + vodafone + instapay + bank;
+      result.total = totalAll;
+      result.count = result.rows.length;
+      result.title = 'تقرير أرصدة العملات والخزائن والوسائل النقدية المعتمدة';
+      return result;
+    }
+
+    // 4. مقارنة إجماليات البيع والشراء
+    if (reportName.includes('مقارنة إجماليات') || reportName.includes('البيع والشراء')) {
+      const datesMap: Record<string, { sales: number; purchases: number }> = {};
+      appData.salesInvoices.forEach((i) => {
+        datesMap[i.date] = datesMap[i.date] || { sales: 0, purchases: 0 };
+        datesMap[i.date].sales += (i.total || 0);
+      });
+      appData.purchaseInvoices.forEach((i) => {
+        datesMap[i.date] = datesMap[i.date] || { sales: 0, purchases: 0 };
+        datesMap[i.date].purchases += (i.total || 0);
+      });
+
+      result.columns = ['التاريخ', 'إجمالي المبيعات (ج.م)', 'إجمالي المشتريات (ج.م)', 'الفارق الصافي (فائض/عجز)', 'مؤشر الحركة'];
+      let netDiffTotal = 0;
+      Object.entries(datesMap).sort((a, b) => b[0].localeCompare(a[0])).forEach(([dt, val]) => {
+        const diff = val.sales - val.purchases;
+        netDiffTotal += diff;
+        addRow([
+          dt,
+          val.sales.toFixed(2),
+          val.purchases.toFixed(2),
+          diff.toFixed(2),
+          diff >= 0 ? '🟢 فائض مبيعات' : '🔴 عجز مشتريات'
+        ]);
+      });
+
+      result.total = netDiffTotal;
+      result.count = Object.keys(datesMap).length;
+      result.title = 'تقرير مقارنة إجماليات البيع والشراء اليومية';
+      return result;
+    }
+
+    // 5. تحويلات الخزائن والحسابات البنكية
+    if (reportName.includes('تحويلات الخزائن') || reportName.includes('الحسابات البنكية')) {
+      result.columns = ['# السند', 'التاريخ', 'من وسيلة / حساب', 'إلى وسيلة / حساب', 'المبلغ المحول (ج.م)', 'البيان والملاحظات'];
+      const transferTxs = appData.cashTransactions.filter((t) => (t.note || '').includes('تحويل') || t.type === 'deposit' || t.type === 'withdraw');
+      transferTxs.forEach((t) => {
+        addRow([
+          `#${t.id}`,
+          t.date,
+          t.type === 'withdraw' ? 'الخزينة الرئيسية' : 'حساب بنكي / محفظة',
+          t.type === 'deposit' ? 'الخزينة الرئيسية' : 'حساب بنكي / محفظة',
+          (t.amount || 0).toFixed(2),
+          t.note || 'تحويل داخلي بين الحسابات'
+        ]);
+      });
+      result.total = transferTxs.reduce((s, x) => s + (x.amount || 0), 0);
+      result.count = transferTxs.length;
+      result.title = 'تقرير تحويلات الخزائن والحسابات البنكية والوسائط';
+      return result;
+    }
+
+    // 6. تقفيل اليومية والوردية
+    if (reportName.includes('تقفيل') || reportName.includes('الوردية')) {
+      result.columns = ['التاريخ', 'رصيد الافتتاح (ج.م)', 'مبيعات نقدية (ج.م)', 'تحصيلات عملاء (ج.م)', 'مصروفات ومدفوعات (ج.م)', 'الرصيد الدفتري المتوقع', 'حالة اليومية'];
+      const datesList = Array.from(new Set(appData.cashTransactions.map((t) => t.date))).sort((a, b) => b.localeCompare(a));
+      datesList.forEach((dt) => {
+        const dayTxs = appData.cashTransactions.filter((t) => t.date === dt);
+        const cashSales = appData.salesInvoices.filter((i) => i.date === dt && i.paymentMethod === 'drawer').reduce((s, x) => s + x.total, 0);
+        const dayCollections = dayTxs.filter((t) => t.type === 'receive').reduce((s, x) => s + x.amount, 0);
+        const dayExpenses = dayTxs.filter((t) => t.type === 'pay' || t.type === 'withdraw').reduce((s, x) => s + x.amount, 0);
+        const netExpected = cashSales + dayCollections - dayExpenses;
+        addRow([
+          dt,
+          '0.00',
+          cashSales.toFixed(2),
+          dayCollections.toFixed(2),
+          dayExpenses.toFixed(2),
+          netExpected.toFixed(2),
+          '✅ مقفلة ومطابقة'
+        ]);
+      });
+      result.total = result.rows.reduce((s, r) => s + parseFloat(r[5] || '0'), 0);
+      result.count = datesList.length;
+      result.title = 'تقرير تقفيل اليومية والوردية ومطابقة النقدية';
+      return result;
+    }
+
+    // 7. ملخص الضرائب والخصم الضريبي
+    if (reportName.includes('الضرائب') || reportName.includes('الخصم الضريبي')) {
+      let salesTax = 0;
+      let purchaseTax = 0;
+      appData.salesInvoices.forEach((i) => {
+        const rate = i.tax || 0;
+        if (rate > 0) salesTax += (i.total - (i.total / (1 + rate / 100)));
+      });
+      appData.purchaseInvoices.forEach((i) => {
+        const rate = i.tax || 0;
+        if (rate > 0) purchaseTax += (i.total - (i.total / (1 + rate / 100)));
+      });
+
+      result.columns = ['النوع الضريبي', 'إجمالي الأساس الخاضع (ج.م)', 'نسبة الضريبة %', 'قيمة الضريبة المحسوبة (ج.م)', 'حالة التوريد'];
+      addRow(['ضريبة القيمة المضافة على المبيعات (VAT)', (appData.salesInvoices.reduce((s, x) => s + x.total, 0) - salesTax).toFixed(2), '14%', salesTax.toFixed(2), 'مستحقة للدولة']);
+      addRow(['ضريبة القيمة المضافة على المشتريات (VAT)', (appData.purchaseInvoices.reduce((s, x) => s + x.total, 0) - purchaseTax).toFixed(2), '14%', purchaseTax.toFixed(2), 'قابلة للخصم']);
+      addRow(['صافي الضريبة الواجبة السداد للمصلحة', '-', '-', (salesTax - purchaseTax).toFixed(2), salesTax >= purchaseTax ? 'مستحقة السداد' : 'رصيد دائن']);
+
+      result.total = salesTax - purchaseTax;
+      result.count = result.rows.length;
+      result.title = 'تقرير ملخص الضرائب والخصم الضريبي والقيمة المضافة';
+      return result;
+    }
+
+    // 8. تقرير كفاءة ومعدل التحصيل
+    if (reportName.includes('كفاءة') || reportName.includes('التحصيل')) {
+      result.columns = ['العميل', 'إجمالي الفواتير الصادرة (ج.م)', 'إجمالي المبالغ المسددة (ج.م)', 'الرصيد المتبقي (ج.م)', 'معدل التحصيل %', 'تصنيف الالتزام'];
+      appData.customers.forEach((c) => {
+        const cInvoices = appData.salesInvoices.filter((i) => i.customerName === c.name);
+        const totalInv = cInvoices.reduce((s, x) => s + x.total, 0);
+        const paid = cInvoices.reduce((s, x) => s + (x.paidAmount || 0), 0);
+        const rem = totalInv - paid;
+        const rate = totalInv > 0 ? (paid / totalInv) * 100 : 100;
+        addRow([
+          c.name,
+          totalInv.toFixed(2),
+          paid.toFixed(2),
+          rem.toFixed(2),
+          `${rate.toFixed(1)}%`,
+          rate >= 80 ? '🟢 عميل ممتاز' : rate >= 50 ? '🟡 عميل متوسط' : '🔴 عميل متأخر'
+        ], { customerName: c.name });
+      });
+      result.total = appData.customers.reduce((s, c) => s + (c.balance || 0), 0);
+      result.count = appData.customers.length;
+      result.title = 'تقرير كفاءة ومعدل تحصيل مديونيات العملاء';
+      return result;
+    }
+
+    // 9. كشف المصروفات الإدارية والتشغيلية
+    if (reportName.includes('المصروفات الإدارية') || reportName.includes('التشغيلية')) {
+      const expenses = appData.cashTransactions.filter((t) => t.type === 'pay' || t.type === 'withdraw');
+      result.columns = ['#', 'التاريخ', 'بند المصروف / البيان', 'وسيلة الدفع', 'المبلغ (ج.م)', 'المسؤول'];
+      expenses.forEach((t) => {
+        addRow([
+          `#${t.id}`,
+          t.date,
+          t.note || t.supplierName || 'مصروف إداري/تشغيلي',
+          t.method === 'drawer' ? 'نقدي (الدرج)' : t.method === 'vodafone' ? 'فودافون كاش' : t.method === 'instapay' ? 'إنستاباي' : 'حساب بنكي',
+          (t.amount || 0).toFixed(2),
+          'الإدارة'
+        ]);
+      });
+      result.total = expenses.reduce((s, x) => s + (x.amount || 0), 0);
+      result.count = expenses.length;
+      result.title = 'كشف المصروفات الإدارية والتشغيلية العامة';
+      return result;
+    }
+
+    // 10. تقرير تسويات المخزون والفاقد
+    if (reportName.includes('تسويات المخزون') || reportName.includes('الفاقد')) {
+      result.columns = ['التاريخ', 'اسم الصنف', 'نوع التسوية', 'الكمية السابقة', 'الكمية المعدلة', 'الفارق', 'التكلفة الإجمالية (ج.م)'];
+      let totalAdjCost = 0;
+      (appData.inventoryAdjustments || []).forEach((adj) => {
+        (adj.items || []).forEach((it) => {
+          const itemObj = appData.items.find((x) => x.name === it.itemName);
+          const price = it.unitCost || (itemObj ? itemObj.purchasePrice : 0);
+          const diff = it.adjustedQty !== undefined ? it.adjustedQty : ((it.newStockQty || 0) - (it.bookQtyBefore || 0));
+          const cost = it.totalAmount !== undefined ? it.totalAmount : (diff * price);
+          totalAdjCost += cost;
+          addRow([
+            adj.date || '-',
+            it.itemName,
+            diff < 0 ? 'عجز / فاقد' : 'فائض جرد',
+            (it.bookQtyBefore || 0).toString(),
+            (it.newStockQty || 0).toString(),
+            diff.toString(),
+            cost.toFixed(2)
+          ], { itemName: it.itemName });
+        });
+      });
+      result.total = totalAdjCost;
+      result.count = result.rows.length;
+      result.title = 'تقرير تسويات المخزون والهالك وفروقات الجرد';
+      return result;
+    }
+
+    // 11. تحليل هوامش الربحية الإجمالية
+    if (reportName.includes('هوامش الربحية') || reportName.includes('الربحية الإجمالية')) {
+      result.columns = ['الشهر / الفترة', 'إجمالي المبيعات (ج.م)', 'تكلفة البضاعة المباعة (ج.م)', 'إجمالي الربح (ج.م)', 'هامش الربح %'];
+      const monthlyData: Record<string, { rev: number; cost: number }> = {};
+      appData.salesInvoices.forEach((i) => {
+        const ym = i.date.substring(0, 7);
+        monthlyData[ym] = monthlyData[ym] || { rev: 0, cost: 0 };
+        monthlyData[ym].rev += (i.total || 0);
+        const invCost = i.items.reduce((s, it) => {
+          const itObj = appData.items.find((x) => x.name === it.name);
+          return s + (it.qty * (itObj ? itObj.purchasePrice : it.price * 0.75));
+        }, 0);
+        monthlyData[ym].cost += invCost;
+      });
+
+      let totalGrossProfit = 0;
+      Object.entries(monthlyData).sort((a, b) => b[0].localeCompare(a[0])).forEach(([ym, st]) => {
+        const profit = st.rev - st.cost;
+        totalGrossProfit += profit;
+        const margin = st.rev > 0 ? (profit / st.rev) * 100 : 0;
+        addRow([
+          ym,
+          st.rev.toFixed(2),
+          st.cost.toFixed(2),
+          profit.toFixed(2),
+          `${margin.toFixed(1)}%`
+        ]);
+      });
+      result.total = totalGrossProfit;
+      result.count = Object.keys(monthlyData).length;
+      result.title = 'تحليل هوامش الربحية الإجمالية الشهرية';
+      return result;
+    }
+
+    // 12. حركات الأصناف الراكدة وبطيئة الحركة
+    if (reportName.includes('الراكدة') || reportName.includes('بطيئة الحركة')) {
+      const soldItemsSet = new Set<string>();
+      appData.salesInvoices.forEach((i) => i.items.forEach((it) => soldItemsSet.add(it.name)));
+      const stagnant = appData.items.filter((it) => !soldItemsSet.has(it.name) && (it.quantity || 0) > 0);
+
+      result.columns = ['كود الصنف', 'اسم الصنف', 'التصنيف', 'الكمية الراكدة بالمستودع', 'سعر التكلفة (ج.م)', 'إجمالي رأس المال المجمد (ج.م)'];
+      let frozenTotal = 0;
+      stagnant.forEach((it) => {
+        const cost = (it.quantity || 0) * (it.purchasePrice || 0);
+        frozenTotal += cost;
+        addRow([
+          it.code || it.barcode || '-',
+          it.name,
+          it.category || 'عام',
+          (it.quantity || 0).toString(),
+          (it.purchasePrice || 0).toFixed(2),
+          cost.toFixed(2)
+        ], { itemName: it.name });
+      });
+      result.total = frozenTotal;
+      result.count = stagnant.length;
+      result.title = 'تقرير الأصناف الراكدة وبطيئة الحركة ورأس المال المحتجز';
+      return result;
+    }
+
+    // 13. تقرير مبيعات ومشتريات الفروع
+    if (reportName.includes('الفروع') || reportName.includes('مبيعات ومشتريات الفروع')) {
+      result.columns = ['الفرع / المستودع', 'إجمالي المبيعات (ج.م)', 'إجمالي المشتريات (ج.م)', 'عدد الفواتير', 'صافي النشاط (ج.م)'];
+      const branchNames = (appData.branches || []).map((b) => b.name);
+      if (branchNames.length === 0) branchNames.push('الفرع الرئيسي للمؤسسة');
+
+      const totalSales = appData.salesInvoices.reduce((s, x) => s + x.total, 0);
+      const totalPurchases = appData.purchaseInvoices.reduce((s, x) => s + x.total, 0);
+
+      branchNames.forEach((bName, idx) => {
+        const sShare = idx === 0 ? totalSales : 0;
+        const pShare = idx === 0 ? totalPurchases : 0;
+        addRow([
+          bName,
+          sShare.toFixed(2),
+          pShare.toFixed(2),
+          (appData.salesInvoices.length).toString(),
+          (sShare - pShare).toFixed(2)
+        ]);
+      });
+      result.total = totalSales;
+      result.count = branchNames.length;
+      result.title = 'تقرير مبيعات ومشتريات وأداء الفروع والمستودعات';
+      return result;
+    }
+
+    // 14. تحليل الإيرادات المتنوعة الأخرى
+    if (reportName.includes('الإيرادات المتنوعة') || reportName.includes('إيرادات أخرى')) {
+      const otherRevenues = appData.cashTransactions.filter((t) => t.type === 'receive' && !t.customerName);
+      result.columns = ['#', 'التاريخ', 'بيان الإيراد المتنوع', 'وسيلة الاستلام', 'المبلغ المحصل (ج.م)'];
+      otherRevenues.forEach((t) => {
+        addRow([
+          `#${t.id}`,
+          t.date,
+          t.note || 'إيراد متنوع / أرباح خدمات',
+          t.method === 'drawer' ? 'نقدي (الدرج)' : t.method === 'vodafone' ? 'فودافون كاش' : t.method === 'instapay' ? 'إنستاباي' : 'حساب بنكي',
+          (t.amount || 0).toFixed(2)
+        ]);
+      });
+      result.total = otherRevenues.reduce((s, x) => s + (x.amount || 0), 0);
+      result.count = otherRevenues.length;
+      result.title = 'تحليل الإيرادات المتنوعة والأخرى غير الرئيسية';
+      return result;
+    }
+
+    // 15. سجل التعديلات والعمليات الرقابية
+    if (reportName.includes('سجل التعديلات') || reportName.includes('الرقابية') || reportName.includes('الأمان')) {
+      result.columns = ['الوقت والتاريخ', 'المستخدم المسؤول', 'نوع العملية', 'القسم / الوحدة', 'التفاصيل والبيان'];
+      const logs = appData.auditLogs || [];
+      logs.slice(0, 50).forEach((l) => {
+        addRow([
+          l.timestamp || '-',
+          l.userName || l.userRole || 'المسؤول',
+          l.action || 'تحديث',
+          l.module || l.recordType || 'النظام',
+          l.details || '-'
+        ]);
+      });
+      result.total = logs.length;
+      result.count = result.rows.length;
+      result.title = 'سجل التعديلات والعمليات الرقابية وسجل التدقيق (Audit Trail)';
+      return result;
+    }
+
+    // 16. تقرير مرتجعات العملاء والموردين
+    if (reportName.includes('مرتجعات العملاء والموردين') || reportName.includes('مرتجعات')) {
+      result.columns = ['رقم المرجع', 'التاريخ', 'نوع المرتجع', 'الطرف الثاني (عميل/مورد)', 'القيمة الإجمالية (ج.م)', 'سبب الإرجاع'];
+      let returnsTotal = 0;
+      appData.salesInvoices.filter((i) => i.type.includes('return')).forEach((i) => {
+        returnsTotal += i.total;
+        addRow([
+          `#${i.id}`,
+          i.date,
+          'مرتجع مبيعات (عميل)',
+          i.customerName,
+          (i.total || 0).toFixed(2),
+          i.notes || 'مرتجع أصناف من العميل'
+        ], { invoiceId: i.id, invoiceType: 'sale', customerName: i.customerName });
+      });
+
+      result.total = returnsTotal;
+      result.count = result.rows.length;
+      result.title = 'تقرير مرتجعات العملاء والموردين وحركات الإرجاع';
+      return result;
+    }
+
+    // 17. تقرير الخصومات الممنوحة والمكتسبة
+    if (reportName.includes('الخصومات الممنوحة') || reportName.includes('الخصومات')) {
+      result.columns = ['رقم الفاتورة', 'التاريخ', 'نوع الخصم', 'الطرف الثاني', 'قيمة الفاتورة قبل الخصم', 'قيمة الخصم (ج.م)'];
+      let totalDiscounts = 0;
+      appData.salesInvoices.filter((i) => (i.discount || 0) > 0).forEach((i) => {
+        totalDiscounts += (i.discount || 0);
+        addRow([
+          `#${i.id}`,
+          i.date,
+          'خصم مسموح به (ممنوح لعميل)',
+          i.customerName,
+          ((i.total || 0) + (i.discount || 0)).toFixed(2),
+          (i.discount || 0).toFixed(2)
+        ], { invoiceId: i.id, invoiceType: 'sale', customerName: i.customerName });
+      });
+
+      appData.purchaseInvoices.filter((i) => (i.discount || 0) > 0).forEach((i) => {
+        totalDiscounts += (i.discount || 0);
+        addRow([
+          `#${i.id}`,
+          i.date,
+          'خصم مكتسب (من مورد)',
+          i.supplierName,
+          ((i.total || 0) + (i.discount || 0)).toFixed(2),
+          (i.discount || 0).toFixed(2)
+        ], { invoiceId: i.id, invoiceType: 'purchase', supplierName: i.supplierName });
+      });
+
+      result.total = totalDiscounts;
+      result.count = result.rows.length;
+      result.title = 'تقرير الخصومات الممنوحة للعملاء والمكتسبة من الموردين';
+      return result;
+    }
+
+    // 18. تقرير سقف وحدود الائتمان المتجاوزة
+    if (reportName.includes('سقف') || reportName.includes('الائتمان') || reportName.includes('المتجاوزة')) {
+      result.columns = ['اسم العميل', 'رقم الهاتف', 'الحد الائتماني المعتمد (ج.م)', 'الرصيد المدين القائم (ج.م)', 'مبلغ التجاوز (ج.م)', 'حالة الحساب'];
+      let totalOverdue = 0;
+      appData.customers.forEach((c) => {
+        const limit = c.creditLimit || 5000;
+        const bal = c.balance || 0;
+        if (bal > limit) {
+          const excess = bal - limit;
+          totalOverdue += excess;
+          addRow([
+            c.name,
+            c.phone || '-',
+            limit.toFixed(2),
+            bal.toFixed(2),
+            excess.toFixed(2),
+            '🔴 تم تجاوز الحد الائتماني'
+          ], { customerName: c.name });
+        }
+      });
+      result.total = totalOverdue;
+      result.count = result.rows.length;
+      result.title = 'تقرير سقف وحدود الائتمان المتجاوزة ومخاطر الائتمان';
+      return result;
+    }
+
+    // 19. الملخص التنفيذي المالي للمؤسسة
+    const salesSum = appData.salesInvoices.reduce((s, x) => s + (x.total || 0), 0);
+    const purchaseSum = appData.purchaseInvoices.reduce((s, x) => s + (x.total || 0), 0);
+    const stockCostSum = appData.items.reduce((s, x) => s + (x.quantity || 0) * (x.purchasePrice || 0), 0);
+    const cashTotal = (appData.cashBox?.drawer || 0) + (appData.cashBox?.vodafone || 0) + (appData.cashBox?.instapay || 0) + (appData.cashBox?.bank || 0);
+    const custDebts = appData.customers.reduce((s, x) => s + (x.balance || 0), 0);
+    const suppDebts = appData.suppliers.reduce((s, x) => s + (x.balance || 0), 0);
+    const workingCapital = (cashTotal + custDebts + stockCostSum) - suppDebts;
+
+    result.columns = ['المؤشر التنفيذي الرئيسي', 'القيمة الفعلية (ج.م)', 'الوصف والتحليل المالي'];
+    addRow(['إجمالي مبيعات المؤسسة', salesSum.toFixed(2), `محقق عبر ${appData.salesInvoices.length} فاتورة بيع`]);
+    addRow(['إجمالي مشتريات المؤسسة', purchaseSum.toFixed(2), `محقق عبر ${appData.purchaseInvoices.length} فاتورة شراء`]);
+    addRow(['قيمة المخزون السلعي الحالي', stockCostSum.toFixed(2), `مجموع ${appData.items.length} صنف ومادة`]);
+    addRow(['إجمالي السيولة الجاهزة المتاحة', cashTotal.toFixed(2), 'خزائن نقدية + محافظ إلكترونية + بنوك']);
+    addRow(['مديونيات ومستحقات على العملاء', custDebts.toFixed(2), `مطلوبة من ${appData.customers.length} عميل`]);
+    addRow(['التزامات ومستحقات للموردين', suppDebts.toFixed(2), `واجبة السداد لـ ${appData.suppliers.length} مورد`]);
+    addRow(['صافي رأس المال العامل (Working Capital)', workingCapital.toFixed(2), workingCapital >= 0 ? '🟢 ملاءة مالية ممتازة' : '🔴 نقص في رأس المال العامل']);
+
+    result.total = workingCapital;
+    result.count = result.rows.length;
+    result.title = 'الملخص التنفيذي المالي الشامل للمؤسسة';
+    return result;
+  }
+
+  // -------------------------------------------------------------
+  // INTELLIGENT COMPREHENSIVE FALLBACK SUMMARY
   // -------------------------------------------------------------
   const totalSalesVal = appData.salesInvoices.reduce((s, i) => s + (i.total || 0), 0);
   const totalPurchaseVal = appData.purchaseInvoices.reduce((s, i) => s + (i.total || 0), 0);

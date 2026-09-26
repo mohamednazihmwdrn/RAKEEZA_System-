@@ -141,7 +141,7 @@ export const MonthlyProfitReportView: React.FC<MonthlyProfitReportViewProps> = (
         monthsMap[monthKey] = { invoicesCount: 0, grossSales: 0, salesReturns: 0, cogs: 0, expenses: 0 };
       }
 
-      const isReturn = (inv as any).isReturn === true || (inv as any).type === 'return';
+      const isReturn = (inv as any).isReturn === true || String(inv.type || '').startsWith('return');
       const invTotal = Math.abs(Number((inv as any).grandTotal ?? (inv as any).finalTotal ?? inv.total ?? 0));
 
       if (isReturn) {

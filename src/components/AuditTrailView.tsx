@@ -279,6 +279,11 @@ export const AuditTrailView: React.FC<AuditTrailViewProps> = ({
                 {/* Event Details */}
                 <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-100 text-xs text-slate-700 font-medium leading-relaxed break-words">
                   {log.details}
+                  {log.changesSummary && (
+                    <div className="mt-1.5 text-[11px] bg-amber-50 text-amber-900 border border-amber-200/80 px-2.5 py-1 rounded-lg font-medium">
+                      🔍 <strong>الفروقات الرقابية:</strong> {log.changesSummary}
+                    </div>
+                  )}
                 </div>
               </div>
             );
@@ -338,7 +343,14 @@ export const AuditTrailView: React.FC<AuditTrailViewProps> = ({
                       <td className="p-3 font-semibold text-indigo-900 whitespace-nowrap">
                         📂 {log.module}
                       </td>
-                      <td className="p-3 text-slate-700 font-medium">{log.details}</td>
+                      <td className="p-3 text-slate-700 font-medium">
+                        <div>{log.details}</div>
+                        {log.changesSummary && (
+                          <div className="mt-1 text-[11px] bg-amber-50 text-amber-900 border border-amber-200/80 px-2 py-0.5 rounded-md font-medium inline-block">
+                            🔍 <strong>الفروقات الرقابية:</strong> {log.changesSummary}
+                          </div>
+                        )}
+                      </td>
                     </tr>
                   );
                 })

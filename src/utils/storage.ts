@@ -51,8 +51,10 @@ export const defaultAccountsTree: AccountNode[] = [
   { code: '5206', name: 'عجز وفاقد تسوية المخزون (Inventory Shrinkage & Loss)', type: 'expense', parentCode: '5', isParent: false, debit: 0, credit: 0, balance: 0 },
 ];
 
-export function getDefaultData(): AppData {
+export function getDefaultData(companyId?: string): AppData {
+  const targetCompanyId = companyId || 'COMP-000001';
   return {
+    companyId: targetCompanyId,
     settings: {
       companyName: 'منظومة RAKEEZA للمحاسبة',
       address: 'القاهرة، مصر',
@@ -72,19 +74,43 @@ export function getDefaultData(): AppData {
       {
         id: 'user1',
         code: 1,
-        name: 'Mohamed Nazih (المدير)',
+        name: 'Mohamed Nazih (المدير العام)',
         username: 'admin',
-        password: 'admin123',
+        password: '123',
         role: 'admin',
         permissions: { all: true },
       },
       {
+        id: 'user4',
+        code: 4,
+        name: 'محمود سعيد (المحاسب المالي)',
+        username: 'accountant',
+        password: '123',
+        role: 'accountant',
+      },
+      {
+        id: 'user5',
+        code: 5,
+        name: 'خالد عبد الرحمن (مسؤول المبيعات)',
+        username: 'sales',
+        password: '123',
+        role: 'sales_rep',
+      },
+      {
+        id: 'user3',
+        code: 3,
+        name: 'سامح إبراهيم (مسؤول المخازن)',
+        username: 'warehouse',
+        password: '123',
+        role: 'warehouse_keeper',
+      },
+      {
         id: 'user2',
         code: 2,
-        name: 'كاشير الفرع الرئيسي',
+        name: 'أحمد محمود (كاشير الفرع الرئيسي)',
         username: 'cashier',
         password: '123',
-        role: 'user',
+        role: 'cashier',
         permissions: { sales: true, pos: true, quotes: true },
       },
     ],
@@ -194,7 +220,6 @@ export function getDefaultData(): AppData {
     },
 
     // 8. Multi-Tenant Enterprise Architecture
-    companyId: 'COMP-000001',
     companies: DEFAULT_COMPANIES,
     companyCatalogConfigs: {
       'COMP-000001': {
@@ -234,22 +259,43 @@ export function getDefaultData(): AppData {
         companyId: 'COMP-000002',
       },
     },
+    deletedRecords: {},
   };
 }
 
 export function loadAppData(companyId?: string): AppData {
   try {
     let raw: string | null = null;
-    if (companyId) {
-      raw = localStorage.getItem(`rakeeza_tenant_data_${companyId}`);
-    }
-    if (!raw) {
+    const cleanCompId = companyId?.trim().toUpperCase();
+
+    if (cleanCompId) {
+      raw = localStorage.getItem(`rakeeza_tenant_data_${cleanCompId}`);
+      // Fallback check on standard legacy key only if matching company
+      if (!raw) {
+        const legacyRaw = localStorage.getItem(STORAGE_KEY);
+        if (legacyRaw) {
+          try {
+            const parsedLegacy = JSON.parse(legacyRaw);
+            const legacyCompId = (parsedLegacy.companyId || parsedLegacy.settings?.companyId || '').trim().toUpperCase();
+            if (legacyCompId === cleanCompId) {
+              raw = legacyRaw;
+            }
+          } catch {}
+        }
+      }
+    } else {
       raw = localStorage.getItem(STORAGE_KEY);
     }
-    const defaults = getDefaultData();
+    const defaults = getDefaultData(cleanCompId);
     const storedLogo = localStorage.getItem('company_logo_base64');
     if (raw) {
       const parsed = JSON.parse(raw);
+      // Strict Cross-Company Guard: Discard if company ID mismatch!
+      const parsedCompId = (parsed.companyId || parsed.settings?.companyId || '').trim().toUpperCase();
+      if (cleanCompId && parsedCompId && parsedCompId !== cleanCompId) {
+        console.warn(`[RAKEEZA Guard] Prevented cross-tenant data leak. Requested: ${cleanCompId}, found: ${parsedCompId}`);
+        return defaults;
+      }
       const mergedSettings = { ...defaults.settings, ...(parsed.settings || {}) };
       if (storedLogo && !mergedSettings.logo && !mergedSettings.logoUrl) {
         mergedSettings.logo = storedLogo;
@@ -339,6 +385,20 @@ export function loadAppData(companyId?: string): AppData {
         loaded.companyCatalogConfigs['COMP-000001'].storeName = 'شركة ركيزة للمحاسبة والتجارة RAKEEZA';
       }
 
+      // Ensure all standard test roles (accountant, sales, warehouse) exist in users list
+      if (loaded.users && Array.isArray(loaded.users)) {
+        for (const defaultUser of defaults.users) {
+          const exists = loaded.users.some(
+            (u) => u.username?.toLowerCase() === defaultUser.username?.toLowerCase() || (defaultUser.role !== 'admin' && u.role === defaultUser.role)
+          );
+          if (!exists) {
+            loaded.users.push(defaultUser);
+          }
+        }
+      } else {
+        loaded.users = defaults.users;
+      }
+
       // Ensure all items have a companyId, and seed company 2 items if not present
       if (loaded.items && loaded.items.length > 0) {
         const hasCompany2 = loaded.items.some((it) => it.companyId === 'COMP-000002');
@@ -361,12 +421,12 @@ export function loadAppData(companyId?: string): AppData {
 }
 
 export function saveAppData(data: AppData, companyId?: string): void {
-  const targetCompId = companyId || data.companyId || 'COMP-000001';
+  const targetCompId = (companyId || data.companyId || 'COMP-000001').trim().toUpperCase();
+  data.companyId = targetCompId;
   try {
+    localStorage.setItem(`rakeeza_tenant_data_${targetCompId}`, JSON.stringify(data));
+    // Also update current active storage key
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-    if (targetCompId) {
-      localStorage.setItem(`rakeeza_tenant_data_${targetCompId}`, JSON.stringify(data));
-    }
   } catch (e: any) {
     console.warn('Storage quota warning, performing defensive cache pruning:', e);
     try {
@@ -379,21 +439,18 @@ export function saveAppData(data: AppData, companyId?: string): void {
       const trimmedAudit = (data.auditLogs || []).slice(0, 100);
       const prunedData: AppData = {
         ...data,
+        companyId: targetCompId,
         backups: trimmedBackups,
         auditLogs: trimmedAudit,
       };
+      localStorage.setItem(`rakeeza_tenant_data_${targetCompId}`, JSON.stringify(prunedData));
       localStorage.setItem(STORAGE_KEY, JSON.stringify(prunedData));
-      if (targetCompId) {
-        localStorage.setItem(`rakeeza_tenant_data_${targetCompId}`, JSON.stringify(prunedData));
-      }
     } catch (e2) {
       try {
         // Fallback: save without backups to guarantee core ERP state is always persisted
-        const strippedData = { ...data, backups: [], auditLogs: (data.auditLogs || []).slice(0, 50) };
+        const strippedData = { ...data, companyId: targetCompId, backups: [], auditLogs: (data.auditLogs || []).slice(0, 50) };
+        localStorage.setItem(`rakeeza_tenant_data_${targetCompId}`, JSON.stringify(strippedData));
         localStorage.setItem(STORAGE_KEY, JSON.stringify(strippedData));
-        if (targetCompId) {
-          localStorage.setItem(`rakeeza_tenant_data_${targetCompId}`, JSON.stringify(strippedData));
-        }
       } catch (e3) {
         console.error('Critical localStorage save failure:', e3);
       }
@@ -402,88 +459,319 @@ export function saveAppData(data: AppData, companyId?: string): void {
 }
 
 /**
- * 🛡️ Monotonic Record Merge:
+ * 🛡️ Detects whether an action represents an intentional record deletion
+ */
+export function isDeleteAction(action?: string, details?: string): boolean {
+  if (!action && !details) return false;
+  const combined = `${action || ''} ${details || ''}`.toLowerCase();
+  return (
+    combined.includes('delete') ||
+    combined.includes('حذف') ||
+    combined.includes('remove') ||
+    combined.includes('destroy') ||
+    combined.includes('إلغاء')
+  );
+}
+
+/**
+ * 🔍 Maps an action or details string to its target AppData collection name
+ */
+export function getTargetCollectionForAction(action?: string, details?: string): string | null {
+  const combined = `${action || ''} ${details || ''}`.toLowerCase();
+  if (combined.includes('purchase') || combined.includes('مشتريات') || combined.includes('شراء')) {
+    return 'purchaseInvoices';
+  }
+  if (combined.includes('invoice') || combined.includes('فاتورة مبيعات') || combined.includes('مبيعات')) {
+    return 'salesInvoices';
+  }
+  if (combined.includes('customer') || combined.includes('عميل') || combined.includes('العملاء')) {
+    return 'customers';
+  }
+  if (combined.includes('supplier') || combined.includes('مورد') || combined.includes('الموردين')) {
+    return 'suppliers';
+  }
+  if (combined.includes('cash') || combined.includes('نقد') || combined.includes('سند') || combined.includes('خزينة') || combined.includes('قبض') || combined.includes('صرف')) {
+    return 'cashTransactions';
+  }
+  if (combined.includes('item') || combined.includes('صنف') || combined.includes('أصناف') || combined.includes('منتج')) {
+    return 'items';
+  }
+  if (combined.includes('user') || combined.includes('مستخدم')) {
+    return 'users';
+  }
+  if (combined.includes('branch') || combined.includes('فرع')) {
+    return 'branches';
+  }
+  if (combined.includes('quotation') || combined.includes('عرض أسعار')) {
+    return 'quotations';
+  }
+  if (combined.includes('cheque') || combined.includes('شيك')) {
+    return 'cheques';
+  }
+  return null;
+}
+
+/**
+ * 🛡️ Monotonic Record Merge with Tombstones:
  * Ensures that newly created or existing records in `prevList` are NEVER wiped out by an
  * empty or partial `incomingList` array, unless an explicit deletion was intended.
+ * Deletions tracked by tombstones (`deletedRecords`) are pruned definitively everywhere.
  * If both arrays contain a record with the same ID, incoming (latest) is preferred.
- * Any ID in `prevList` that is not in `incomingList` is safely retained!
+ */
+/**
+ * 🔑 Extract deduplication / idempotency key for any business entity
+ */
+function getItemDeduplicationKey(item: any, collectionKey?: string): string | null {
+  if (!item || typeof item !== 'object') return null;
+  // 1. Explicit idempotency / client sync key
+  if (item.clientSyncId) return `sync_${String(item.clientSyncId).trim()}`;
+  if (item.syncId) return `sync_${String(item.syncId).trim()}`;
+  if (item.idempotencyKey) return `sync_${String(item.idempotencyKey).trim()}`;
+  if (item.uuid) return `uuid_${String(item.uuid).trim()}`;
+
+  // 2. Collection-specific semantic deduplication
+  if (collectionKey === 'customers') {
+    const cleanPhone = String(item.phone || '').trim().replace(/[^0-9]/g, '');
+    const cleanName = String(item.name || '').trim().toLowerCase();
+    if (cleanPhone && cleanName) return `cust_${cleanName}_${cleanPhone}`;
+  } else if (collectionKey === 'suppliers') {
+    const cleanPhone = String(item.phone || '').trim().replace(/[^0-9]/g, '');
+    const cleanName = String(item.name || '').trim().toLowerCase();
+    if (cleanPhone && cleanName) return `supp_${cleanName}_${cleanPhone}`;
+  } else if (collectionKey === 'items') {
+    if (item.barcode && String(item.barcode).trim()) {
+      return `item_barcode_${String(item.barcode).trim()}`;
+    }
+    if (item.code && String(item.code).trim()) {
+      return `item_code_${String(item.code).trim().toLowerCase()}`;
+    }
+    if (item.name && String(item.name).trim()) {
+      return `item_name_${String(item.name).trim().toLowerCase()}`;
+    }
+  } else if (collectionKey === 'cashTransactions') {
+    if (item.invoiceId && item.amount && item.type) {
+      return `cash_inv_${item.invoiceId}_${item.type}_${item.amount}_${item.method || ''}`;
+    }
+    if (item.date && item.type && item.amount && (item.customerName || item.supplierName || item.note)) {
+      return `cash_tx_${item.date}_${item.type}_${item.amount}_${String(item.customerName || item.supplierName || '').trim()}_${String(item.note || '').trim()}`;
+    }
+  } else if (collectionKey === 'salesInvoices' || collectionKey === 'purchaseInvoices') {
+    const party = String(item.customerName || item.supplierName || '').trim().toLowerCase();
+    const date = String(item.date || '').trim();
+    const total = Number(item.total || 0).toFixed(2);
+    const count = Array.isArray(item.items) ? item.items.length : 0;
+    if (party && date && total) {
+      return `inv_sig_${date}_${party}_${total}_${count}`;
+    }
+  }
+  return null;
+}
+
+/**
+ * 🛡️ Monotonic Record Merge with Tombstones & Duplication Protection:
+ * - Offline synchronization never creates duplicate invoices, customers, payments, products, or records.
+ * - Stable IDs / Idempotency keys are checked first.
+ * - Retried operations update existing records instead of cloning.
+ * - Offline ID collisions between devices (e.g. both used counter 5) are safely re-numbered to prevent data loss.
  */
 export function mergeCollectionRecords<T = any>(
   prevList: T[] = [],
   incomingList: T[] = [],
-  isExplicitDeletion: boolean = false
+  isExplicitDeletion: boolean = false,
+  collectionKey?: string,
+  deletedRecords?: Record<string, number>
 ): T[] {
+  const isDeleted = (item: any): boolean => {
+    if (!item || typeof item !== 'object' || !collectionKey || !deletedRecords) return false;
+    const idKey = item.id !== undefined && item.id !== null ? String(item.id).trim() : null;
+    const codeKey = item.code !== undefined && item.code !== null ? String(item.code).trim() : null;
+    const syncKey = item.clientSyncId || item.syncId || item.idempotencyKey;
+    if (idKey && deletedRecords[`${collectionKey}_${idKey}`]) return true;
+    if (codeKey && deletedRecords[`${collectionKey}_${codeKey}`]) return true;
+    if (syncKey && deletedRecords[`${collectionKey}_${syncKey}`]) return true;
+    return false;
+  };
+
+  // If explicit deletion was requested specifically for this collection:
   if (isExplicitDeletion) {
-    return Array.isArray(incomingList) ? incomingList : (Array.isArray(prevList) ? prevList : []);
-  }
-  if (!Array.isArray(incomingList) || incomingList.length === 0) {
-    return Array.isArray(prevList) ? prevList : [];
-  }
-  if (!Array.isArray(prevList) || prevList.length === 0) {
-    return incomingList;
+    const baseList = Array.isArray(incomingList) ? incomingList : (Array.isArray(prevList) ? prevList : []);
+    return baseList.filter((item) => !isDeleted(item));
   }
 
-  const map = new Map<string | number, T>();
-  for (const item of prevList) {
-    if (item && typeof item === 'object') {
-      const key = (item as any).id !== undefined && (item as any).id !== null ? (item as any).id : (item as any).code;
-      if (key !== undefined && key !== null) {
-        map.set(key, item);
-      }
+  // If incomingList is empty, retain prevList except tombstoned items
+  if (!Array.isArray(incomingList) || incomingList.length === 0) {
+    const baseList = Array.isArray(prevList) ? prevList : [];
+    return baseList.filter((item) => !isDeleted(item));
+  }
+
+  // Index existing records by normalized ID, sync/idempotency key, and semantic key
+  const recordsMap = new Map<string, T>();
+  const syncKeyToId = new Map<string, string>();
+  let maxNumericId = 0;
+
+  const registerItem = (item: any, forceId?: string) => {
+    if (!item || typeof item !== 'object' || isDeleted(item)) return;
+    const key = forceId || (item.id !== undefined && item.id !== null ? String(item.id).trim() : (item.code ? String(item.code).trim() : null));
+    if (!key) return;
+
+    const num = Number(key);
+    if (!isNaN(num) && num > maxNumericId) {
+      maxNumericId = num;
+    }
+
+    recordsMap.set(key, item);
+
+    const dedupKey = getItemDeduplicationKey(item, collectionKey);
+    if (dedupKey) {
+      syncKeyToId.set(dedupKey, key);
+    }
+  };
+
+  if (Array.isArray(prevList)) {
+    for (const item of prevList) {
+      registerItem(item);
     }
   }
+
+  // Process incoming items with idempotency and deduplication
   for (const item of incomingList) {
-    if (item && typeof item === 'object') {
-      const key = (item as any).id !== undefined && (item as any).id !== null ? (item as any).id : (item as any).code;
-      if (key !== undefined && key !== null) {
-        map.set(key, item);
+    if (!item || typeof item !== 'object' || isDeleted(item)) continue;
+
+    const dedupKey = getItemDeduplicationKey(item, collectionKey);
+    const existingIdByDedup = dedupKey ? syncKeyToId.get(dedupKey) : null;
+
+    if (existingIdByDedup && recordsMap.has(existingIdByDedup)) {
+      // 🔄 Idempotency Match: Retry or re-sync of existing item -> Merge in place!
+      const existing = recordsMap.get(existingIdByDedup)!;
+      recordsMap.set(existingIdByDedup, { ...existing, ...item, id: (existing as any).id });
+      continue;
+    }
+
+    const itemAny = item as any;
+    const rawId = itemAny.id !== undefined && itemAny.id !== null ? String(itemAny.id).trim() : (itemAny.code ? String(itemAny.code).trim() : null);
+
+    if (rawId && recordsMap.has(rawId)) {
+      const existing = recordsMap.get(rawId)!;
+      const existingAny = existing as any;
+      // Check if existing and incoming are genuinely the same record (same syncId or matching content)
+      const sameSyncId = (itemAny.clientSyncId && itemAny.clientSyncId === existingAny.clientSyncId) ||
+                         (itemAny.syncId && itemAny.syncId === existingAny.syncId);
+      const isInvoice = collectionKey === 'salesInvoices' || collectionKey === 'purchaseInvoices';
+      const isSameInvoice = isInvoice && (
+        sameSyncId ||
+        (String(existingAny.date) === String(itemAny.date) &&
+         String(existingAny.customerName || existingAny.supplierName) === String(itemAny.customerName || itemAny.supplierName) &&
+         Math.abs(Number(existingAny.total || 0) - Number(itemAny.total || 0)) < 0.01)
+      );
+
+      if (sameSyncId || isSameInvoice || !isInvoice) {
+        // Genuine update or idempotent retry -> update in place
+        recordsMap.set(rawId, { ...existing, ...item });
+      } else {
+        // ⚠️ Collision Detection: Two offline devices created different records with the same counter ID!
+        // Re-assign incoming record to next safe unique ID so neither is overwritten or lost!
+        maxNumericId += 1;
+        const safeNewId = typeof itemAny.id === 'number' ? maxNumericId : String(maxNumericId);
+        const resolvedItem = { ...item, id: safeNewId };
+        registerItem(resolvedItem, String(safeNewId));
       }
+    } else if (rawId) {
+      registerItem(item, rawId);
+    } else {
+      // Record without explicit ID
+      maxNumericId += 1;
+      const safeNewId = String(maxNumericId);
+      registerItem({ ...item, id: safeNewId }, safeNewId);
     }
   }
-  return Array.from(map.values());
+
+  return Array.from(recordsMap.values());
 }
 
 /**
  * 🛡️ Merge full AppData payload preserving all business collections
+ * Guarantees cross-tenant boundary isolation and prevents records from disappearing.
  */
 export function mergeAppDataMonotonically(
   prev: AppData,
   incoming: Partial<AppData>,
-  isExplicitDeletion: boolean = false
+  isExplicitDeletion: boolean | string | string[] = false,
+  actionInfo?: { action?: string; module?: string; details?: string; deletedId?: string | number }
 ): AppData {
   if (!incoming || typeof incoming !== 'object') return prev;
+
+  // 🛡️ Cross-Company Guard: Never merge data across different company IDs!
+  const prevCompId = (prev.companyId || '').trim().toUpperCase();
+  const incomingCompId = (incoming.companyId || '').trim().toUpperCase();
+  if (prevCompId && incomingCompId && prevCompId !== incomingCompId) {
+    const freshDefaults = getDefaultData(incomingCompId);
+    return mergeAppDataMonotonically(freshDefaults, incoming, isExplicitDeletion, actionInfo);
+  }
+
+  // Merge tombstones monotonically
+  const mergedDeletedRecords: Record<string, number> = {
+    ...(prev.deletedRecords || {}),
+    ...(incoming.deletedRecords || {}),
+  };
+
+  // Determine whether deletion applies globally or to a specific collection
+  let isGlobalDelete = isExplicitDeletion === true;
+  let targetCollection: string | null = null;
+
+  if (typeof isExplicitDeletion === 'string' && isExplicitDeletion !== 'true') {
+    targetCollection = isExplicitDeletion;
+  } else if (actionInfo && isDeleteAction(actionInfo.action, actionInfo.details)) {
+    targetCollection = getTargetCollectionForAction(actionInfo.action, actionInfo.details);
+    if (!targetCollection) {
+      isGlobalDelete = true;
+    }
+  }
+
+  // If action specified a deletedId and collection, record in tombstones
+  if (targetCollection && actionInfo?.deletedId !== undefined) {
+    mergedDeletedRecords[`${targetCollection}_${actionInfo.deletedId}`] = Date.now();
+  }
+
+  const isCollectionDelete = (colKey: string): boolean => {
+    if (isGlobalDelete) return true;
+    if (targetCollection && targetCollection === colKey) return true;
+    if (Array.isArray(isExplicitDeletion) && isExplicitDeletion.includes(colKey)) return true;
+    return false;
+  };
 
   return {
     ...prev,
     ...incoming,
+    companyId: incoming.companyId || prev.companyId,
     settings: { ...prev.settings, ...(incoming.settings || {}) },
     advancedSettings: incoming.advancedSettings || prev.advancedSettings,
-    branches: mergeCollectionRecords(prev.branches, incoming.branches, isExplicitDeletion),
-    costCenters: mergeCollectionRecords(prev.costCenters, incoming.costCenters, isExplicitDeletion),
-    accounts: mergeCollectionRecords(prev.accounts, incoming.accounts, isExplicitDeletion),
-    users: mergeCollectionRecords(prev.users, incoming.users, isExplicitDeletion),
-    customers: mergeCollectionRecords(prev.customers, incoming.customers, isExplicitDeletion),
-    suppliers: mergeCollectionRecords(prev.suppliers, incoming.suppliers, isExplicitDeletion),
-    items: mergeCollectionRecords(prev.items, incoming.items, isExplicitDeletion),
-    salesInvoices: mergeCollectionRecords(prev.salesInvoices, incoming.salesInvoices, isExplicitDeletion),
-    purchaseInvoices: mergeCollectionRecords(prev.purchaseInvoices, incoming.purchaseInvoices, isExplicitDeletion),
-    cashTransactions: mergeCollectionRecords(prev.cashTransactions, incoming.cashTransactions, isExplicitDeletion),
-    journalEntries: mergeCollectionRecords(prev.journalEntries, incoming.journalEntries, isExplicitDeletion),
-    cheques: mergeCollectionRecords(prev.cheques, incoming.cheques, isExplicitDeletion),
-    quotations: mergeCollectionRecords(prev.quotations, incoming.quotations, isExplicitDeletion),
-    auditLogs: mergeCollectionRecords(prev.auditLogs, incoming.auditLogs, isExplicitDeletion),
-    bankAccounts: mergeCollectionRecords(prev.bankAccounts, incoming.bankAccounts, isExplicitDeletion),
-    employees: mergeCollectionRecords(prev.employees, incoming.employees, isExplicitDeletion),
-    fixedAssets: mergeCollectionRecords(prev.fixedAssets, incoming.fixedAssets, isExplicitDeletion),
-    boms: mergeCollectionRecords(prev.boms, incoming.boms, isExplicitDeletion),
-    salesReps: mergeCollectionRecords(prev.salesReps, incoming.salesReps, isExplicitDeletion),
-    physicalInventories: mergeCollectionRecords(prev.physicalInventories, incoming.physicalInventories, isExplicitDeletion),
-    inventoryAdjustments: mergeCollectionRecords(prev.inventoryAdjustments, incoming.inventoryAdjustments, isExplicitDeletion),
-    goodsIssueVouchers: mergeCollectionRecords(prev.goodsIssueVouchers, incoming.goodsIssueVouchers, isExplicitDeletion),
-    productionOrders: mergeCollectionRecords(prev.productionOrders, incoming.productionOrders, isExplicitDeletion),
-    approvalRequests: mergeCollectionRecords(prev.approvalRequests, incoming.approvalRequests, isExplicitDeletion),
-    commissions: mergeCollectionRecords(prev.commissions, incoming.commissions, isExplicitDeletion),
-    fiscalClosings: mergeCollectionRecords(prev.fiscalClosings, incoming.fiscalClosings, isExplicitDeletion),
+    deletedRecords: mergedDeletedRecords,
+    branches: mergeCollectionRecords(prev.branches, incoming.branches, isCollectionDelete('branches'), 'branches', mergedDeletedRecords),
+    costCenters: mergeCollectionRecords(prev.costCenters, incoming.costCenters, isCollectionDelete('costCenters'), 'costCenters', mergedDeletedRecords),
+    accounts: mergeCollectionRecords(prev.accounts, incoming.accounts, isCollectionDelete('accounts'), 'accounts', mergedDeletedRecords),
+    users: mergeCollectionRecords(prev.users, incoming.users, isCollectionDelete('users'), 'users', mergedDeletedRecords),
+    customers: mergeCollectionRecords(prev.customers, incoming.customers, isCollectionDelete('customers'), 'customers', mergedDeletedRecords),
+    suppliers: mergeCollectionRecords(prev.suppliers, incoming.suppliers, isCollectionDelete('suppliers'), 'suppliers', mergedDeletedRecords),
+    items: mergeCollectionRecords(prev.items, incoming.items, isCollectionDelete('items'), 'items', mergedDeletedRecords),
+    salesInvoices: mergeCollectionRecords(prev.salesInvoices, incoming.salesInvoices, isCollectionDelete('salesInvoices'), 'salesInvoices', mergedDeletedRecords),
+    purchaseInvoices: mergeCollectionRecords(prev.purchaseInvoices, incoming.purchaseInvoices, isCollectionDelete('purchaseInvoices'), 'purchaseInvoices', mergedDeletedRecords),
+    cashTransactions: mergeCollectionRecords(prev.cashTransactions, incoming.cashTransactions, isCollectionDelete('cashTransactions'), 'cashTransactions', mergedDeletedRecords),
+    journalEntries: mergeCollectionRecords(prev.journalEntries, incoming.journalEntries, isCollectionDelete('journalEntries'), 'journalEntries', mergedDeletedRecords),
+    cheques: mergeCollectionRecords(prev.cheques, incoming.cheques, isCollectionDelete('cheques'), 'cheques', mergedDeletedRecords),
+    quotations: mergeCollectionRecords(prev.quotations, incoming.quotations, isCollectionDelete('quotations'), 'quotations', mergedDeletedRecords),
+    auditLogs: mergeCollectionRecords(prev.auditLogs, incoming.auditLogs, isCollectionDelete('auditLogs'), 'auditLogs', mergedDeletedRecords),
+    bankAccounts: mergeCollectionRecords(prev.bankAccounts, incoming.bankAccounts, isCollectionDelete('bankAccounts'), 'bankAccounts', mergedDeletedRecords),
+    employees: mergeCollectionRecords(prev.employees, incoming.employees, isCollectionDelete('employees'), 'employees', mergedDeletedRecords),
+    fixedAssets: mergeCollectionRecords(prev.fixedAssets, incoming.fixedAssets, isCollectionDelete('fixedAssets'), 'fixedAssets', mergedDeletedRecords),
+    boms: mergeCollectionRecords(prev.boms, incoming.boms, isCollectionDelete('boms'), 'boms', mergedDeletedRecords),
+    salesReps: mergeCollectionRecords(prev.salesReps, incoming.salesReps, isCollectionDelete('salesReps'), 'salesReps', mergedDeletedRecords),
+    physicalInventories: mergeCollectionRecords(prev.physicalInventories, incoming.physicalInventories, isCollectionDelete('physicalInventories'), 'physicalInventories', mergedDeletedRecords),
+    inventoryAdjustments: mergeCollectionRecords(prev.inventoryAdjustments, incoming.inventoryAdjustments, isCollectionDelete('inventoryAdjustments'), 'inventoryAdjustments', mergedDeletedRecords),
+    goodsIssueVouchers: mergeCollectionRecords(prev.goodsIssueVouchers, incoming.goodsIssueVouchers, isCollectionDelete('goodsIssueVouchers'), 'goodsIssueVouchers', mergedDeletedRecords),
+    productionOrders: mergeCollectionRecords(prev.productionOrders, incoming.productionOrders, isCollectionDelete('productionOrders'), 'productionOrders', mergedDeletedRecords),
+    approvalRequests: mergeCollectionRecords(prev.approvalRequests, incoming.approvalRequests, isCollectionDelete('approvalRequests'), 'approvalRequests', mergedDeletedRecords),
+    commissions: mergeCollectionRecords(prev.commissions, incoming.commissions, isCollectionDelete('commissions'), 'commissions', mergedDeletedRecords),
+    fiscalClosings: mergeCollectionRecords(prev.fiscalClosings, incoming.fiscalClosings, isCollectionDelete('fiscalClosings'), 'fiscalClosings', mergedDeletedRecords),
     viewingClosedYear: prev.viewingClosedYear !== undefined ? prev.viewingClosedYear : incoming.viewingClosedYear,
     cashBox: incoming.cashBox ? { ...prev.cashBox, ...incoming.cashBox } : prev.cashBox,
     catalogConfig: incoming.catalogConfig || prev.catalogConfig,

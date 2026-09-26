@@ -1,4 +1,21 @@
 import React, { useState } from 'react';
+import {
+  Users,
+  Building2,
+  User,
+  UserPlus,
+  FileText,
+  MessageSquare,
+  Pencil,
+  Trash2,
+  Printer,
+  Plus,
+  Phone,
+  Calendar,
+  Save,
+  X,
+  CreditCard,
+} from 'lucide-react';
 import { AppData, Customer, CustomerRepresentative } from '../types';
 import { Modal } from './Modal';
 import { printStatementWindow, compileStatementData, formatEnNumber } from '../utils/printStatement';
@@ -7,10 +24,11 @@ import { exportToExcel } from '../utils/excelExport';
 import { openUnifiedPrintWindow } from '../utils/printUnified';
 import { TableActionButtons } from './TableActionButtons';
 import { generateStatementWhatsAppMessage, openWhatsAppChat } from '../services/whatsappService';
+import { calculateCustomerBalance, calculateSupplierBalance } from '../utils/accounting';
 
 interface AccountsViewProps {
   appData: AppData;
-  onUpdateData: (newData: AppData) => void;
+  onUpdateData: (newData: AppData, actionInfo?: { action?: string; module?: string; details?: string; deletedId?: string | number }) => void;
   showToast: (msg: string, type?: 'success' | 'error' | 'warning' | 'info') => void;
 }
 
@@ -66,31 +84,34 @@ export const AccountsView: React.FC<AccountsViewProps> = ({ appData, onUpdateDat
 
   // Print Customers Directory
   const handlePrintCustomers = () => {
-    const totalBalance = appData.customers.reduce((sum, c) => sum + (c.balance || 0), 0);
+    const totalBalance = appData.customers.reduce((sum, c) => sum + calculateCustomerBalance(c, appData).balance, 0);
     openUnifiedPrintWindow(
       {
-        reportTitle: 'دليل العملاء والأرصدة الحسابية',
-        subTitle: 'سجل حسابات العملاء المعتمد',
+        reportTitle: 'دليل العملاء والأرصدة الحسابية الفعلى',
+        subTitle: 'سجل حسابات العملاء المعتمد والمحسوب محاسبياً',
         serial: 'CUST-REP',
         branch: 'الإدارة المالية',
         date: new Date().toISOString().split('T')[0],
         time: new Date().toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' }),
         kpis: [
           { title: 'إجمالي العملاء', value: `${appData.customers.length} عميل` },
-          { title: 'إجمالي مديونيات العملاء', value: `${totalBalance.toFixed(2)} ج.م` },
+          { title: 'إجمالي مديونيات العملاء الفعلية', value: `${totalBalance.toFixed(2)} ج.م` },
         ],
-        columns: ['#', 'اسم العميل', 'رقم الهاتف', 'الرصيد الحسابي (ج.م)', 'الحالة'],
-        rows: appData.customers.map((c, idx) => [
-          idx + 1,
-          c.name,
-          c.phone || 'غير مسجل',
-          `${(c.balance || 0).toFixed(2)} ج.م`,
-          (c.balance || 0) > 0 ? 'مدين (عليه مبالغ)' : (c.balance || 0) < 0 ? 'دائن (له رصيد)' : 'متزن',
-        ]),
+        columns: ['#', 'اسم العميل', 'رقم الهاتف', 'الرصيد الحسابي الفعلي (ج.م)', 'الحالة'],
+        rows: appData.customers.map((c, idx) => {
+          const bal = calculateCustomerBalance(c, appData).balance;
+          return [
+            idx + 1,
+            c.name,
+            c.phone || 'غير مسجل',
+            `${bal.toFixed(2)} ج.م`,
+            bal > 0 ? 'مدين (عليه مبالغ)' : bal < 0 ? 'دائن (له رصيد)' : 'متزن',
+          ];
+        }),
         summary: [
-          { label: 'إجمالي أرصدة العملاء', value: `${totalBalance.toFixed(2)} ج.م`, isTotal: true },
+          { label: 'إجمالي أرصدة العملاء الفعلية', value: `${totalBalance.toFixed(2)} ج.م`, isTotal: true },
         ],
-        footerNote: 'تم استخراج كشف أرصدة العملاء بدقة واعتماده محاسبياً',
+        footerNote: 'تم استخراج كشف أرصدة العملاء استناداً للعمليات والمعاملات الفعلية المسجلة',
       },
       appData.settings,
       showToast
@@ -108,44 +129,47 @@ export const AccountsView: React.FC<AccountsViewProps> = ({ appData, onUpdateDat
         { header: 'اسم العميل', key: 'name', width: 28 },
         { header: 'رقم الهاتف', key: 'phone', width: 18 },
         {
-          header: 'الرصيد الحسابي (ج.م)',
-          getValue: (item: any) => (item.balance || 0).toFixed(2),
+          header: 'الرصيد الحسابي الفعلي (ج.م)',
+          getValue: (item: any) => calculateCustomerBalance(item, appData).balance.toFixed(2),
           width: 20,
         },
       ],
       companyName: appData.settings?.companyName || 'المنظومة المحاسبية المعتمدة',
-      reportTitle: 'دليل وحسابات العملاء',
+      reportTitle: 'دليل وحسابات العملاء المعتمدة',
     });
     showToast('تم تصدير دليل العملاء إلى ملف Excel بنجاح', 'success');
   };
 
   // Print Suppliers Directory
   const handlePrintSuppliers = () => {
-    const totalBalance = appData.suppliers.reduce((sum, s) => sum + (s.balance || 0), 0);
+    const totalBalance = appData.suppliers.reduce((sum, s) => sum + calculateSupplierBalance(s, appData).balance, 0);
     openUnifiedPrintWindow(
       {
-        reportTitle: 'دليل الموردين والأرصدة المستحقة',
-        subTitle: 'سجل حسابات الموردين المعتمد',
+        reportTitle: 'دليل الموردين والأرصدة المستحقة الفعلية',
+        subTitle: 'سجل حسابات الموردين المعتمد والمحسوب محاسبياً',
         serial: 'SUPP-REP',
         branch: 'الإدارة المالية والمشتريات',
         date: new Date().toISOString().split('T')[0],
         time: new Date().toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' }),
         kpis: [
           { title: 'إجمالي الموردين', value: `${appData.suppliers.length} مورد` },
-          { title: 'إجمالي مستحقات الموردين', value: `${totalBalance.toFixed(2)} ج.م` },
+          { title: 'إجمالي مستحقات الموردين الفعلية', value: `${totalBalance.toFixed(2)} ج.م` },
         ],
-        columns: ['#', 'اسم المورد', 'رقم الهاتف', 'الرصيد الحسابي (ج.م)', 'الحالة'],
-        rows: appData.suppliers.map((s, idx) => [
-          idx + 1,
-          s.name,
-          s.phone || 'غير مسجل',
-          `${(s.balance || 0).toFixed(2)} ج.م`,
-          (s.balance || 0) > 0 ? 'مستحق له (دائن)' : 'متزن',
-        ]),
+        columns: ['#', 'اسم المورد', 'رقم الهاتف', 'الرصيد الحسابي الفعلي (ج.م)', 'الحالة'],
+        rows: appData.suppliers.map((s, idx) => {
+          const bal = calculateSupplierBalance(s, appData).balance;
+          return [
+            idx + 1,
+            s.name,
+            s.phone || 'غير مسجل',
+            `${bal.toFixed(2)} ج.م`,
+            bal > 0 ? 'مستحق له (دائن)' : bal < 0 ? 'مدين (لنا مبالغ)' : 'متزن',
+          ];
+        }),
         summary: [
-          { label: 'إجمالي مستحقات الموردين', value: `${totalBalance.toFixed(2)} ج.م`, isTotal: true },
+          { label: 'إجمالي مستحقات الموردين الفعلية', value: `${totalBalance.toFixed(2)} ج.م`, isTotal: true },
         ],
-        footerNote: 'تم استخراج كشف أرصدة الموردين واعتماده محاسبياً',
+        footerNote: 'تم استخراج كشف أرصدة الموردين استناداً للعمليات الفعلية المسجلة',
       },
       appData.settings,
       showToast
@@ -163,13 +187,13 @@ export const AccountsView: React.FC<AccountsViewProps> = ({ appData, onUpdateDat
         { header: 'اسم المورد', key: 'name', width: 28 },
         { header: 'رقم الهاتف', key: 'phone', width: 18 },
         {
-          header: 'الرصيد الحسابي (ج.م)',
-          getValue: (item: any) => (item.balance || 0).toFixed(2),
+          header: 'الرصيد الحسابي الفعلي (ج.م)',
+          getValue: (item: any) => calculateSupplierBalance(item, appData).balance.toFixed(2),
           width: 20,
         },
       ],
       companyName: appData.settings?.companyName || 'المنظومة المحاسبية المعتمدة',
-      reportTitle: 'دليل وحسابات الموردين',
+      reportTitle: 'دليل وحسابات الموردين المعتمدة',
     });
     showToast('تم تصدير دليل الموردين إلى ملف Excel بنجاح', 'success');
   };
@@ -181,6 +205,8 @@ export const AccountsView: React.FC<AccountsViewProps> = ({ appData, onUpdateDat
     }
 
     const updatedData = { ...appData };
+    const currentUser = appData.users.find((u) => u.id === appData.currentUser) || appData.users[0];
+    const nowIso = new Date().toISOString();
 
     if (editingAccountId) {
       if (modalType === 'customer') {
@@ -188,11 +214,14 @@ export const AccountsView: React.FC<AccountsViewProps> = ({ appData, onUpdateDat
           c.id === editingAccountId
             ? {
                 ...c,
+                companyId: c.companyId || appData.companyId || 'COMP-000001',
                 name: name.trim(),
                 phone: phone.trim(),
                 taxNumber: taxNumber.trim() || undefined,
                 commercialReg: commercialReg.trim() || undefined,
                 address: address.trim() || undefined,
+                updatedAt: nowIso,
+                updatedBy: currentUser?.name || 'مدير النظام',
               }
             : c
         );
@@ -202,11 +231,14 @@ export const AccountsView: React.FC<AccountsViewProps> = ({ appData, onUpdateDat
           s.id === editingAccountId
             ? {
                 ...s,
+                companyId: s.companyId || appData.companyId || 'COMP-000001',
                 name: name.trim(),
                 phone: phone.trim(),
                 taxNumber: taxNumber.trim() || undefined,
                 commercialReg: commercialReg.trim() || undefined,
                 address: address.trim() || undefined,
+                updatedAt: nowIso,
+                updatedBy: currentUser?.name || 'مدير النظام',
               }
             : s
         );
@@ -241,6 +273,8 @@ export const AccountsView: React.FC<AccountsViewProps> = ({ appData, onUpdateDat
       const newCustId = 'c' + Date.now();
       updatedData.customers.push({
         id: newCustId,
+        companyId: appData.companyId || 'COMP-000001',
+        branchId: appData.activeBranchId || 'main',
         name: name.trim(),
         phone: phone.trim(),
         taxNumber: taxNumber.trim() || undefined,
@@ -249,11 +283,18 @@ export const AccountsView: React.FC<AccountsViewProps> = ({ appData, onUpdateDat
         balance: 0,
         representatives: initialReps,
         transactions: [],
+        createdAt: nowIso,
+        updatedAt: nowIso,
+        createdBy: currentUser?.name || 'مدير النظام',
+        createdByUserId: currentUser?.id,
+        createdByUserCode: currentUser?.code || 1,
       });
       showToast('تم إضافة العميل وبيانات المندوب بنجاح', 'success');
     } else {
       updatedData.suppliers.push({
         id: 's' + Date.now(),
+        companyId: appData.companyId || 'COMP-000001',
+        branchId: appData.activeBranchId || 'main',
         name: name.trim(),
         phone: phone.trim(),
         taxNumber: taxNumber.trim() || undefined,
@@ -262,11 +303,20 @@ export const AccountsView: React.FC<AccountsViewProps> = ({ appData, onUpdateDat
         balance: 0,
         representatives: initialReps,
         transactions: [],
+        createdAt: nowIso,
+        updatedAt: nowIso,
+        createdBy: currentUser?.name || 'مدير النظام',
+        createdByUserId: currentUser?.id,
+        createdByUserCode: currentUser?.code || 1,
       });
       showToast('تم إضافة المورد وبيانات المندوب بنجاح', 'success');
     }
 
-    onUpdateData(updatedData);
+    onUpdateData(updatedData, {
+      action: modalType === 'customer' ? 'create_customer' : 'create_supplier',
+      module: modalType === 'customer' ? 'العملاء' : 'الموردين',
+      details: `إضافة ${modalType === 'customer' ? 'عميل' : 'مورد'}: ${name.trim()}`,
+    });
     setModalType(null);
     setName('');
     setPhone('');
@@ -410,28 +460,43 @@ export const AccountsView: React.FC<AccountsViewProps> = ({ appData, onUpdateDat
 
   const handleDeleteCustomer = (id: string) => {
     if (!confirm('حذف هذا العميل؟')) return;
+    const targetCust = appData.customers.find((c) => c.id === id);
     const updatedData = { ...appData };
+    if (!updatedData.deletedRecords) updatedData.deletedRecords = {};
+    updatedData.deletedRecords[`customers_${id}`] = Date.now();
     updatedData.customers = updatedData.customers.filter((c) => c.id !== id);
-    onUpdateData(updatedData);
-    showToast('تم حذف العميل');
+    onUpdateData(updatedData, {
+      action: 'delete_customer',
+      module: 'العملاء',
+      details: `حذف العميل: ${targetCust?.name || id}`,
+    });
+    showToast('تم حذف العميل بنجاح');
   };
 
   const handleDeleteSupplier = (id: string) => {
     if (!confirm('حذف هذا المورد؟')) return;
+    const targetSupp = appData.suppliers.find((s) => s.id === id);
     const updatedData = { ...appData };
+    if (!updatedData.deletedRecords) updatedData.deletedRecords = {};
+    updatedData.deletedRecords[`suppliers_${id}`] = Date.now();
     updatedData.suppliers = updatedData.suppliers.filter((s) => s.id !== id);
-    onUpdateData(updatedData);
-    showToast('تم حذف المورد');
+    onUpdateData(updatedData, {
+      action: 'delete_supplier',
+      module: 'الموردين',
+      details: `حذف المورد: ${targetSupp?.name || id}`,
+    });
+    showToast('تم حذف المورد بنجاح');
   };
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
         {/* Customers Section */}
-        <div className="bg-white p-4 rounded-2xl shadow-xs border border-gray-100 space-y-3">
-          <div className="flex flex-wrap justify-between items-center pb-2 border-b border-gray-100 gap-2">
-            <h4 className="text-[#1a237e] font-bold text-base flex items-center gap-1.5">
-              <span>👤</span> العملاء والشركات المشترية ({appData.customers.length})
+        <div className="bg-white p-4 rounded-xl shadow-xs border border-slate-200/90 space-y-3">
+          <div className="flex flex-wrap justify-between items-center pb-2 border-b border-slate-100 gap-2">
+            <h4 className="text-slate-900 font-bold text-sm sm:text-base flex items-center gap-2">
+              <Users className="w-5 h-5 text-blue-700" />
+              <span>العملاء والشركات المشترية ({appData.customers.length})</span>
             </h4>
             <div className="flex flex-wrap items-center gap-1.5">
               <TableActionButtons
@@ -451,9 +516,10 @@ export const AccountsView: React.FC<AccountsViewProps> = ({ appData, onUpdateDat
                   setInitialRepPhone('');
                   setModalType('customer');
                 }}
-                className="min-h-[36px] bg-[#1a237e] hover:bg-[#0d1452] text-white px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer shadow-xs flex items-center gap-1"
+                className="min-h-[38px] bg-blue-700 hover:bg-blue-800 active:bg-blue-900 text-white px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer shadow-xs flex items-center gap-1.5"
               >
-                ➕ إضافة شركة / عميل
+                <UserPlus className="w-4 h-4" />
+                <span>إضافة شركة / عميل</span>
               </button>
             </div>
           </div>
@@ -461,25 +527,36 @@ export const AccountsView: React.FC<AccountsViewProps> = ({ appData, onUpdateDat
           {/* Mobile Card List (< md) */}
           <div className="block md:hidden space-y-2.5">
             {appData.customers.length === 0 ? (
-              <div className="text-center py-6 text-gray-400 text-xs">لا يوجد عملاء مسجلين</div>
+              <div className="text-center py-6 text-slate-400 text-xs">لا يوجد عملاء مسجلين</div>
             ) : (
               appData.customers.map((c) => (
-                <div key={c.id} className="bg-slate-50 border border-slate-200 rounded-xl p-3 space-y-2 shadow-2xs">
+                <div key={c.id} className="bg-slate-50 border border-slate-200 rounded-lg p-3 space-y-2 shadow-2xs">
                   <div className="flex justify-between items-start">
                     <div>
-                      <div className="font-bold text-slate-900 text-sm">👤 {c.name}</div>
-                      <div className="text-xs text-slate-500 mt-0.5">📞 هاتف الشركة: {c.phone || 'بدون رقم'}</div>
+                      <div className="font-bold text-slate-900 text-sm flex items-center gap-1.5">
+                        <User className="w-3.5 h-3.5 text-blue-700 shrink-0" />
+                        <span>{c.name}</span>
+                      </div>
+                      <div className="text-xs text-slate-500 mt-0.5 flex items-center gap-1 font-mono">
+                        <Phone className="w-3 h-3 text-slate-400 shrink-0" />
+                        <span>{c.phone || 'بدون رقم'}</span>
+                      </div>
                       {c.representatives && c.representatives.length > 0 && (
-                        <div className="text-[11px] text-indigo-700 font-semibold mt-1 bg-indigo-50 p-1.5 rounded-lg">
-                          👥 المناديب: {c.representatives.map((r) => `${r.name} (${r.phone})`).join(' ، ')}
+                        <div className="text-[11px] text-blue-800 font-medium mt-1 bg-blue-50/70 border border-blue-100 p-1.5 rounded">
+                          المناديب: {c.representatives.map((r) => `${r.name} (${r.phone})`).join(' ، ')}
                         </div>
                       )}
                     </div>
                     <div className="text-left">
-                      <div className="text-[10px] text-slate-500">الرصيد الحسابي</div>
-                      <div className={`font-mono font-bold text-xs ${(c.balance || 0) > 0 ? 'text-rose-700' : 'text-emerald-700'}`}>
-                        {(c.balance || 0).toFixed(2)} ج.م
-                      </div>
+                      <div className="text-[10px] text-slate-500">الرصيد الفعلي الحسابي</div>
+                      {(() => {
+                        const bal = calculateCustomerBalance(c, appData).balance;
+                        return (
+                          <div className={`font-mono font-bold text-xs tabular-nums ${bal > 0 ? 'text-rose-700' : bal < 0 ? 'text-amber-700' : 'text-emerald-700'}`}>
+                            {bal.toFixed(2)} ج.م
+                          </div>
+                        );
+                      })()}
                     </div>
                   </div>
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 pt-1">
@@ -493,34 +570,39 @@ export const AccountsView: React.FC<AccountsViewProps> = ({ appData, onUpdateDat
                           representatives: c.representatives || [],
                         })
                       }
-                      className="min-h-[38px] bg-indigo-50 hover:bg-indigo-100 text-indigo-800 rounded-lg text-[11px] font-bold transition flex items-center justify-center gap-1 border border-indigo-200"
+                      className="min-h-[36px] bg-blue-50 hover:bg-blue-100 text-blue-800 rounded-lg text-[11px] font-semibold transition flex items-center justify-center gap-1 border border-blue-200 cursor-pointer"
                     >
-                      👥 المناديب ({c.representatives?.length || 0})
+                      <Users className="w-3.5 h-3.5" />
+                      <span>المناديب ({c.representatives?.length || 0})</span>
                     </button>
                     <button
                       onClick={() => openStatementModal(c.name, 'customer')}
-                      className="min-h-[38px] bg-[#3b0764] hover:bg-[#2a0845] text-white rounded-lg text-[11px] font-bold transition flex items-center justify-center gap-1"
+                      className="min-h-[36px] bg-slate-800 hover:bg-slate-900 text-white rounded-lg text-[11px] font-semibold transition flex items-center justify-center gap-1 cursor-pointer"
                     >
-                      📄 كشف حساب
+                      <FileText className="w-3.5 h-3.5" />
+                      <span>كشف حساب</span>
                     </button>
                     <button
                       onClick={() => handleWhatsAppCustomer(c)}
-                      className="min-h-[38px] bg-[#25D366] hover:bg-[#128C7E] text-white rounded-lg text-[11px] font-bold transition flex items-center justify-center gap-1 shadow-xs"
+                      className="min-h-[36px] bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-[11px] font-semibold transition flex items-center justify-center gap-1 shadow-xs cursor-pointer"
                       title="إرسال كشف الحساب والرصيد واتساب"
                     >
-                      💬 واتساب
+                      <MessageSquare className="w-3.5 h-3.5" />
+                      <span>واتساب</span>
                     </button>
                     <button
                       onClick={() => handleOpenEdit('customer', c)}
-                      className="min-h-[38px] bg-blue-100 hover:bg-blue-200 text-blue-800 rounded-lg text-[11px] font-bold transition flex items-center justify-center gap-1"
+                      className="min-h-[36px] bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-lg text-[11px] font-semibold transition flex items-center justify-center gap-1 cursor-pointer"
                     >
-                      ✏️ تعديل
+                      <Pencil className="w-3.5 h-3.5" />
+                      <span>تعديل</span>
                     </button>
                     <button
                       onClick={() => handleDeleteCustomer(c.id)}
-                      className="min-h-[38px] bg-rose-100 hover:bg-rose-200 text-rose-800 rounded-lg text-[11px] font-bold transition flex items-center justify-center gap-1"
+                      className="min-h-[36px] bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-lg text-[11px] font-semibold transition flex items-center justify-center gap-1 cursor-pointer"
                     >
-                      🗑️ حذف
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span>حذف</span>
                     </button>
                   </div>
                 </div>
@@ -529,36 +611,36 @@ export const AccountsView: React.FC<AccountsViewProps> = ({ appData, onUpdateDat
           </div>
 
           {/* Desktop Table (>= md) */}
-          <div className="hidden md:block overflow-x-auto">
+          <div className="hidden md:block overflow-x-auto rounded-lg border border-slate-200">
             <table className="w-full text-right text-xs md:text-sm">
               <thead>
-                <tr className="bg-[#1a237e] text-white">
-                  <th className="p-2.5 rounded-r-lg">الشركة / العميل</th>
-                  <th className="p-2.5">هاتف الشركة</th>
-                  <th className="p-2.5">المناديب وجهات الاتصال</th>
-                  <th className="p-2.5">الرصيد (ج.م)</th>
-                  <th className="p-2.5">كشف الحساب</th>
-                  <th className="p-2.5">تعديل</th>
-                  <th className="p-2.5 rounded-l-lg">حذف</th>
+                <tr className="bg-[#0f2756] text-white">
+                  <th className="p-2.5 font-semibold">الشركة / العميل</th>
+                  <th className="p-2.5 font-semibold">هاتف الشركة</th>
+                  <th className="p-2.5 font-semibold">المناديب وجهات الاتصال</th>
+                  <th className="p-2.5 font-semibold">الرصيد (ج.م)</th>
+                  <th className="p-2.5 font-semibold">كشف الحساب</th>
+                  <th className="p-2.5 font-semibold">تعديل</th>
+                  <th className="p-2.5 font-semibold">حذف</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100">
+              <tbody className="divide-y divide-slate-100">
                 {appData.customers.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="text-center p-4 text-gray-400">
+                    <td colSpan={7} className="text-center p-4 text-slate-400">
                       لا يوجد عملاء
                     </td>
                   </tr>
                 ) : (
                   appData.customers.map((c) => (
-                    <tr key={c.id} className="hover:bg-slate-50">
-                      <td className="p-2.5 font-bold">
+                    <tr key={c.id} className="hover:bg-slate-50 transition">
+                      <td className="p-2.5 font-bold text-slate-900">
                         <div>{c.name}</div>
                         {c.taxNumber && (
                           <div className="text-[10px] text-slate-400 font-mono">ضريبي: {c.taxNumber}</div>
                         )}
                       </td>
-                      <td className="p-2.5 text-gray-500 font-mono">{c.phone || '-'}</td>
+                      <td className="p-2.5 text-slate-600 font-mono">{c.phone || '-'}</td>
                       <td className="p-2.5">
                         <button
                           onClick={() =>
@@ -570,59 +652,64 @@ export const AccountsView: React.FC<AccountsViewProps> = ({ appData, onUpdateDat
                               representatives: c.representatives || [],
                             })
                           }
-                          className="bg-indigo-50 hover:bg-indigo-100 text-indigo-800 px-2 py-1 rounded-lg text-xs font-bold transition flex items-center gap-1 border border-indigo-200 cursor-pointer"
+                          className="bg-blue-50 hover:bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs font-semibold transition flex items-center gap-1 border border-blue-200 cursor-pointer"
                         >
-                          <span>👥 المناديب</span>
-                          <span className="bg-indigo-200 text-indigo-900 text-[10px] px-1.5 py-0.2 rounded-full font-mono">
+                          <Users className="w-3 h-3" />
+                          <span>المناديب</span>
+                          <span className="bg-blue-200 text-blue-900 text-[10px] px-1 rounded font-mono">
                             {c.representatives?.length || 0}
                           </span>
                         </button>
                         {c.representatives && c.representatives.length > 0 && (
-                          <div className="text-[10px] text-slate-500 truncate max-w-[150px] mt-0.5">
+                          <div className="text-[10px] text-slate-500 truncate max-w-[150px] mt-0.5 font-mono">
                             {c.representatives[0].name} ({c.representatives[0].phone})
                           </div>
                         )}
                       </td>
-                      <td
-                        className={`p-2.5 font-bold font-mono ${
-                          (c.balance || 0) > 0 ? 'text-[#c62828]' : 'text-[#2e7d32]'
-                        }`}
-                      >
-                        {(c.balance || 0).toFixed(2)}
+                      <td className="p-2.5 font-bold font-mono tabular-nums">
+                        {(() => {
+                          const bal = calculateCustomerBalance(c, appData).balance;
+                          return (
+                            <span className={bal > 0 ? 'text-rose-700' : bal < 0 ? 'text-amber-700' : 'text-emerald-700'}>
+                              {bal.toFixed(2)}
+                            </span>
+                          );
+                        })()}
                       </td>
                       <td className="p-2.5">
                         <div className="flex items-center gap-1">
                           <button
                             onClick={() => openStatementModal(c.name, 'customer')}
-                            className="bg-[#3b0764] text-white px-2.5 py-1.5 rounded-lg text-xs font-bold hover:bg-[#2a0845] transition flex items-center gap-1 cursor-pointer"
+                            className="bg-slate-800 text-white px-2 py-1 rounded text-xs font-semibold hover:bg-slate-900 transition flex items-center gap-1 cursor-pointer"
                           >
-                            📄 كشف حساب
+                            <FileText className="w-3.5 h-3.5" />
+                            <span>كشف حساب</span>
                           </button>
                           <button
                             onClick={() => handleWhatsAppCustomer(c)}
-                            className="bg-[#25D366] text-white px-2.5 py-1.5 rounded-lg text-xs font-bold hover:bg-[#128C7E] transition flex items-center gap-1 cursor-pointer"
+                            className="bg-emerald-600 text-white p-1 rounded text-xs font-bold hover:bg-emerald-700 transition flex items-center justify-center cursor-pointer"
                             title="إرسال الرصيد عبر واتساب"
                           >
-                            💬
+                            <MessageSquare className="w-3.5 h-3.5" />
                           </button>
                         </div>
                       </td>
                       <td className="p-2.5">
                         <button
                           onClick={() => handleOpenEdit('customer', c)}
-                          className="bg-blue-600 text-white p-1.5 rounded-lg text-xs hover:bg-blue-700 cursor-pointer transition flex items-center justify-center"
+                          className="w-7 h-7 rounded bg-blue-50 text-blue-700 hover:bg-blue-100 cursor-pointer transition flex items-center justify-center border border-blue-200"
                           title="تعديل بيانات العميل"
                         >
-                          ✏️
+                          <Pencil className="w-3.5 h-3.5" />
                         </button>
                       </td>
                       <td className="p-2.5">
                         <button
                           onClick={() => handleDeleteCustomer(c.id)}
-                          className="bg-red-500 text-white p-1.5 rounded-lg text-xs hover:bg-red-600 cursor-pointer transition flex items-center justify-center"
+                          className="w-7 h-7 rounded bg-rose-50 text-rose-700 hover:bg-rose-100 cursor-pointer transition flex items-center justify-center border border-rose-200"
                           title="حذف العميل"
                         >
-                          🗑️
+                          <Trash2 className="w-3.5 h-3.5" />
                         </button>
                       </td>
                     </tr>
@@ -634,10 +721,11 @@ export const AccountsView: React.FC<AccountsViewProps> = ({ appData, onUpdateDat
         </div>
 
         {/* Suppliers Section */}
-        <div className="bg-white p-4 rounded-2xl shadow-xs border border-gray-100 space-y-3">
-          <div className="flex flex-wrap justify-between items-center pb-2 border-b border-gray-100 gap-2">
-            <h4 className="text-[#1a237e] font-bold text-base flex items-center gap-1.5">
-              <span>🏢</span> الموردين ({appData.suppliers.length})
+        <div className="bg-white p-4 rounded-xl shadow-xs border border-slate-200/90 space-y-3">
+          <div className="flex flex-wrap justify-between items-center pb-2 border-b border-slate-100 gap-2">
+            <h4 className="text-slate-900 font-bold text-sm sm:text-base flex items-center gap-2">
+              <Building2 className="w-5 h-5 text-blue-700" />
+              <span>الموردين ({appData.suppliers.length})</span>
             </h4>
             <div className="flex flex-wrap items-center gap-1.5">
               <TableActionButtons
@@ -652,9 +740,10 @@ export const AccountsView: React.FC<AccountsViewProps> = ({ appData, onUpdateDat
                   setPhone('');
                   setModalType('supplier');
                 }}
-                className="min-h-[36px] bg-[#1a237e] hover:bg-[#0d1452] text-white px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer shadow-xs flex items-center gap-1"
+                className="min-h-[38px] bg-blue-700 hover:bg-blue-800 active:bg-blue-900 text-white px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer shadow-xs flex items-center gap-1.5"
               >
-                ➕ إضافة مورد
+                <Plus className="w-4 h-4" />
+                <span>إضافة مورد</span>
               </button>
             </div>
           </div>
@@ -662,25 +751,36 @@ export const AccountsView: React.FC<AccountsViewProps> = ({ appData, onUpdateDat
           {/* Mobile Card List (< md) */}
           <div className="block md:hidden space-y-2.5">
             {appData.suppliers.length === 0 ? (
-              <div className="text-center py-6 text-gray-400 text-xs">لا يوجد موردين مسجلين</div>
+              <div className="text-center py-6 text-slate-400 text-xs">لا يوجد موردين مسجلين</div>
             ) : (
               appData.suppliers.map((s) => (
-                <div key={s.id} className="bg-slate-50 border border-slate-200 rounded-xl p-3 space-y-2 shadow-2xs">
+                <div key={s.id} className="bg-slate-50 border border-slate-200 rounded-lg p-3 space-y-2 shadow-2xs">
                   <div className="flex justify-between items-start">
                     <div>
-                      <div className="font-bold text-slate-900 text-sm">🏢 {s.name}</div>
-                      <div className="text-xs text-slate-500 mt-0.5">📞 هاتف المورد: {s.phone || 'بدون رقم'}</div>
+                      <div className="font-bold text-slate-900 text-sm flex items-center gap-1.5">
+                        <Building2 className="w-3.5 h-3.5 text-blue-700 shrink-0" />
+                        <span>{s.name}</span>
+                      </div>
+                      <div className="text-xs text-slate-500 mt-0.5 flex items-center gap-1 font-mono">
+                        <Phone className="w-3 h-3 text-slate-400 shrink-0" />
+                        <span>{s.phone || 'بدون رقم'}</span>
+                      </div>
                       {s.representatives && s.representatives.length > 0 && (
-                        <div className="text-[11px] text-indigo-700 font-semibold mt-1 bg-indigo-50 p-1.5 rounded-lg">
-                          👥 المناديب: {s.representatives.map((r) => `${r.name} (${r.phone})`).join(' ، ')}
+                        <div className="text-[11px] text-blue-800 font-medium mt-1 bg-blue-50/70 border border-blue-100 p-1.5 rounded">
+                          المناديب: {s.representatives.map((r) => `${r.name} (${r.phone})`).join(' ، ')}
                         </div>
                       )}
                     </div>
                     <div className="text-left">
-                      <div className="text-[10px] text-slate-500">الرصيد الحسابي</div>
-                      <div className={`font-mono font-bold text-xs ${(s.balance || 0) > 0 ? 'text-rose-700' : 'text-emerald-700'}`}>
-                        {(s.balance || 0).toFixed(2)} ج.م
-                      </div>
+                      <div className="text-[10px] text-slate-500">الرصيد الفعلي المستحق</div>
+                      {(() => {
+                        const bal = calculateSupplierBalance(s, appData).balance;
+                        return (
+                          <div className={`font-mono font-bold text-xs tabular-nums ${bal > 0 ? 'text-rose-700' : bal < 0 ? 'text-amber-700' : 'text-emerald-700'}`}>
+                            {bal.toFixed(2)} ج.م
+                          </div>
+                        );
+                      })()}
                     </div>
                   </div>
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 pt-1">
@@ -694,27 +794,31 @@ export const AccountsView: React.FC<AccountsViewProps> = ({ appData, onUpdateDat
                           representatives: s.representatives || [],
                         })
                       }
-                      className="min-h-[38px] bg-indigo-50 hover:bg-indigo-100 text-indigo-800 rounded-lg text-[11px] font-bold transition flex items-center justify-center gap-1 border border-indigo-200"
+                      className="min-h-[36px] bg-blue-50 hover:bg-blue-100 text-blue-800 rounded-lg text-[11px] font-semibold transition flex items-center justify-center gap-1 border border-blue-200 cursor-pointer"
                     >
-                      👥 المناديب ({s.representatives?.length || 0})
+                      <Users className="w-3.5 h-3.5" />
+                      <span>المناديب ({s.representatives?.length || 0})</span>
                     </button>
                     <button
                       onClick={() => openStatementModal(s.name, 'supplier')}
-                      className="min-h-[38px] bg-[#3b0764] hover:bg-[#2a0845] text-white rounded-lg text-[11px] font-bold transition flex items-center justify-center gap-1"
+                      className="min-h-[36px] bg-slate-800 hover:bg-slate-900 text-white rounded-lg text-[11px] font-semibold transition flex items-center justify-center gap-1 cursor-pointer"
                     >
-                      📄 كشف حساب
+                      <FileText className="w-3.5 h-3.5" />
+                      <span>كشف حساب</span>
                     </button>
                     <button
                       onClick={() => handleOpenEdit('supplier', s)}
-                      className="min-h-[38px] bg-blue-100 hover:bg-blue-200 text-blue-800 rounded-lg text-[11px] font-bold transition flex items-center justify-center gap-1"
+                      className="min-h-[36px] bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-lg text-[11px] font-semibold transition flex items-center justify-center gap-1 cursor-pointer"
                     >
-                      ✏️ تعديل
+                      <Pencil className="w-3.5 h-3.5" />
+                      <span>تعديل</span>
                     </button>
                     <button
                       onClick={() => handleDeleteSupplier(s.id)}
-                      className="min-h-[38px] bg-rose-100 hover:bg-rose-200 text-rose-800 rounded-lg text-[11px] font-bold transition flex items-center justify-center gap-1"
+                      className="min-h-[36px] bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-lg text-[11px] font-semibold transition flex items-center justify-center gap-1 cursor-pointer"
                     >
-                      🗑️ حذف
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span>حذف</span>
                     </button>
                   </div>
                 </div>
@@ -723,36 +827,36 @@ export const AccountsView: React.FC<AccountsViewProps> = ({ appData, onUpdateDat
           </div>
 
           {/* Desktop Table (>= md) */}
-          <div className="hidden md:block overflow-x-auto">
+          <div className="hidden md:block overflow-x-auto rounded-lg border border-slate-200">
             <table className="w-full text-right text-xs md:text-sm">
               <thead>
-                <tr className="bg-[#1a237e] text-white">
-                  <th className="p-2.5 rounded-r-lg">الشركة / المورد</th>
-                  <th className="p-2.5">هاتف الشركة</th>
-                  <th className="p-2.5">المناديب وجهات الاتصال</th>
-                  <th className="p-2.5">الرصيد (ج.م)</th>
-                  <th className="p-2.5">كشف الحساب</th>
-                  <th className="p-2.5">تعديل</th>
-                  <th className="p-2.5 rounded-l-lg">حذف</th>
+                <tr className="bg-[#0f2756] text-white">
+                  <th className="p-2.5 font-semibold">الشركة / المورد</th>
+                  <th className="p-2.5 font-semibold">هاتف الشركة</th>
+                  <th className="p-2.5 font-semibold">المناديب وجهات الاتصال</th>
+                  <th className="p-2.5 font-semibold">الرصيد (ج.م)</th>
+                  <th className="p-2.5 font-semibold">كشف الحساب</th>
+                  <th className="p-2.5 font-semibold">تعديل</th>
+                  <th className="p-2.5 font-semibold">حذف</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100">
+              <tbody className="divide-y divide-slate-100">
                 {appData.suppliers.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="text-center p-4 text-gray-400">
+                    <td colSpan={7} className="text-center p-4 text-slate-400">
                       لا يوجد موردين
                     </td>
                   </tr>
                 ) : (
                   appData.suppliers.map((s) => (
-                    <tr key={s.id} className="hover:bg-slate-50">
-                      <td className="p-2.5 font-bold">
+                    <tr key={s.id} className="hover:bg-slate-50 transition">
+                      <td className="p-2.5 font-bold text-slate-900">
                         <div>{s.name}</div>
                         {s.taxNumber && (
                           <div className="text-[10px] text-slate-400 font-mono">ضريبي: {s.taxNumber}</div>
                         )}
                       </td>
-                      <td className="p-2.5 text-gray-500 font-mono">{s.phone || '-'}</td>
+                      <td className="p-2.5 text-slate-600 font-mono">{s.phone || '-'}</td>
                       <td className="p-2.5">
                         <button
                           onClick={() =>
@@ -764,50 +868,55 @@ export const AccountsView: React.FC<AccountsViewProps> = ({ appData, onUpdateDat
                               representatives: s.representatives || [],
                             })
                           }
-                          className="bg-indigo-50 hover:bg-indigo-100 text-indigo-800 px-2 py-1 rounded-lg text-xs font-bold transition flex items-center gap-1 border border-indigo-200 cursor-pointer"
+                          className="bg-blue-50 hover:bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs font-semibold transition flex items-center gap-1 border border-blue-200 cursor-pointer"
                         >
-                          <span>👥 المناديب</span>
-                          <span className="bg-indigo-200 text-indigo-900 text-[10px] px-1.5 py-0.2 rounded-full font-mono">
+                          <Users className="w-3 h-3" />
+                          <span>المناديب</span>
+                          <span className="bg-blue-200 text-blue-900 text-[10px] px-1 rounded font-mono">
                             {s.representatives?.length || 0}
                           </span>
                         </button>
                         {s.representatives && s.representatives.length > 0 && (
-                          <div className="text-[10px] text-slate-500 truncate max-w-[150px] mt-0.5">
+                          <div className="text-[10px] text-slate-500 truncate max-w-[150px] mt-0.5 font-mono">
                             {s.representatives[0].name} ({s.representatives[0].phone})
                           </div>
                         )}
                       </td>
-                      <td
-                        className={`p-2.5 font-bold ${
-                          (s.balance || 0) > 0 ? 'text-[#c62828]' : 'text-[#2e7d32]'
-                        }`}
-                      >
-                        {(s.balance || 0).toFixed(2)}
+                      <td className="p-2.5 font-bold font-mono tabular-nums">
+                        {(() => {
+                          const bal = calculateSupplierBalance(s, appData).balance;
+                          return (
+                            <span className={bal > 0 ? 'text-rose-700' : bal < 0 ? 'text-amber-700' : 'text-emerald-700'}>
+                              {bal.toFixed(2)}
+                            </span>
+                          );
+                        })()}
                       </td>
                       <td className="p-2.5">
                         <button
                           onClick={() => openStatementModal(s.name, 'supplier')}
-                          className="bg-[#3b0764] text-white px-2.5 py-1.5 rounded-lg text-xs font-bold hover:bg-[#2a0845] transition flex items-center gap-1 cursor-pointer"
+                          className="bg-slate-800 text-white px-2 py-1 rounded text-xs font-semibold hover:bg-slate-900 transition flex items-center gap-1 cursor-pointer"
                         >
-                          📄 كشف حساب
+                          <FileText className="w-3.5 h-3.5" />
+                          <span>كشف حساب</span>
                         </button>
                       </td>
                       <td className="p-2.5">
                         <button
                           onClick={() => handleOpenEdit('supplier', s)}
-                          className="bg-blue-600 text-white p-1.5 rounded-lg text-xs hover:bg-blue-700 cursor-pointer transition flex items-center justify-center"
+                          className="w-7 h-7 rounded bg-blue-50 text-blue-700 hover:bg-blue-100 cursor-pointer transition flex items-center justify-center border border-blue-200"
                           title="تعديل بيانات المورد"
                         >
-                          ✏️
+                          <Pencil className="w-3.5 h-3.5" />
                         </button>
                       </td>
                       <td className="p-2.5">
                         <button
                           onClick={() => handleDeleteSupplier(s.id)}
-                          className="bg-red-500 text-white p-1.5 rounded-lg text-xs hover:bg-red-600 cursor-pointer transition flex items-center justify-center"
+                          className="w-7 h-7 rounded bg-rose-50 text-rose-700 hover:bg-rose-100 cursor-pointer transition flex items-center justify-center border border-rose-200"
                           title="حذف المورد"
                         >
-                          🗑️
+                          <Trash2 className="w-3.5 h-3.5" />
                         </button>
                       </td>
                     </tr>
@@ -917,15 +1026,17 @@ export const AccountsView: React.FC<AccountsViewProps> = ({ appData, onUpdateDat
           <div className="flex flex-col sm:flex-row gap-2 pt-1">
             <button
               onClick={handleAddAccount}
-              className="min-h-[44px] bg-[#2e7d32] hover:bg-[#1b5e20] active:bg-[#124116] text-white px-6 py-2.5 rounded-xl font-bold cursor-pointer transition shadow-xs flex-1 sm:flex-initial text-center"
+              className="min-h-[42px] bg-emerald-700 hover:bg-emerald-800 active:bg-emerald-900 text-white px-6 py-2.5 rounded-lg font-semibold text-xs sm:text-sm cursor-pointer transition shadow-xs flex items-center justify-center gap-2 flex-1 sm:flex-initial text-center"
             >
-              💾 حفظ البيانات
+              <Save className="w-4 h-4" />
+              <span>حفظ البيانات</span>
             </button>
             <button
               onClick={() => setModalType(null)}
-              className="min-h-[44px] bg-gray-400 hover:bg-gray-500 active:bg-gray-600 text-white px-6 py-2.5 rounded-xl font-bold cursor-pointer transition flex-1 sm:flex-initial text-center"
+              className="min-h-[42px] bg-slate-200 hover:bg-slate-300 active:bg-slate-400 text-slate-800 px-6 py-2.5 rounded-lg font-semibold text-xs sm:text-sm cursor-pointer transition flex items-center justify-center gap-1.5 flex-1 sm:flex-initial text-center"
             >
-              إلغاء
+              <X className="w-4 h-4" />
+              <span>إلغاء</span>
             </button>
           </div>
         </div>

@@ -308,6 +308,8 @@ export const PosView: React.FC<PosViewProps> = ({ appData, onUpdateData, showToa
 
     const newInvoice: SaleInvoice = {
       id: nextId,
+      companyId: appData.companyId || 'COMP-000001',
+      branchId: appData.activeBranchId || 'main',
       customerName: selectedCustomer.trim(),
       phone: customerPhone.trim(),
       date: today,
@@ -323,10 +325,12 @@ export const PosView: React.FC<PosViewProps> = ({ appData, onUpdateData, showToa
       salesType: pricingTier,
       paidAmount: totalPaidAll,
       remainingAmount: effectiveRemainingCredit,
-      createdAt: new Date().toISOString(),
-      createdBy: currentUserObj?.name || 'كاشير نقطة البيع',
       status: 'approved',
-      branchId: appData.activeBranchId || 'br-main',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      createdBy: currentUserObj?.name || 'كاشير نقطة البيع',
+      createdByUserId: currentUserObj?.id,
+      createdByUserCode: currentUserObj?.code || 1,
     };
 
     // Update Items Quantities
@@ -357,10 +361,16 @@ export const PosView: React.FC<PosViewProps> = ({ appData, onUpdateData, showToa
     const updatedCashTransactions = [...(appData.cashTransactions || [])];
     let nextCashId = appData.nextCashId || 1;
 
+    const nowIso = new Date().toISOString();
+    const activeCompId = appData.companyId || 'COMP-000001';
+    const activeBrId = appData.activeBranchId || 'main';
+
     if (saleType === 'nagdi') {
       updatedCashBox[paymentMethod] = (updatedCashBox[paymentMethod] || 0) + finalTotal;
       updatedCashTransactions.unshift({
         id: nextCashId++,
+        companyId: activeCompId,
+        branchId: activeBrId,
         date: today,
         type: 'receive' as const,
         method: paymentMethod,
@@ -368,13 +378,20 @@ export const PosView: React.FC<PosViewProps> = ({ appData, onUpdateData, showToa
         note: `إيراد نقطة بيع POS فاتورة مبيعات نقدية #${nextId}`,
         customerName: selectedCustomer,
         invoiceId: nextId,
+        status: 'approved',
+        createdAt: nowIso,
+        updatedAt: nowIso,
         createdBy: currentUserObj?.name,
+        createdByUserId: currentUserObj?.id,
+        createdByUserCode: currentUserObj?.code || 1,
       });
     } else if (saleType === 'ajel') {
       if (effectivePaidCash > 0) {
         updatedCashBox[paymentMethod] = (updatedCashBox[paymentMethod] || 0) + effectivePaidCash;
         updatedCashTransactions.unshift({
           id: nextCashId++,
+          companyId: activeCompId,
+          branchId: activeBrId,
           date: today,
           type: 'receive' as const,
           method: paymentMethod,
@@ -382,7 +399,12 @@ export const PosView: React.FC<PosViewProps> = ({ appData, onUpdateData, showToa
           note: `دفعة نقدية مع فاتورة POS آجل #${nextId} (${getMethodLabel(paymentMethod)}) - العميل: ${selectedCustomer}`,
           customerName: selectedCustomer,
           invoiceId: nextId,
+          status: 'approved',
+          createdAt: nowIso,
+          updatedAt: nowIso,
           createdBy: currentUserObj?.name,
+          createdByUserId: currentUserObj?.id,
+          createdByUserCode: currentUserObj?.code || 1,
         });
       }
       // Customer Ledger
@@ -392,13 +414,22 @@ export const PosView: React.FC<PosViewProps> = ({ appData, onUpdateData, showToa
       );
       if (custIdx !== -1) {
         updatedCustomers[custIdx].balance = (updatedCustomers[custIdx].balance || 0) + effectiveRemainingCredit;
+        updatedCustomers[custIdx].updatedAt = nowIso;
+        updatedCustomers[custIdx].updatedBy = currentUserObj?.name;
       } else {
         updatedCustomers.push({
           id: 'c' + Date.now(),
+          companyId: activeCompId,
+          branchId: activeBrId,
           name: selectedCustomer.trim(),
           phone: customerPhone.trim(),
           balance: effectiveRemainingCredit,
           transactions: [],
+          createdAt: nowIso,
+          updatedAt: nowIso,
+          createdBy: currentUserObj?.name,
+          createdByUserId: currentUserObj?.id,
+          createdByUserCode: currentUserObj?.code || 1,
         });
       }
     } else if (saleType === 'split') {
@@ -406,6 +437,8 @@ export const PosView: React.FC<PosViewProps> = ({ appData, onUpdateData, showToa
         updatedCashBox['drawer'] = (updatedCashBox['drawer'] || 0) + effectivePaidCash;
         updatedCashTransactions.unshift({
           id: nextCashId++,
+          companyId: activeCompId,
+          branchId: activeBrId,
           date: today,
           type: 'receive' as const,
           method: 'drawer',
@@ -413,13 +446,20 @@ export const PosView: React.FC<PosViewProps> = ({ appData, onUpdateData, showToa
           note: `جزء نقدي من فاتورة POS مجزأة #${nextId} - العميل: ${selectedCustomer}`,
           customerName: selectedCustomer,
           invoiceId: nextId,
+          status: 'approved',
+          createdAt: nowIso,
+          updatedAt: nowIso,
           createdBy: currentUserObj?.name,
+          createdByUserId: currentUserObj?.id,
+          createdByUserCode: currentUserObj?.code || 1,
         });
       }
       if (effectivePaidDigital > 0) {
         updatedCashBox[splitDigitalMethod] = (updatedCashBox[splitDigitalMethod] || 0) + effectivePaidDigital;
         updatedCashTransactions.unshift({
           id: nextCashId++,
+          companyId: activeCompId,
+          branchId: activeBrId,
           date: today,
           type: 'receive' as const,
           method: splitDigitalMethod,
@@ -427,7 +467,12 @@ export const PosView: React.FC<PosViewProps> = ({ appData, onUpdateData, showToa
           note: `جزء إلكتروني (${getMethodLabel(splitDigitalMethod)}) من فاتورة POS #${nextId} - العميل: ${selectedCustomer}`,
           customerName: selectedCustomer,
           invoiceId: nextId,
+          status: 'approved',
+          createdAt: nowIso,
+          updatedAt: nowIso,
           createdBy: currentUserObj?.name,
+          createdByUserId: currentUserObj?.id,
+          createdByUserCode: currentUserObj?.code || 1,
         });
       }
       if (effectiveRemainingCredit > 0) {
@@ -437,13 +482,22 @@ export const PosView: React.FC<PosViewProps> = ({ appData, onUpdateData, showToa
         );
         if (custIdx !== -1) {
           updatedCustomers[custIdx].balance = (updatedCustomers[custIdx].balance || 0) + effectiveRemainingCredit;
+          updatedCustomers[custIdx].updatedAt = nowIso;
+          updatedCustomers[custIdx].updatedBy = currentUserObj?.name;
         } else {
           updatedCustomers.push({
             id: 'c' + Date.now(),
+            companyId: activeCompId,
+            branchId: activeBrId,
             name: selectedCustomer.trim(),
             phone: customerPhone.trim(),
             balance: effectiveRemainingCredit,
             transactions: [],
+            createdAt: nowIso,
+            updatedAt: nowIso,
+            createdBy: currentUserObj?.name,
+            createdByUserId: currentUserObj?.id,
+            createdByUserCode: currentUserObj?.code || 1,
           });
         }
       }

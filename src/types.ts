@@ -108,6 +108,8 @@ export interface User {
 
 export interface Customer {
   id: string;
+  companyId?: string;
+  branchId?: string;
   name: string;
   phone: string;
   balance: number;
@@ -122,10 +124,18 @@ export interface Customer {
   representatives?: CustomerRepresentative[];
   selectedRepId?: string;
   notes?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  createdBy?: string;
+  updatedBy?: string;
+  createdByUserId?: string | number;
+  createdByUserCode?: string | number;
 }
 
 export interface Supplier {
   id: string;
+  companyId?: string;
+  branchId?: string;
   name: string;
   phone: string;
   balance: number;
@@ -136,6 +146,12 @@ export interface Supplier {
   representatives?: CustomerRepresentative[];
   selectedRepId?: string;
   notes?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  createdBy?: string;
+  updatedBy?: string;
+  createdByUserId?: string | number;
+  createdByUserCode?: string | number;
 }
 
 export interface ItemBatch {
@@ -160,6 +176,8 @@ export interface ItemMovement {
 
 export interface Item {
   id: string;
+  companyId?: string;
+  branchId?: string;
   code?: string;
   name: string;
   barcode?: string;
@@ -193,7 +211,12 @@ export interface Item {
   catalogBadge?: string; // شارة ترويجية (مثل: الأكثر طلباً، عرض خاص، جديد)
   catalogDescription?: string; // وصف تسويقي مخصص للعملاء على الويب سايت
   imageUrl?: string; // صورة المنتج
-  companyId?: string; // معرف الشركة المالكة للعزل التام بين الشركات
+  createdAt?: string;
+  updatedAt?: string;
+  createdBy?: string;
+  updatedBy?: string;
+  createdByUserId?: string | number;
+  createdByUserCode?: string | number;
 }
 
 export interface InvoiceItem {
@@ -219,6 +242,7 @@ export interface InvoiceItem {
 
 export interface SaleInvoice {
   id: number;
+  clientSyncId?: string;
   customerName: string;
   phone?: string;
   customerRepId?: string;
@@ -270,6 +294,7 @@ export interface SaleInvoice {
 
 export interface PurchaseInvoice {
   id: number;
+  clientSyncId?: string;
   supplierName: string;
   phone?: string;
   supplierRepId?: string;
@@ -314,6 +339,9 @@ export interface PurchaseInvoice {
 
 export interface CashTransaction {
   id: number;
+  syncId?: string;
+  companyId?: string;
+  branchId?: string;
   date: string;
   type: 'receive' | 'pay' | 'deposit' | 'withdraw';
   method: 'drawer' | 'vodafone' | 'instapay' | 'bank';
@@ -322,7 +350,13 @@ export interface CashTransaction {
   customerName?: string;
   supplierName?: string;
   invoiceId?: number;
+  status?: string;
+  createdAt?: string;
+  updatedAt?: string;
   createdBy?: string;
+  updatedBy?: string;
+  createdByUserId?: number | string;
+  createdByUserCode?: number | string;
   accountCode?: string;
   costCenter?: string;
 }
@@ -538,6 +572,11 @@ export interface AuditLog {
   action: 'create' | 'update' | 'delete' | 'print' | 'approval' | 'login' | 'transfer' | string;
   module: string;
   details: string;
+  recordId?: string | number;
+  recordType?: string;
+  beforeData?: any;
+  afterData?: any;
+  changesSummary?: string;
   ipOrDevice?: string;
 }
 
@@ -1039,6 +1078,9 @@ export interface AppData {
   currencies?: CurrencyDef[];
   exchangeRates?: ExchangeRate[];
   multiCurrencyConfig?: MultiCurrencyConfig;
+
+  // 20. Distributed Deletion Tombstones & Data Integrity
+  deletedRecords?: Record<string, number>;
 }
 
 export type DashboardWidgetId =

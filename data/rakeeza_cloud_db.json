@@ -53,12 +53,14 @@
         "price_management",
         "full_export"
       ],
-      "usersCount": 3,
+      "usersCount": 1,
       "branchesCount": 2,
       "warehousesCount": 2,
-      "operationsCount": 0,
-      "lastActivityAt": "2026-09-02 11:20",
-      "apiKey": "rkz_live_comp000001_vnqscj3sil2s"
+      "operationsCount": 2,
+      "lastActivityAt": "2026-09-25 13:44",
+      "apiKey": "rkz_live_comp000001_vnqscj3sil2s",
+      "uid": "UID_COMP_COMP-000001",
+      "companyCode": "101"
     },
     {
       "id": "COMP-000002",
@@ -858,12 +860,60 @@
       "role": "accountant",
       "createdAt": "2026-09-14T15:28:55.473Z",
       "expiresAt": "2026-10-14T15:28:55.473Z"
+    },
+    "tok_COMP-000001_e69888ca-8296-4aef-a9db-4e4804b71d97": {
+      "token": "tok_COMP-000001_e69888ca-8296-4aef-a9db-4e4804b71d97",
+      "userId": "u-admin-1",
+      "userUid": "UID_COMP-000001_USR_1",
+      "companyId": "COMP-000001",
+      "companyUid": "UID_COMP_COMP-000001",
+      "userName": "Mohamed Nazih (المدير العام)",
+      "userCode": 1,
+      "role": "company_admin",
+      "createdAt": "2026-09-24T09:49:53.949Z",
+      "expiresAt": "2026-10-24T09:49:53.949Z"
+    },
+    "tok_COMP-000001_a2d36a38-1f65-45df-a59c-79606f581c0a": {
+      "token": "tok_COMP-000001_a2d36a38-1f65-45df-a59c-79606f581c0a",
+      "userId": "u-admin-1",
+      "userUid": "UID_COMP-000001_USR_1",
+      "companyId": "COMP-000001",
+      "companyUid": "UID_COMP_COMP-000001",
+      "userName": "Mohamed Nazih (المدير العام)",
+      "userCode": 1,
+      "role": "company_admin",
+      "createdAt": "2026-09-24T10:39:05.834Z",
+      "expiresAt": "2026-10-24T10:39:05.834Z"
+    },
+    "tok_COMP-000001_94761dd9-577a-459a-8210-b166888cd01f": {
+      "token": "tok_COMP-000001_94761dd9-577a-459a-8210-b166888cd01f",
+      "userId": "u-admin-1",
+      "userUid": "UID_COMP-000001_USR_1",
+      "companyId": "COMP-000001",
+      "companyUid": "UID_COMP_COMP-000001",
+      "userName": "Mohamed Nazih (المدير العام)",
+      "userCode": 1,
+      "role": "company_admin",
+      "createdAt": "2026-09-24T10:39:17.045Z",
+      "expiresAt": "2026-10-24T10:39:17.045Z"
+    },
+    "tok_COMP-000001_b69abfa8-73ee-481e-a455-32a7f30c136d": {
+      "token": "tok_COMP-000001_b69abfa8-73ee-481e-a455-32a7f30c136d",
+      "userId": "u-cashier-1",
+      "userUid": "UID_COMP-000001_USR_2",
+      "companyId": "COMP-000001",
+      "companyUid": "UID_COMP_COMP-000001",
+      "userName": "أحمد محمود (كاشير الفرع الرئيسي)",
+      "userCode": 2,
+      "role": "cashier",
+      "createdAt": "2026-09-24T10:39:17.070Z",
+      "expiresAt": "2026-10-24T10:39:17.070Z"
     }
   },
   "tenantsData": {
     "COMP-000001": {
       "settings": {
-        "companyName": "شركة ركيزة للمحاسبة والتجارة العامة (RAKEEZA)",
+        "companyName": "شركة ركيزة للاختبار",
         "address": "القاهرة، مصر",
         "phone1": "01029190615",
         "phone2": "01100000000",
@@ -877,89 +927,90 @@
         "currencySymbol": "ج.م",
         "fiscalYear": "2026"
       },
-      "users": [
+      "users": [],
+      "currentUser": "user1",
+      "customers": [
         {
-          "id": "u-admin-1",
+          "id": "cust-test-1790343850491",
+          "name": "مؤسسة النور للتجارة الحديثة",
+          "phone": "01011112222",
+          "balance": 0,
           "companyId": "COMP-000001",
-          "name": "Mohamed Nazih (المدير العام)",
-          "username": "admin",
-          "password": "admin123",
-          "role": "company_admin",
-          "phone": "01029190615",
-          "status": "active",
-          "permissions": {
-            "all": true
-          },
-          "code": 1
-        },
-        {
-          "id": "u-cashier-1",
-          "companyId": "COMP-000001",
-          "name": "أحمد محمود (كاشير الفرع الرئيسي)",
-          "username": "cashier",
-          "password": "123",
-          "role": "cashier",
-          "status": "active",
-          "permissions": {
-            "sales": true,
-            "pos": true,
-            "quotes_orders": true
-          },
-          "code": 2
-        },
-        {
-          "id": "u-warehouse-1",
-          "companyId": "COMP-000001",
-          "name": "سامح إبراهيم (أمين المخزن المركزي)",
-          "username": "warehouse",
-          "password": "123",
-          "role": "warehouse_keeper",
-          "status": "active",
-          "permissions": {
-            "inventory": true,
-            "purchases": true
-          },
-          "code": 3
+          "priceTier": "wholesale",
+          "createdAt": "2026-09-25T13:44:10.491Z"
         }
       ],
-      "currentUser": "user1",
-      "customers": [],
       "suppliers": [],
-      "items": [],
-      "salesInvoices": [],
+      "items": [
+        {
+          "id": "item-test-1790343850491",
+          "companyId": "COMP-000001",
+          "name": "شاشة حاسوب سامسونج 27 بوصة منحنية",
+          "quantity": 15,
+          "costPrice": 4000,
+          "purchasePrice": 4000,
+          "salePrice": 5500,
+          "minStockAlert": 5,
+          "unit": "قطعة"
+        }
+      ],
+      "salesInvoices": [
+        {
+          "id": 1790343850491,
+          "companyId": "COMP-000001",
+          "customerName": "مؤسسة النور للتجارة الحديثة",
+          "phone": "01011112222",
+          "type": "ajel",
+          "date": "2026-09-25",
+          "items": [
+            {
+              "itemId": "item-test-1790343850491",
+              "name": "شاشة حاسوب سامسونج 27 بوصة منحنية",
+              "qty": 5,
+              "price": 5500,
+              "costPrice": 4000,
+              "total": 27500
+            }
+          ],
+          "subtotal": 27500,
+          "discount": 0,
+          "tax": 0,
+          "total": 27500,
+          "paidAmount": 10000,
+          "remainingAmount": 17500,
+          "status": "approved",
+          "fees": 0,
+          "paymentMethod": "drawer",
+          "createdAt": "2026-09-25T13:44:10.491Z",
+          "createdBy": "المدير العام"
+        }
+      ],
       "purchaseInvoices": [],
-      "cashTransactions": [],
+      "cashTransactions": [
+        {
+          "id": 1790343850492,
+          "companyId": "COMP-000001",
+          "date": "2026-09-25",
+          "amount": 10000,
+          "type": "receive",
+          "method": "drawer",
+          "customerName": "مؤسسة النور للتجارة الحديثة",
+          "invoiceId": 1790343850491,
+          "note": "دفعة نقدية لفاتورة المبيعات #1790343850491"
+        }
+      ],
       "backups": [],
       "nextInvoiceNumber": 1,
       "nextPurchaseNumber": 1,
       "nextCashId": 1,
       "cashBox": {
-        "drawer": 0,
+        "drawer": 12000,
         "vodafone": 0,
         "instapay": 0,
         "bank": 0
       },
       "salesReps": [],
-      "bankAccounts": [
-        {
-          "id": "b1",
-          "name": "البنك الأهلي المصري",
-          "accountNumber": "12345678901",
-          "balance": 0
-        },
-        {
-          "id": "b2",
-          "name": "بنك مصر",
-          "accountNumber": "98765432101",
-          "balance": 0
-        },
-        {
-          "id": "b3",
-          "name": "البنك التجاري الدولي CIB",
-          "accountNumber": "5544332211",
-          "balance": 0
-        }
-      ],
+      "bankAccounts": [],
       "physicalInventories": [],
       "inventoryAdjustments": [],
       "goodsIssueVouchers": [],
@@ -990,400 +1041,176 @@
           "متر"
         ]
       },
-      "accounts": [
-        {
-          "code": "1",
-          "name": "الأصول (Assets)",
-          "type": "asset",
-          "isParent": true,
-          "debit": 0,
-          "credit": 0,
-          "balance": 0
-        },
-        {
-          "code": "11",
-          "name": "الأصول المتداولة (Current Assets)",
-          "type": "asset",
-          "parentCode": "1",
-          "isParent": true,
-          "debit": 0,
-          "credit": 0,
-          "balance": 0
-        },
-        {
-          "code": "1101",
-          "name": "الصندوق والخزينة الرئيسية (Cash)",
-          "type": "asset",
-          "parentCode": "11",
-          "isParent": false,
-          "debit": 0,
-          "credit": 0,
-          "balance": 0
-        },
-        {
-          "code": "1102",
-          "name": "فودافون كاش والمحافظ الإلكترونية",
-          "type": "asset",
-          "parentCode": "11",
-          "isParent": false,
-          "debit": 0,
-          "credit": 0,
-          "balance": 0
-        },
-        {
-          "code": "1103",
-          "name": "إنستاباي (InstaPay)",
-          "type": "asset",
-          "parentCode": "11",
-          "isParent": false,
-          "debit": 0,
-          "credit": 0,
-          "balance": 0
-        },
-        {
-          "code": "1104",
-          "name": "الحسابات البنكية (Bank Accounts)",
-          "type": "asset",
-          "parentCode": "11",
-          "isParent": false,
-          "debit": 0,
-          "credit": 0,
-          "balance": 0
-        },
-        {
-          "code": "1105",
-          "name": "العملاء والمدينون (Accounts Receivable)",
-          "type": "asset",
-          "parentCode": "11",
-          "isParent": false,
-          "debit": 0,
-          "credit": 0,
-          "balance": 0
-        },
-        {
-          "code": "1106",
-          "name": "مخزون البضاعة (Merchandise Inventory)",
-          "type": "asset",
-          "parentCode": "11",
-          "isParent": false,
-          "debit": 0,
-          "credit": 0,
-          "balance": 0
-        },
-        {
-          "code": "12",
-          "name": "الأصول الثابتة (Fixed Assets)",
-          "type": "asset",
-          "parentCode": "1",
-          "isParent": true,
-          "debit": 0,
-          "credit": 0,
-          "balance": 0
-        },
-        {
-          "code": "1201",
-          "name": "الأثاث والمعدات المكتبية",
-          "type": "asset",
-          "parentCode": "12",
-          "isParent": false,
-          "debit": 0,
-          "credit": 0,
-          "balance": 0
-        },
-        {
-          "code": "1202",
-          "name": "أجهزة الكمبيوتر والتكنولوجيا",
-          "type": "asset",
-          "parentCode": "12",
-          "isParent": false,
-          "debit": 0,
-          "credit": 0,
-          "balance": 0
-        },
-        {
-          "code": "2",
-          "name": "الخصوم والالتزامات (Liabilities)",
-          "type": "liability",
-          "isParent": true,
-          "debit": 0,
-          "credit": 0,
-          "balance": 0
-        },
-        {
-          "code": "21",
-          "name": "الخصوم المتداولة (Current Liabilities)",
-          "type": "liability",
-          "parentCode": "2",
-          "isParent": true,
-          "debit": 0,
-          "credit": 0,
-          "balance": 0
-        },
-        {
-          "code": "2101",
-          "name": "الموردون والدائنون (Accounts Payable)",
-          "type": "liability",
-          "parentCode": "21",
-          "isParent": false,
-          "debit": 0,
-          "credit": 0,
-          "balance": 0
-        },
-        {
-          "code": "2102",
-          "name": "أمانات ضريبة القيمة المضافة (VAT Payable)",
-          "type": "liability",
-          "parentCode": "21",
-          "isParent": false,
-          "debit": 0,
-          "credit": 0,
-          "balance": 0
-        },
-        {
-          "code": "2103",
-          "name": "ضريبة الخصم والتحصيل من المنبع",
-          "type": "liability",
-          "parentCode": "21",
-          "isParent": false,
-          "debit": 0,
-          "credit": 0,
-          "balance": 0
-        },
-        {
-          "code": "2104",
-          "name": "مصروفات مستحقة الدفع",
-          "type": "liability",
-          "parentCode": "21",
-          "isParent": false,
-          "debit": 0,
-          "credit": 0,
-          "balance": 0
-        },
-        {
-          "code": "3",
-          "name": "حقوق الملكية (Owner's Equity)",
-          "type": "equity",
-          "isParent": true,
-          "debit": 0,
-          "credit": 0,
-          "balance": 0
-        },
-        {
-          "code": "3101",
-          "name": "رأس المال المستثمر (Capital)",
-          "type": "equity",
-          "parentCode": "3",
-          "isParent": false,
-          "debit": 0,
-          "credit": 0,
-          "balance": 0
-        },
-        {
-          "code": "3102",
-          "name": "الأرباح والخسائر المرحلة (Retained Earnings)",
-          "type": "equity",
-          "parentCode": "3",
-          "isParent": false,
-          "debit": 0,
-          "credit": 0,
-          "balance": 0
-        },
-        {
-          "code": "3103",
-          "name": "جاري صاحب المنشأة / الشركاء",
-          "type": "equity",
-          "parentCode": "3",
-          "isParent": false,
-          "debit": 0,
-          "credit": 0,
-          "balance": 0
-        },
-        {
-          "code": "4",
-          "name": "الإيرادات والمبيعات (Revenues)",
-          "type": "revenue",
-          "isParent": true,
-          "debit": 0,
-          "credit": 0,
-          "balance": 0
-        },
-        {
-          "code": "4101",
-          "name": "إيراد مبيعات بضاعة تجارية (Sales Revenue)",
-          "type": "revenue",
-          "parentCode": "4",
-          "isParent": false,
-          "debit": 0,
-          "credit": 0,
-          "balance": 0
-        },
-        {
-          "code": "4102",
-          "name": "مردودات ومسموحات المبيعات (Sales Returns)",
-          "type": "revenue",
-          "parentCode": "4",
-          "isParent": false,
-          "debit": 0,
-          "credit": 0,
-          "balance": 0
-        },
-        {
-          "code": "4103",
-          "name": "إيرادات خدمات وشحن وصيانة",
-          "type": "revenue",
-          "parentCode": "4",
-          "isParent": false,
-          "debit": 0,
-          "credit": 0,
-          "balance": 0
-        },
-        {
-          "code": "4104",
-          "name": "خصم مسموح به (Sales Discounts)",
-          "type": "revenue",
-          "parentCode": "4",
-          "isParent": false,
-          "debit": 0,
-          "credit": 0,
-          "balance": 0
-        },
-        {
-          "code": "4201",
-          "name": "أرباح وفروقات تسوية المخزون (Inventory Adjustment Gain)",
-          "type": "revenue",
-          "parentCode": "4",
-          "isParent": false,
-          "debit": 0,
-          "credit": 0,
-          "balance": 0
-        },
-        {
-          "code": "5",
-          "name": "المصروفات وتكلفة البضاعة (Expenses & COGS)",
-          "type": "expense",
-          "isParent": true,
-          "debit": 0,
-          "credit": 0,
-          "balance": 0
-        },
-        {
-          "code": "5101",
-          "name": "تكلفة البضاعة المباعة (Cost of Goods Sold - COGS)",
-          "type": "expense",
-          "parentCode": "5",
-          "isParent": false,
-          "debit": 0,
-          "credit": 0,
-          "balance": 0
-        },
-        {
-          "code": "5201",
-          "name": "مصروفات الإيجار والمرافق",
-          "type": "expense",
-          "parentCode": "5",
-          "isParent": false,
-          "debit": 0,
-          "credit": 0,
-          "balance": 0
-        },
-        {
-          "code": "5202",
-          "name": "الرواتب والأجور والمكافآت",
-          "type": "expense",
-          "parentCode": "5",
-          "isParent": false,
-          "debit": 0,
-          "credit": 0,
-          "balance": 0
-        },
-        {
-          "code": "5203",
-          "name": "مصاريف الدعاية والتسويق",
-          "type": "expense",
-          "parentCode": "5",
-          "isParent": false,
-          "debit": 0,
-          "credit": 0,
-          "balance": 0
-        },
-        {
-          "code": "5204",
-          "name": "مصاريف الصيانة والتشغيل والنثريات",
-          "type": "expense",
-          "parentCode": "5",
-          "isParent": false,
-          "debit": 0,
-          "credit": 0,
-          "balance": 0
-        },
-        {
-          "code": "5205",
-          "name": "عمولات المندوبين والمبيعات",
-          "type": "expense",
-          "parentCode": "5",
-          "isParent": false,
-          "debit": 0,
-          "credit": 0,
-          "balance": 0
-        },
-        {
-          "code": "5206",
-          "name": "عجز وفاقد تسوية المخزون (Inventory Shrinkage & Loss)",
-          "type": "expense",
-          "parentCode": "5",
-          "isParent": false,
-          "debit": 0,
-          "credit": 0,
-          "balance": 0
-        }
-      ],
+      "accounts": [],
       "journalEntries": [],
       "nextJournalId": 1,
-      "costCenters": [
-        {
-          "id": "cc-1",
-          "code": "CC-01",
-          "name": "المركز العام الرئيسي",
-          "manager": "المدير المالي"
-        },
-        {
-          "id": "cc-2",
-          "code": "CC-02",
-          "name": "مشروع مبيعات التوزيع",
-          "manager": "مدير المبيعات"
-        },
-        {
-          "id": "cc-3",
-          "code": "CC-03",
-          "name": "فرع الجيزة والمعارض",
-          "manager": "مدير الفرع"
-        }
-      ],
-      "branches": [
-        {
-          "id": "br-main",
-          "code": "HQ-01",
-          "name": "الفرع الرئيسي والمخزن المركزي",
-          "location": "القاهرة - المقر الرئيسي",
-          "phone": "01029190615",
-          "isMain": true,
-          "manager": "Mohamed Nazih"
-        },
-        {
-          "id": "br-branch2",
-          "code": "BR-02",
-          "name": "فرع الجيزة والمعرض",
-          "location": "الجيزة - شارع التحرير",
-          "phone": "01100000000",
-          "isMain": false,
-          "manager": "أحمد محمود"
-        }
-      ],
+      "costCenters": [],
+      "branches": [],
       "activeBranchId": "br-main",
       "stockTransfers": [],
       "quotations": [],
       "nextQuoteId": 1,
       "auditLogs": [
+        {
+          "id": "log-op-1790343850493-4llz",
+          "timestamp": "2026-09-25 13:44:10",
+          "userName": "المدير العام",
+          "userId": "u-admin-1",
+          "userCode": 1,
+          "userRole": "company_admin",
+          "companyId": "COMP-000001",
+          "action": "create",
+          "module": "المبيعات",
+          "details": "إنشاء فاتورة مبيعات #1790343850491 للعميل مؤسسة النور للتجارة الحديثة"
+        },
+        {
+          "id": "log-op-1790246357129-ujze",
+          "timestamp": "2026-09-24 10:39:17",
+          "userName": "Mohamed Nazih (المدير العام)",
+          "userId": "u-admin-1",
+          "userCode": 1,
+          "userRole": "company_admin",
+          "companyId": "COMP-000001",
+          "action": "delete_invoice",
+          "module": "المبيعات",
+          "details": "حذف الفاتورة #inv-1790246357076"
+        },
+        {
+          "id": "log-op-1790246357108-7s7l",
+          "timestamp": "2026-09-24 10:39:17",
+          "userName": "أحمد محمود (كاشير الفرع الرئيسي)",
+          "userId": "u-cashier-1",
+          "userCode": 2,
+          "userRole": "cashier",
+          "companyId": "COMP-000001",
+          "action": "create",
+          "module": "المصروفات والسندات",
+          "details": "سند صرف مصاريف بواسطة المحاسب"
+        },
+        {
+          "id": "log-op-1790246357088-th2r",
+          "timestamp": "2026-09-24 10:39:17",
+          "userName": "Mohamed Nazih (المدير العام)",
+          "userId": "u-admin-1",
+          "userCode": 1,
+          "userRole": "company_admin",
+          "companyId": "COMP-000001",
+          "action": "create",
+          "module": "المبيعات والعملاء",
+          "details": "إضافة عميل وفاتورة وسند قبض جديد"
+        },
+        {
+          "id": "log-login-1790246357070",
+          "timestamp": "2026-09-24 10:39:17",
+          "userName": "أحمد محمود (كاشير الفرع الرئيسي)",
+          "userId": "u-cashier-1",
+          "companyId": "COMP-000001",
+          "action": "login",
+          "module": "المصادقة والأمان",
+          "details": "تسجيل دخول ناجح إلى منظومة شركة \"شركة ركيزة للمحاسبة والتجارة العامة (RAKEEZA)\""
+        },
+        {
+          "id": "log-login-1790246357045",
+          "timestamp": "2026-09-24 10:39:17",
+          "userName": "Mohamed Nazih (المدير العام)",
+          "userId": "u-admin-1",
+          "companyId": "COMP-000001",
+          "action": "login",
+          "module": "المصادقة والأمان",
+          "details": "تسجيل دخول ناجح إلى منظومة شركة \"شركة ركيزة للمحاسبة والتجارة العامة (RAKEEZA)\""
+        },
+        {
+          "id": "log-login-1790246345834",
+          "timestamp": "2026-09-24 10:39:05",
+          "userName": "Mohamed Nazih (المدير العام)",
+          "userId": "u-admin-1",
+          "companyId": "COMP-000001",
+          "action": "login",
+          "module": "المصادقة والأمان",
+          "details": "تسجيل دخول ناجح إلى منظومة شركة \"شركة ركيزة للمحاسبة والتجارة العامة (RAKEEZA)\""
+        },
+        {
+          "id": "log-op-1790243394056-jzjl",
+          "timestamp": "2026-09-24 09:49:54",
+          "userName": "Mohamed Nazih (المدير العام)",
+          "userId": "u-admin-1",
+          "userCode": 1,
+          "userRole": "company_admin",
+          "companyId": "COMP-000001",
+          "action": "user_login",
+          "module": "الجلسة",
+          "details": "تسجيل دخول وتحديث إعدادات"
+        },
+        {
+          "id": "log-op-1790243394043-lbwi",
+          "timestamp": "2026-09-24 09:49:54",
+          "userName": "Mohamed Nazih (المدير العام)",
+          "userId": "u-admin-1",
+          "userCode": 1,
+          "userRole": "company_admin",
+          "companyId": "COMP-000001",
+          "action": "delete_invoice",
+          "module": "المبيعات",
+          "details": "حذف فاتورة المبيعات #1790243393"
+        },
+        {
+          "id": "log-op-1790243394027-233n",
+          "timestamp": "2026-09-24 09:49:54",
+          "userName": "Mohamed Nazih (المدير العام)",
+          "userId": "u-admin-1",
+          "userCode": 1,
+          "userRole": "company_admin",
+          "companyId": "COMP-000001",
+          "action": "create_purchase",
+          "module": "المشتريات",
+          "details": "إنشاء فاتورة مشتريات آجل #1790243396"
+        },
+        {
+          "id": "log-op-1790243394011-z69g",
+          "timestamp": "2026-09-24 09:49:54",
+          "userName": "Mohamed Nazih (المدير العام)",
+          "userId": "u-admin-1",
+          "userCode": 1,
+          "userRole": "company_admin",
+          "companyId": "COMP-000001",
+          "action": "create_receipt",
+          "module": "الخزينة والنقدية",
+          "details": "سند قبض نقدي #1790243395 بقيمة 2000 ج.م"
+        },
+        {
+          "id": "log-op-1790243393991-cf38",
+          "timestamp": "2026-09-24 09:49:53",
+          "userName": "Mohamed Nazih (المدير العام)",
+          "userId": "u-admin-1",
+          "userCode": 1,
+          "userRole": "company_admin",
+          "companyId": "COMP-000001",
+          "action": "create_invoice",
+          "module": "المبيعات",
+          "details": "إنشاء فاتورة مبيعات آجل #1790243393"
+        },
+        {
+          "id": "log-op-1790243393975-pypq",
+          "timestamp": "2026-09-24 09:49:53",
+          "userName": "Mohamed Nazih (المدير العام)",
+          "userId": "u-admin-1",
+          "userCode": 1,
+          "userRole": "company_admin",
+          "companyId": "COMP-000001",
+          "action": "create_customer",
+          "module": "العملاء",
+          "details": "إضافة عميل فحص: شركة الأمل للتجارة (فحص)"
+        },
+        {
+          "id": "log-login-1790243393949",
+          "timestamp": "2026-09-24 09:49:53",
+          "userName": "Mohamed Nazih (المدير العام)",
+          "userId": "u-admin-1",
+          "companyId": "COMP-000001",
+          "action": "login",
+          "module": "المصادقة والأمان",
+          "details": "تسجيل دخول ناجح إلى منظومة شركة \"شركة ركيزة للمحاسبة والتجارة العامة (RAKEEZA)\""
+        },
         {
           "id": "log-purge-1789196660230",
           "timestamp": "2026-09-12 07:04:20",
@@ -1626,7 +1453,11 @@
         }
       },
       "productPrices": [],
-      "priceHistories": []
+      "priceHistories": [],
+      "deletedRecords": {
+        "salesInvoices_1790243393": 1790243394043,
+        "salesInvoices_inv-1790246357076": 1790246357129
+      }
     },
     "COMP-000002": {
       "settings": {

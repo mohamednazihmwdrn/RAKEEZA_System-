@@ -25,7 +25,7 @@ import {
 
 interface UsersViewProps {
   appData: AppData;
-  onUpdateData: (newData: AppData, actionInfo?: { action?: string; module?: string; details?: string }) => void;
+  onUpdateData: (newData: AppData, actionInfo?: { action?: string; module?: string; details?: string; deletedId?: string | number }) => void;
   showToast: (msg: string, type?: 'success' | 'error' | 'warning' | 'info') => void;
 }
 
@@ -298,6 +298,7 @@ export const UsersView: React.FC<UsersViewProps> = ({ appData, onUpdateData, sho
     if (!confirm(`هل أنت متأكد من حذف المستخدم "${userName}" نهائياً من منظومة الشركة؟`)) return;
 
     const updatedUsers = appData.users.filter((u) => u.id !== id);
+    const updatedDeletedRecords = { ...(appData.deletedRecords || {}), [`users_${id}`]: Date.now() };
 
     const auditLog = {
       id: `log-usr-del-${Date.now()}`,
@@ -313,7 +314,13 @@ export const UsersView: React.FC<UsersViewProps> = ({ appData, onUpdateData, sho
     onUpdateData({
       ...appData,
       users: updatedUsers,
+      deletedRecords: updatedDeletedRecords,
       auditLogs: [auditLog, ...(appData.auditLogs || [])],
+    }, {
+      action: 'delete_user',
+      module: 'إدارة المستخدمين والصلاحيات',
+      details: `تم حذف حساب المستخدم "${userName}"`,
+      deletedId: id,
     });
 
     showToast(`تم حذف المستخدم "${userName}" بنجاح`, 'info');
@@ -872,9 +879,9 @@ export const UsersView: React.FC<UsersViewProps> = ({ appData, onUpdateData, sho
                           <label
                             key={perm.id}
                             onClick={() => handleTogglePermission(perm.id)}
-                            className={`flex items-center gap-2 p-2 rounded-lg border cursor-pointer transition-all select-none ${
+                            className={`flex items-start gap-2.5 p-2.5 rounded-xl border cursor-pointer transition-all select-none ${
                               isChecked
-                                ? 'bg-blue-50/80 border-blue-300 text-blue-950 font-semibold'
+                                ? 'bg-blue-50/80 border-blue-300 text-blue-950 font-semibold shadow-xs'
                                 : 'bg-slate-50/60 border-slate-200 text-slate-600 hover:bg-slate-100'
                             }`}
                           >
@@ -884,12 +891,47 @@ export const UsersView: React.FC<UsersViewProps> = ({ appData, onUpdateData, sho
                               onChange={() => {}}
                               className="hidden"
                             />
-                            {isChecked ? (
-                              <CheckSquare className="w-4 h-4 text-blue-600 shrink-0" />
-                            ) : (
-                              <Square className="w-4 h-4 text-slate-400 shrink-0" />
-                            )}
-                            <span className="text-xs leading-tight">{perm.name}</span>
+                            <div className="mt-0.5">
+                              {isChecked ? (
+                                <CheckSquare className="w-4 h-4 text-blue-600 shrink-0" />
+                              ) : (
+                                <Square className="w-4 h-4 text-slate-400 shrink-0" />
+                              )}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center justify-between gap-1.5 flex-wrap">
+                                <span className="text-xs leading-tight font-bold">{perm.name}</span>
+                                {perm.actionType && (
+                                  <span
+                                    className={`text-[10px] font-black px-1.5 py-0.5 rounded-md shrink-0 ${
+                                      perm.actionType === 'view'
+                                        ? 'bg-sky-100 text-sky-800 border border-sky-200'
+                                        : perm.actionType === 'create'
+                                        ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                                        : perm.actionType === 'edit'
+                                        ? 'bg-amber-100 text-amber-800 border border-amber-200'
+                                        : perm.actionType === 'delete'
+                                        ? 'bg-rose-100 text-rose-800 border border-rose-200'
+                                        : perm.actionType === 'approve'
+                                        ? 'bg-purple-100 text-purple-800 border border-purple-200'
+                                        : 'bg-indigo-100 text-indigo-800 border border-indigo-200'
+                                    }`}
+                                  >
+                                    {perm.actionType === 'view' && 'عرض'}
+                                    {perm.actionType === 'create' && 'إنشاء'}
+                                    {perm.actionType === 'edit' && 'تعديل'}
+                                    {perm.actionType === 'delete' && 'حذف'}
+                                    {perm.actionType === 'approve' && 'اعتماد'}
+                                    {perm.actionType === 'export' && 'تصدير'}
+                                  </span>
+                                )}
+                              </div>
+                              {perm.description && (
+                                <p className="text-[11px] text-slate-500 mt-0.5 leading-snug line-clamp-1">
+                                  {perm.description}
+                                </p>
+                              )}
+                            </div>
                           </label>
                         );
                       })}

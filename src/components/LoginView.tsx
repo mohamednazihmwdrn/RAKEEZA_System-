@@ -663,13 +663,15 @@ export const LoginView: React.FC<LoginViewProps> = ({
                             >
                               {u.name} ({u.username || 'user'}) - [
                               {u.role === 'company_admin' || u.role === 'admin'
-                                ? 'المدير'
-                                : u.role === 'cashier'
-                                ? 'كاشير'
+                                ? 'المدير العام'
                                 : u.role === 'accountant'
                                 ? 'محاسب'
-                                : u.role === 'storekeeper'
-                                ? 'أمين مخزن'
+                                : u.role === 'sales_rep'
+                                ? 'مسؤول مبيعات'
+                                : u.role === 'warehouse_keeper' || u.role === 'storekeeper'
+                                ? 'مسؤول مخازن'
+                                : u.role === 'cashier'
+                                ? 'كاشير'
                                 : 'مستخدم'}
                               ]
                             </option>

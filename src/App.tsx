@@ -66,7 +66,9 @@ import {
 } from './services/cloudApi';
 import { realtimeSync } from './services/realtimeSync';
 import { offlineSyncManager } from './services/offlineSyncManager';
-import { AlertTriangle, KeyRound } from 'lucide-react';
+import { canAccessPage, getDefaultLandingPage, verifyDataOperationPermission } from './utils/permissions';
+import { AuditLog } from './types';
+import { AlertTriangle, KeyRound, RotateCcw, Home, Zap, ShoppingCart, ShoppingBag, Menu, ShieldAlert } from 'lucide-react';
 
 export default function App() {
   const [appData, setAppData] = useState<AppData>(() => loadAppData());
@@ -127,7 +129,7 @@ export default function App() {
     }, 3500);
   };
 
-  const updateData = (newData: AppData, actionInfo?: { action?: string; module?: string; details?: string }) => {
+  const updateData = (newData: AppData, actionInfo?: { action?: string; module?: string; details?: string; deletedId?: string | number }) => {
     // 🔒 If viewing a closed fiscal year, prevent any alterations or deletions (Review & Print only)
     if (appData.viewingClosedYear && newData.viewingClosedYear === appData.viewingClosedYear) {
       const isSwitchingYear = actionInfo?.action === 'تبديل سنة مالية' || actionInfo?.module === 'تبديل سنة مالية';
@@ -135,6 +137,61 @@ export default function App() {
         showToast('عفواً، لا يمكن تعديل أو حذف أي بيانات أثناء تصفح سنة مالية مغلقة! السنة مخصصة للمراجعة والطباعة والعرض فقط.', 'warning');
         return;
       }
+    }
+
+    // 🛡️ Data-Operation Level Granular Permission Check
+    const activeUser = session?.user || appData.users?.find((u) => u.id === appData.currentUser) || appData.users?.[0];
+    if (actionInfo) {
+      const permCheck = verifyDataOperationPermission(activeUser, actionInfo);
+      if (!permCheck.allowed) {
+        showToast(permCheck.reason || 'عفواً، حسابك لا يمتلك الصلاحية الكافية لتنفيذ هذا الإجراء!', 'error');
+        return;
+      }
+    }
+
+    // 📝 Systematic Audit Log Record Generator with Before/After Intelligence
+    if (actionInfo && activeUser) {
+      const logId = `log-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
+      const nowTimestamp = new Date().toLocaleString('ar-EG', { hour12: true });
+      let beforeData: any = undefined;
+      let afterData: any = undefined;
+      let changesSummary: string | undefined = undefined;
+
+      // 1. Detect item price or details change
+      if (appData.items && newData.items) {
+        for (const newItem of newData.items) {
+          const oldItem = appData.items.find((i) => i.id === newItem.id);
+          if (oldItem && (oldItem.price !== newItem.price || oldItem.wholesalePrice !== newItem.wholesalePrice || oldItem.costPrice !== newItem.costPrice)) {
+            beforeData = { price: oldItem.price, wholesalePrice: oldItem.wholesalePrice, costPrice: oldItem.costPrice };
+            afterData = { price: newItem.price, wholesalePrice: newItem.wholesalePrice, costPrice: newItem.costPrice };
+            changesSummary = `تغيير سعر صنف "${newItem.name}": قبل (${oldItem.price ?? '—'}) ج.م -> بعد (${newItem.price ?? '—'}) ج.م`;
+            break;
+          }
+        }
+      }
+
+      // 2. Detect Invoice deletion or modification
+      if (actionInfo.action?.includes('delete') || actionInfo.deletedId) {
+        changesSummary = `حذف سجل #${actionInfo.deletedId || ''} من وحدة ${actionInfo.module || ''}`;
+      }
+
+      const newAuditLog: AuditLog = {
+        id: logId,
+        timestamp: nowTimestamp,
+        userId: activeUser.id,
+        userName: activeUser.name,
+        userCode: activeUser.code || (activeUser.role === 'company_admin' || activeUser.role === 'admin' ? 1 : 2),
+        userRole: activeUser.role,
+        companyId: session?.company?.id || appData.companyId || 'COMP-000001',
+        action: actionInfo.action || 'update',
+        module: actionInfo.module || 'المنظومة',
+        details: changesSummary ? `${actionInfo.details || ''} [${changesSummary}]` : (actionInfo.details || `تم تنفيذ عملية بواسطة ${activeUser.name}`),
+        recordId: actionInfo.deletedId,
+        beforeData,
+        afterData,
+        changesSummary,
+      };
+      newData.auditLogs = [newAuditLog, ...(newData.auditLogs || appData.auditLogs || [])].slice(0, 500);
     }
 
     // 🛡️ Automatic Inventory Stock Reversal on Invoice Deletion / Modification
@@ -202,44 +259,90 @@ export default function App() {
     setAppData(newData);
     saveAppData(newData, session?.company?.id);
     if (session?.company?.id) {
-      offlineSyncManager.setCompanyId(session.company.id);
+      const compId = session.company.id;
+      offlineSyncManager.setCompanyId(compId);
 
-      if (!navigator.onLine) {
+      const isOffline = typeof navigator !== 'undefined' && !navigator.onLine;
+
+      if (isOffline) {
         // Queue offline mutation for auto-sync on reconnection
-        offlineSyncManager.queueMutation(session.company.id, newData, {
+        offlineSyncManager.queueMutation(compId, newData, {
           action: actionInfo?.action,
           module: actionInfo?.module,
           details: actionInfo?.details,
           userCode: session.user?.code,
+          deletedId: actionInfo?.deletedId,
         });
       } else {
-        // ⚡ Broadcast instantly to Google Cloud Firestore listeners on all devices
-        realtimeSync.broadcastChange(session.company.id, newData, {
+        offlineSyncManager.setSyncing(true);
+
+        // ⚡ Broadcast instantly to Google Cloud Firestore listeners on all other devices
+        realtimeSync.broadcastChange(compId, newData, {
           action: actionInfo?.action,
           module: actionInfo?.module,
           details: actionInfo?.details,
           userCode: session.user?.code,
-        });
+        }).catch(() => {});
 
-        saveTenantDataCloud(newData, session.company.id, actionInfo).catch((err) => {
-          console.warn('Cloud sync note, queued for offline auto-sync:', err);
-          offlineSyncManager.queueMutation(session.company.id, newData, {
-            action: actionInfo?.action,
-            module: actionInfo?.module,
-            details: actionInfo?.details,
-            userCode: session.user?.code,
+        // Authoritative Cloud Backend persistence
+        saveTenantDataCloud(newData, compId, actionInfo)
+          .then((res) => {
+            if (res.success && res.data) {
+              setAppData((prev) => {
+                const merged = mergeAppDataMonotonically(prev, res.data!, false, actionInfo);
+                saveAppData(merged, compId);
+                return merged;
+              });
+              offlineSyncManager.markSynchronized();
+            } else {
+              offlineSyncManager.queueMutation(compId, newData, {
+                action: actionInfo?.action,
+                module: actionInfo?.module,
+                details: actionInfo?.details,
+                userCode: session.user?.code,
+                deletedId: actionInfo?.deletedId,
+              });
+              offlineSyncManager.setSyncError(res.error || 'تعذر تأكيد الحفظ السحابي');
+            }
+          })
+          .catch((err) => {
+            offlineSyncManager.queueMutation(compId, newData, {
+              action: actionInfo?.action,
+              module: actionInfo?.module,
+              details: actionInfo?.details,
+              userCode: session.user?.code,
+              deletedId: actionInfo?.deletedId,
+            });
+            offlineSyncManager.setSyncError(err?.message || 'انقطع الاتصال بالسيرفر السحابي');
           });
-        });
       }
     }
   };
 
-  // ⚡ Offline-First Auto Sync listener
+  // ⚡ Offline-First Auto Sync listener & data update binding
   useEffect(() => {
     if (!session?.company?.id) return;
-    offlineSyncManager.setCompanyId(session.company.id);
+    const compId = session.company.id;
+    offlineSyncManager.setCompanyId(compId);
 
-    let prevOnline = navigator.onLine;
+    // Register callback so local React state adopts authoritative server data when queue flushes
+    offlineSyncManager.setDataUpdateCallback((authoritativeData) => {
+      setAppData((prev) => {
+        const merged = mergeAppDataMonotonically(prev, authoritativeData, false);
+        saveAppData(merged, compId);
+        return merged;
+      });
+    });
+
+    // Check if there are already pending mutations on load while online
+    if (typeof navigator !== 'undefined' && navigator.onLine) {
+      const q = offlineSyncManager.getQueue(compId);
+      if (q.length > 0) {
+        offlineSyncManager.flushQueue(compId);
+      }
+    }
+
+    let prevOnline = typeof navigator !== 'undefined' ? navigator.onLine : true;
     const unsub = offlineSyncManager.subscribe((st) => {
       if (!prevOnline && st.isOnline) {
         showToast('⚡ تم استعادة الاتصال بنجاح وجاري مزامنة العمليات المحفوظة مع السحابة...', 'success');
@@ -249,7 +352,10 @@ export default function App() {
       prevOnline = st.isOnline;
     });
 
-    return () => unsub();
+    return () => {
+      unsub();
+      offlineSyncManager.setDataUpdateCallback(() => {});
+    };
   }, [session?.company?.id]);
 
   // 🔄 Real-time Instant Synchronization between Manager (Code 1) and Users (Code 2+)
@@ -268,13 +374,8 @@ export default function App() {
       currentUserName: currentName,
       onDataUpdated: (incomingData, meta) => {
         if (!incomingData || typeof incomingData !== 'object') return;
-        const isExplicitDelete =
-          meta?.actionInfo?.action === 'delete' ||
-          meta?.actionInfo?.action === 'delete_invoice' ||
-          meta?.actionInfo?.action === 'delete_item';
-
         setAppData((prev) => {
-          const merged = mergeAppDataMonotonically(prev, incomingData, isExplicitDelete);
+          const merged = mergeAppDataMonotonically(prev, incomingData, false, meta?.actionInfo);
           saveAppData(merged, session.company.id);
           return merged;
         });
@@ -595,6 +696,19 @@ export default function App() {
 
   const handleNavigate = (page: string, pushHistory = true) => {
     if (page === currentPage) return;
+
+    // 🛡️ User Permission Access Guard
+    const activeUser = session?.user || appData.users?.find((u) => u.id === appData.currentUser) || appData.users?.[0];
+    if (!canAccessPage(activeUser, page)) {
+      showToast(`عفواً، حسابك لا يمتلك صلاحية الدخول لشاشة "${page}". تم توجيهك لصفحتك المصرح بها.`, 'warning');
+      const safePage = getDefaultLandingPage(activeUser);
+      if (safePage !== currentPage) {
+        if (pushHistory) window.history.pushState({ page: safePage }, '', `#${safePage}`);
+        setCurrentPage(safePage);
+      }
+      return;
+    }
+
     if (pushHistory) {
       window.history.pushState({ page }, '', `#${page}`);
     }
@@ -612,7 +726,9 @@ export default function App() {
   useEffect(() => {
     // Initialize initial state if empty
     const currentHash = window.location.hash.replace('#', '') || currentPage || 'home';
-    window.history.replaceState({ page: currentHash }, '', `#${currentHash}`);
+    const activeUser = session?.user || appData.users?.find((u) => u.id === appData.currentUser) || appData.users?.[0];
+    const safeInitPage = canAccessPage(activeUser, currentHash) ? currentHash : getDefaultLandingPage(activeUser);
+    window.history.replaceState({ page: safeInitPage }, '', `#${safeInitPage}`);
 
     const handlePopState = (event: PopStateEvent) => {
       // 1. If mobile sidebar is open, phone back button closes the sidebar first
@@ -632,18 +748,39 @@ export default function App() {
         return;
       }
 
-      // 3. Navigate back to previous page in app
+      // 3. Navigate back to previous page in app with permission validation
       const targetPage = event.state?.page || window.location.hash.replace('#', '') || 'home';
+      const currentUserActive = session?.user || appData.users?.find((u) => u.id === appData.currentUser) || appData.users?.[0];
+      const verifiedTarget = canAccessPage(currentUserActive, targetPage) ? targetPage : getDefaultLandingPage(currentUserActive);
       try {
-        localStorage.setItem('rakeeza_current_page', targetPage);
+        localStorage.setItem('rakeeza_current_page', verifiedTarget);
       } catch {}
-      setCurrentPage(targetPage);
+      setCurrentPage(verifiedTarget);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
+    // 🛡️ Security Guard: Prevent bypassing restrictions by manually editing the URL hash
+    const handleHashChange = () => {
+      const hashPage = window.location.hash.replace('#', '') || 'home';
+      const currentUserActive = session?.user || appData.users?.find((u) => u.id === appData.currentUser) || appData.users?.[0];
+      if (!canAccessPage(currentUserActive, hashPage)) {
+        showToast(`عفواً، لا يمتلك حسابك صلاحية الدخول لشاشة "${hashPage}". تم منع التجاوز وتوجيهك لصفحتك المصرح بها.`, 'error');
+        const safePage = getDefaultLandingPage(currentUserActive);
+        window.history.replaceState({ page: safePage }, '', `#${safePage}`);
+        setCurrentPage(safePage);
+        return;
+      }
+      try {
+        localStorage.setItem('rakeeza_current_page', hashPage);
+      } catch {}
+      setCurrentPage(hashPage);
+    };
+
     window.addEventListener('popstate', handlePopState);
+    window.addEventListener('hashchange', handleHashChange);
     return () => {
       window.removeEventListener('popstate', handlePopState);
+      window.removeEventListener('hashchange', handleHashChange);
     };
   }, [isSidebarOpen, isInspectModalOpen, isShareCatalogOpen, currentPage]);
 
@@ -789,6 +926,31 @@ export default function App() {
   };
 
   const renderContent = () => {
+    // 🛡️ Top-Level Permission Gate (Guards against manually modified URLs, hashes or tampered client state)
+    const activeUser = session?.user || appData.users?.find((u) => u.id === appData.currentUser) || appData.users?.[0];
+    if (!canAccessPage(activeUser, currentPage)) {
+      return (
+        <div className="erp-card max-w-lg mx-auto text-center py-10 px-6 space-y-4 my-8 select-none" dir="rtl">
+          <div className="w-16 h-16 rounded-2xl bg-rose-50 text-rose-600 border border-rose-200 flex items-center justify-center mx-auto shadow-xs">
+            <ShieldAlert className="w-8 h-8" />
+          </div>
+          <div>
+            <h2 className="text-lg font-black text-slate-900">غير مصرح بالوصول</h2>
+            <p className="text-xs text-slate-500 leading-relaxed mt-1">
+              عفواً، لا يمتلك حسابك ({activeUser?.name || 'المستخدم الحالي'}) الصلاحية الكافية للوصول إلى هذه الشاشة ({getPageTitle(currentPage)}). تم حجب الصفحة تلقائياً وفقاً للسياسات الأمنية لمنظومة ركيزة.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => handleNavigate(getDefaultLandingPage(activeUser))}
+            className="erp-btn erp-btn-primary mx-auto"
+          >
+            العودة للصفحة المعتمدة
+          </button>
+        </div>
+      );
+    }
+
     switch (currentPage) {
       case 'home':
         return <HomeView appData={appData} onNavigate={handleNavigate} currentUser={currentUser} />;
@@ -855,6 +1017,7 @@ export default function App() {
         return <AccountsTreeView appData={appData} onUpdateData={updateData} showToast={showToast} />;
       case 'branches':
         return <BranchesView appData={appData} onUpdateData={updateData} showToast={showToast} />;
+      case 'einvoicing':
       case 'e_invoicing':
         return <EInvoicingView appData={appData} onUpdateData={updateData} showToast={showToast} />;
       case 'crm_pipeline':
@@ -907,6 +1070,7 @@ export default function App() {
       case 'income_statement':
       case 'balance_sheet':
         return <OperationsView appData={appData} subPage={currentPage} onUpdateData={updateData} showToast={showToast} />;
+      case 'profit_report':
       case 'monthly_profit_report':
         return <MonthlyProfitReportView appData={appData} onNavigate={handleNavigate} />;
       case 'year_end_closing':
@@ -973,6 +1137,17 @@ export default function App() {
             }}
             onClose={() => handleNavigate('home')}
             onLogout={handleLogout}
+          />
+        );
+      case 'reports':
+      case 'reports_group':
+        return (
+          <ReportsView
+            appData={appData}
+            pageId="reports_group"
+            onNavigate={handleNavigate}
+            onUpdateData={updateData}
+            showToast={showToast}
           />
         );
       default:
@@ -1086,6 +1261,7 @@ export default function App() {
         onUpdateData={updateData}
         showToast={showToast}
         onNavigateReports={(year) => handleNavigate('reports')}
+        onNavigate={handleNavigate}
       />
 
       {/* 👑 Owner Browsing Company Banner */}
@@ -1255,7 +1431,7 @@ export default function App() {
 
       {/* Mobile Sticky Quick Navigation Bar with Hardware & Screen Back Support */}
       <nav
-        className="md:hidden fixed bottom-0 left-0 right-0 h-16 bg-white/95 backdrop-blur-md border-t border-slate-200 z-30 flex items-center justify-around px-1 shadow-lg no-print mobile-bottom-nav"
+        className="md:hidden fixed bottom-0 left-0 right-0 h-16 bg-white/95 backdrop-blur-md border-t border-slate-200/90 z-30 flex items-center justify-around px-2 shadow-lg no-print mobile-bottom-nav select-none"
         aria-label="التنقل السريع للهاتف"
       >
         {currentPage !== 'home' ? (
@@ -1268,58 +1444,58 @@ export default function App() {
                 handleNavigate('home');
               }
             }}
-            className="flex flex-col items-center justify-center flex-1 min-h-[48px] py-1 text-indigo-700 hover:text-indigo-900 active:scale-95 transition"
+            className="flex flex-col items-center justify-center flex-1 min-h-[48px] py-1 text-blue-700 hover:text-blue-900 active:scale-95 transition"
             title="الرجوع للصفحة السابقة"
           >
-            <span className="text-lg">↩️</span>
-            <span className="text-[10px] mt-0.5 font-bold">رجوع</span>
+            <RotateCcw className="w-5 h-5 mb-0.5" />
+            <span className="text-[11px] font-bold">رجوع</span>
           </button>
         ) : (
           <button
             onClick={() => handleNavigate('home')}
-            className="flex flex-col items-center justify-center flex-1 min-h-[48px] py-1 text-[#1a237e] font-black"
+            className="flex flex-col items-center justify-center flex-1 min-h-[48px] py-1 text-blue-900 font-bold"
           >
-            <span className="text-lg">🏠</span>
-            <span className="text-[10px] mt-0.5">الرئيسية</span>
+            <Home className="w-5 h-5 mb-0.5 text-blue-900" />
+            <span className="text-[11px]">الرئيسية</span>
           </button>
         )}
 
         <button
           onClick={() => handleNavigate('pos')}
           className={`flex flex-col items-center justify-center flex-1 min-h-[48px] py-1 transition ${
-            currentPage === 'pos' ? 'text-[#1a237e] font-black' : 'text-amber-600 hover:text-amber-700'
+            currentPage === 'pos' ? 'text-amber-600 font-bold' : 'text-slate-600 hover:text-slate-900'
           }`}
         >
-          <span className="text-lg">⚡</span>
-          <span className="text-[10px] mt-0.5 font-bold">الكاشير</span>
+          <Zap className="w-5 h-5 mb-0.5 text-amber-500" />
+          <span className="text-[11px] font-bold">الكاشير</span>
         </button>
 
         <button
           onClick={() => handleNavigate('sales')}
           className={`flex flex-col items-center justify-center flex-1 min-h-[48px] py-1 transition ${
-            currentPage === 'sales' ? 'text-[#1a237e] font-black' : 'text-slate-500 hover:text-slate-800'
+            currentPage === 'sales' ? 'text-blue-800 font-bold' : 'text-slate-600 hover:text-slate-900'
           }`}
         >
-          <span className="text-lg">💰</span>
-          <span className="text-[10px] mt-0.5">المبيعات</span>
+          <ShoppingCart className="w-5 h-5 mb-0.5" />
+          <span className="text-[11px]">المبيعات</span>
         </button>
 
         <button
           onClick={() => handleNavigate('purchases')}
           className={`flex flex-col items-center justify-center flex-1 min-h-[48px] py-1 transition ${
-            currentPage === 'purchases' ? 'text-[#1a237e] font-black' : 'text-slate-500 hover:text-slate-800'
+            currentPage === 'purchases' ? 'text-blue-800 font-bold' : 'text-slate-600 hover:text-slate-900'
           }`}
         >
-          <span className="text-lg">🛒</span>
-          <span className="text-[10px] mt-0.5">المشتريات</span>
+          <ShoppingBag className="w-5 h-5 mb-0.5" />
+          <span className="text-[11px]">المشتريات</span>
         </button>
 
         <button
           onClick={() => setIsSidebarOpen((prev) => !prev)}
-          className="flex flex-col items-center justify-center flex-1 min-h-[48px] py-1 text-slate-500 hover:text-slate-800 transition"
+          className="flex flex-col items-center justify-center flex-1 min-h-[48px] py-1 text-slate-600 hover:text-slate-900 transition"
         >
-          <span className="text-lg">☰</span>
-          <span className="text-[10px] mt-0.5">القائمة</span>
+          <Menu className="w-5 h-5 mb-0.5" />
+          <span className="text-[11px]">القائمة</span>
         </button>
       </nav>
 

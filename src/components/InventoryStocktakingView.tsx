@@ -1,5 +1,24 @@
 import React, { useState, useMemo } from 'react';
 import {
+  Boxes,
+  ClipboardList,
+  PackageMinus,
+  Scale,
+  Plus,
+  Printer,
+  CheckCircle2,
+  Clock,
+  Eye,
+  Trash2,
+  Save,
+  X,
+  Search,
+  FileText,
+  ArrowUpRight,
+  Barcode,
+  Layers,
+} from 'lucide-react';
+import {
   AppData,
   StocktakeSession,
   StocktakeItemRecord,
@@ -850,34 +869,36 @@ export const InventoryStocktakingView: React.FC<InventoryStocktakingViewProps> =
   return (
     <div className="space-y-6">
       {/* Top Header & Metrics Banner */}
-      <div className="bg-gradient-to-r from-[#1a237e] via-[#0d47a1] to-[#01579b] text-white p-6 rounded-3xl shadow-xl flex flex-wrap justify-between items-center gap-4">
+      <div className="bg-[#0f2756] text-white p-5 rounded-xl shadow-xs border border-slate-200 flex flex-wrap justify-between items-center gap-4">
         <div className="space-y-1">
           <div className="flex items-center gap-2">
-            <span className="text-2xl">📦</span>
-            <h2 className="text-xl md:text-2xl font-black text-[#ffd54f]">
+            <Boxes className="w-6 h-6 text-amber-400 shrink-0" />
+            <h2 className="text-lg md:text-xl font-bold text-white">
               نظام الجرد الفعلي ومطابقة وتسوية المخازن
             </h2>
-            <span className="bg-amber-400 text-slate-900 text-xs font-black px-2.5 py-0.5 rounded-full">
-              Enterprise Live
+            <span className="bg-amber-400 text-slate-900 text-xs font-bold px-2 py-0.5 rounded">
+              مباشر
             </span>
           </div>
-          <p className="text-xs md:text-sm text-blue-100 max-w-2xl leading-relaxed">
-            محرك الجرد الآلي الذكي المتفوق على Odoo: جرد حي بالماسح الضوئي، احتساب فوري للعجز والفائض المالي، وتوليد تلقائي لسندات التسوية وقيود اليومية المزدوجة المتوازنة.
+          <p className="text-xs md:text-sm text-slate-300 max-w-2xl leading-relaxed">
+            محرك الجرد الآلي: جرد بالماسح الضوئي، احتساب فوري للعجز والفائض المالي، وتوليد تلقائي لسندات التسوية والقيود المزدوجة المتوازنة.
           </p>
         </div>
 
         <div className="flex flex-wrap gap-2">
           <button
             onClick={handleOpenNewIssueModal}
-            className="bg-[#0288d1] hover:bg-[#0277bd] text-white px-4 py-2.5 rounded-2xl text-xs md:text-sm font-bold shadow-lg transition-all transform active:scale-95 cursor-pointer flex items-center gap-1.5"
+            className="min-h-[40px] bg-slate-800 hover:bg-slate-700 text-white px-3.5 py-2 rounded-lg text-xs md:text-sm font-semibold transition cursor-pointer flex items-center gap-1.5 border border-slate-600"
           >
-            <span>📤</span> إنشاء إذن صرف مخزني
+            <PackageMinus className="w-4 h-4 shrink-0" />
+            <span>إنشاء إذن صرف مخزني</span>
           </button>
           <button
             onClick={() => setIsNewSessionModalOpen(true)}
-            className="bg-[#2e7d32] hover:bg-[#1b5e20] text-white px-4 py-2.5 rounded-2xl text-xs md:text-sm font-bold shadow-lg transition-all transform active:scale-95 cursor-pointer flex items-center gap-1.5"
+            className="min-h-[40px] bg-emerald-700 hover:bg-emerald-800 text-white px-3.5 py-2 rounded-lg text-xs md:text-sm font-semibold transition cursor-pointer flex items-center gap-1.5 shadow-xs"
           >
-            <span>➕</span> فتح جلسة جرد جديدة
+            <Plus className="w-4 h-4 shrink-0" />
+            <span>فتح جلسة جرد جديدة</span>
           </button>
         </div>
       </div>
@@ -886,13 +907,14 @@ export const InventoryStocktakingView: React.FC<InventoryStocktakingViewProps> =
       <div className="flex flex-wrap gap-2 border-b border-slate-200 pb-3">
         <button
           onClick={() => setActiveTab('sessions')}
-          className={`px-5 py-2.5 rounded-2xl text-xs md:text-sm font-bold transition flex items-center gap-2 cursor-pointer ${
+          className={`px-4 py-2 rounded-lg text-xs md:text-sm font-semibold transition flex items-center gap-2 cursor-pointer ${
             activeTab === 'sessions'
-              ? 'bg-[#1a237e] text-white shadow-md'
-              : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-200'
+              ? 'bg-[#0f2756] text-white shadow-xs'
+              : 'bg-white text-slate-700 hover:bg-slate-50 border border-slate-200'
           }`}
         >
-          <span>📋</span> جلسات الجرد ({appData.physicalInventories.length})
+          <ClipboardList className="w-4 h-4" />
+          <span>جلسات الجرد ({appData.physicalInventories.length})</span>
         </button>
 
         <button
@@ -900,15 +922,16 @@ export const InventoryStocktakingView: React.FC<InventoryStocktakingViewProps> =
             if (activeSessionId) setActiveTab('active_count');
             else showToast('يرجى اختيار جلسة جرد أولاً من القائمة', 'info');
           }}
-          className={`px-5 py-2.5 rounded-2xl text-xs md:text-sm font-bold transition flex items-center gap-2 cursor-pointer ${
+          className={`px-4 py-2 rounded-lg text-xs md:text-sm font-semibold transition flex items-center gap-2 cursor-pointer ${
             activeTab === 'active_count'
-              ? 'bg-[#1a237e] text-white shadow-md'
-              : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-200'
+              ? 'bg-[#0f2756] text-white shadow-xs'
+              : 'bg-white text-slate-700 hover:bg-slate-50 border border-slate-200'
           }`}
         >
-          <span>⚡</span> شاشة العد والمطابقة الحية
+          <Boxes className="w-4 h-4" />
+          <span>شاشة العد والمطابقة الحية</span>
           {currentSession && (
-            <span className="bg-amber-400 text-slate-900 text-[10px] px-1.5 py-0.5 rounded font-black">
+            <span className="bg-amber-400 text-slate-900 text-[10px] px-1.5 py-0.5 rounded font-bold font-mono">
               {currentSession.sessionNumber}
             </span>
           )}
@@ -916,87 +939,89 @@ export const InventoryStocktakingView: React.FC<InventoryStocktakingViewProps> =
 
         <button
           onClick={() => setActiveTab('goods_issue')}
-          className={`px-5 py-2.5 rounded-2xl text-xs md:text-sm font-bold transition flex items-center gap-2 cursor-pointer ${
+          className={`px-4 py-2 rounded-lg text-xs md:text-sm font-semibold transition flex items-center gap-2 cursor-pointer ${
             activeTab === 'goods_issue'
-              ? 'bg-[#1a237e] text-white shadow-md'
-              : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-200'
+              ? 'bg-[#0f2756] text-white shadow-xs'
+              : 'bg-white text-slate-700 hover:bg-slate-50 border border-slate-200'
           }`}
         >
-          <span>📤</span> أذونات الصرف المخزني ({appData.goodsIssueVouchers?.length || 0})
+          <PackageMinus className="w-4 h-4" />
+          <span>أذونات الصرف المخزني ({appData.goodsIssueVouchers?.length || 0})</span>
         </button>
 
         <button
           onClick={() => setActiveTab('vouchers')}
-          className={`px-5 py-2.5 rounded-2xl text-xs md:text-sm font-bold transition flex items-center gap-2 cursor-pointer ${
+          className={`px-4 py-2 rounded-lg text-xs md:text-sm font-semibold transition flex items-center gap-2 cursor-pointer ${
             activeTab === 'vouchers'
-              ? 'bg-[#1a237e] text-white shadow-md'
-              : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-200'
+              ? 'bg-[#0f2756] text-white shadow-xs'
+              : 'bg-white text-slate-700 hover:bg-slate-50 border border-slate-200'
           }`}
         >
-          <span>⚖️</span> سندات التسوية المعتمدة والقيود ({appData.inventoryAdjustments?.length || 0})
+          <Scale className="w-4 h-4" />
+          <span>سندات التسوية المعتمدة والقيود ({appData.inventoryAdjustments?.length || 0})</span>
         </button>
       </div>
 
       {/* TAB 1: SESSIONS LIST */}
       {activeTab === 'sessions' && (
         <div className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-700 flex items-center justify-center font-bold text-lg">
-                📦
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div className="bg-white p-3.5 rounded-lg border border-slate-200 shadow-2xs flex items-center gap-3">
+              <div className="w-9 h-9 rounded-lg bg-blue-50 text-blue-800 flex items-center justify-center font-bold">
+                <Layers className="w-4 h-4" />
               </div>
               <div>
-                <span className="text-xs text-slate-500 block">إجمالي جلسات الجرد</span>
-                <strong className="text-slate-900 text-base">{appData.physicalInventories.length} جلسة</strong>
+                <span className="text-[11px] text-slate-500 block">إجمالي جلسات الجرد</span>
+                <strong className="text-slate-900 text-sm font-bold tabular-nums">{appData.physicalInventories.length} جلسة</strong>
               </div>
             </div>
 
-            <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center font-bold text-lg">
-                ✅
+            <div className="bg-white p-3.5 rounded-lg border border-slate-200 shadow-2xs flex items-center gap-3">
+              <div className="w-9 h-9 rounded-lg bg-emerald-50 text-emerald-800 flex items-center justify-center font-bold">
+                <CheckCircle2 className="w-4 h-4" />
               </div>
               <div>
-                <span className="text-xs text-slate-500 block">الجلسات المعتمدة والمسواة</span>
-                <strong className="text-emerald-700 text-base">
+                <span className="text-[11px] text-slate-500 block">الجلسات المعتمدة</span>
+                <strong className="text-emerald-700 text-sm font-bold tabular-nums">
                   {appData.physicalInventories.filter((s) => s.status === 'approved_settled').length} جلسة
                 </strong>
               </div>
             </div>
 
-            <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-700 flex items-center justify-center font-bold text-lg">
-                ⏳
+            <div className="bg-white p-3.5 rounded-lg border border-slate-200 shadow-2xs flex items-center gap-3">
+              <div className="w-9 h-9 rounded-lg bg-amber-50 text-amber-800 flex items-center justify-center font-bold">
+                <Clock className="w-4 h-4" />
               </div>
               <div>
-                <span className="text-xs text-slate-500 block">جلسات قيد المراجعة والعد</span>
-                <strong className="text-amber-700 text-base">
+                <span className="text-[11px] text-slate-500 block">جلسات قيد المراجعة</span>
+                <strong className="text-amber-700 text-sm font-bold tabular-nums">
                   {appData.physicalInventories.filter((s) => s.status === 'draft' || s.status === 'in_review').length} مسودة
                 </strong>
               </div>
             </div>
 
-            <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-purple-50 text-purple-700 flex items-center justify-center font-bold text-lg">
-                ⚖️
+            <div className="bg-white p-3.5 rounded-lg border border-slate-200 shadow-2xs flex items-center gap-3">
+              <div className="w-9 h-9 rounded-lg bg-slate-100 text-slate-700 flex items-center justify-center font-bold">
+                <Scale className="w-4 h-4" />
               </div>
               <div>
-                <span className="text-xs text-slate-500 block">سندات التسوية المسجلة</span>
-                <strong className="text-purple-700 text-base">{appData.inventoryAdjustments?.length || 0} سند</strong>
+                <span className="text-[11px] text-slate-500 block">سندات التسوية</span>
+                <strong className="text-slate-800 text-sm font-bold tabular-nums">{appData.inventoryAdjustments?.length || 0} سند</strong>
               </div>
             </div>
           </div>
 
           {/* Sessions List - Mobile Cards (< lg) & Desktop Table (>= lg) */}
-          <div className="bg-white rounded-3xl p-4 sm:p-6 shadow-xs border border-slate-200 space-y-4">
+          <div className="bg-white rounded-xl p-4 shadow-xs border border-slate-200/90 space-y-4">
             <div className="flex justify-between items-center flex-wrap gap-2 pb-2 border-b border-slate-100">
-              <h3 className="text-base font-bold text-[#1a237e]">سجل جلسات جرد المخازن</h3>
+              <h3 className="text-sm font-bold text-slate-900">سجل جلسات جرد المخازن</h3>
               <span className="text-xs text-slate-500">اختر جلسة لمتابعة العد الفعلي أو اعتماد التسوية</span>
             </div>
 
             {/* Mobile Cards View */}
             <div className="block lg:hidden space-y-3">
               {appData.physicalInventories.length === 0 ? (
-                <div className="p-8 text-center text-slate-400 text-sm">
+                <div className="p-8 text-center text-slate-400 text-xs">
                   لا توجد جلسات جرد مسجلة بعد. انقر على "فتح جلسة جرد جديدة" للبدء.
                 </div>
               ) : (
@@ -1005,33 +1030,35 @@ export const InventoryStocktakingView: React.FC<InventoryStocktakingViewProps> =
                   return (
                     <div
                       key={sess.id}
-                      className="bg-slate-50 rounded-2xl p-4 border border-slate-200 space-y-3 hover:border-indigo-300 transition"
+                      className="bg-white rounded-lg p-3.5 border border-slate-200 space-y-3 shadow-2xs"
                     >
-                      <div className="flex items-center justify-between border-b border-slate-200/70 pb-2">
+                      <div className="flex items-center justify-between border-b border-slate-100 pb-2">
                         <div>
-                          <span className="font-mono font-bold text-indigo-700 text-xs">{sess.sessionNumber}</span>
-                          <h4 className="font-bold text-slate-900 text-sm mt-0.5">{sess.title}</h4>
+                          <span className="font-mono font-bold text-blue-900 text-xs tabular-nums">{sess.sessionNumber}</span>
+                          <h4 className="font-bold text-slate-900 text-xs mt-0.5">{sess.title}</h4>
                         </div>
                         {sess.status === 'approved_settled' ? (
-                          <span className="bg-emerald-100 text-emerald-800 text-[11px] px-2.5 py-1 rounded-full font-bold">
-                            ✅ معتمد ومسوى
+                          <span className="bg-emerald-50 text-emerald-800 border border-emerald-200 text-[11px] px-2 py-0.5 rounded font-semibold inline-flex items-center gap-1">
+                            <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                            <span>معتمد ومسوى</span>
                           </span>
                         ) : (
-                          <span className="bg-amber-100 text-amber-800 text-[11px] px-2.5 py-1 rounded-full font-bold">
-                            📝 قيد العد
+                          <span className="bg-amber-50 text-amber-800 border border-amber-200 text-[11px] px-2 py-0.5 rounded font-semibold inline-flex items-center gap-1">
+                            <Clock className="w-3 h-3 text-amber-600" />
+                            <span>قيد العد</span>
                           </span>
                         )}
                       </div>
 
-                      <div className="grid grid-cols-2 gap-2 text-xs text-slate-600 bg-white p-2.5 rounded-xl border border-slate-100">
-                        <div>📅 التاريخ: <strong className="text-slate-800">{sess.date}</strong></div>
-                        <div>🏢 الفرع: <strong className="text-slate-800">{sess.branchName || 'الرئيسي'}</strong></div>
-                        <div>📦 الأصناف: <strong className="text-slate-800">{sess.totalItemsCounted} صنف</strong></div>
+                      <div className="grid grid-cols-2 gap-2 text-xs text-slate-600 bg-slate-50 p-2.5 rounded border border-slate-100">
+                        <div>التاريخ: <strong className="text-slate-800 font-mono tabular-nums">{sess.date}</strong></div>
+                        <div>الفرع: <strong className="text-slate-800">{sess.branchName || 'الرئيسي'}</strong></div>
+                        <div>الأصناف: <strong className="text-slate-800 tabular-nums">{sess.totalItemsCounted} صنف</strong></div>
                         <div>
-                          🎯 التطابق:{' '}
+                          التطابق:{' '}
                           <span
-                            className={`font-bold px-1.5 py-0.5 rounded text-[11px] ${
-                              matchPercent === 100 ? 'text-emerald-700' : 'text-amber-700'
+                            className={`font-bold px-1.5 py-0.5 rounded text-[11px] tabular-nums ${
+                              matchPercent === 100 ? 'text-emerald-700 bg-emerald-50' : 'text-amber-700 bg-amber-50'
                             }`}
                           >
                             {matchPercent}%
@@ -1039,14 +1066,14 @@ export const InventoryStocktakingView: React.FC<InventoryStocktakingViewProps> =
                         </div>
                       </div>
 
-                      <div className="flex justify-between items-center bg-white p-2.5 rounded-xl border border-slate-100 text-xs">
+                      <div className="flex justify-between items-center bg-slate-50 p-2 rounded border border-slate-100 text-xs">
                         <span className="text-slate-500">صافي الأثر المالي:</span>
                         <strong
-                          className={`font-mono text-sm ${
+                          className={`font-mono text-xs tabular-nums ${
                             sess.netVarianceValue < 0
-                              ? 'text-rose-600'
+                              ? 'text-rose-600 font-bold'
                               : sess.netVarianceValue > 0
-                              ? 'text-emerald-600'
+                              ? 'text-emerald-600 font-bold'
                               : 'text-slate-700'
                           }`}
                         >
@@ -1060,23 +1087,26 @@ export const InventoryStocktakingView: React.FC<InventoryStocktakingViewProps> =
                             setActiveSessionId(sess.id);
                             setActiveTab('active_count');
                           }}
-                          className="min-h-[42px] bg-indigo-50 hover:bg-indigo-100 text-indigo-700 px-2 py-2 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1"
+                          className="min-h-[36px] bg-blue-50 hover:bg-blue-100 text-blue-900 border border-blue-200 px-2 py-1.5 rounded-lg text-xs font-semibold transition flex items-center justify-center gap-1 cursor-pointer"
                         >
-                          🔍 فحص
+                          <Eye className="w-3.5 h-3.5" />
+                          <span>فحص</span>
                         </button>
                         <button
                           onClick={() => printStocktakeSession(sess, appData)}
-                          className="min-h-[42px] bg-blue-50 hover:bg-blue-100 text-blue-700 px-2 py-2 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1"
+                          className="min-h-[36px] bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-200 px-2 py-1.5 rounded-lg text-xs font-semibold transition flex items-center justify-center gap-1 cursor-pointer"
                           title="طباعة تقرير الجرد والتسوية"
                         >
-                          🖨️ طباعة
+                          <Printer className="w-3.5 h-3.5" />
+                          <span>طباعة</span>
                         </button>
                         {sess.status !== 'approved_settled' ? (
                           <button
                             onClick={() => handleApproveAndSettle(sess)}
-                            className="min-h-[42px] bg-[#2e7d32] hover:bg-[#1b5e20] active:bg-[#124116] text-white px-2 py-2 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1 shadow-xs"
+                            className="min-h-[36px] bg-emerald-700 hover:bg-emerald-800 text-white px-2 py-1.5 rounded-lg text-xs font-semibold transition flex items-center justify-center gap-1 shadow-xs cursor-pointer"
                           >
-                            ⚡ اعتماد
+                            <CheckCircle2 className="w-3.5 h-3.5" />
+                            <span>اعتماد</span>
                           </button>
                         ) : (
                           <button
@@ -1090,9 +1120,10 @@ export const InventoryStocktakingView: React.FC<InventoryStocktakingViewProps> =
                                 showToast('لا يوجد سند تسوية منفصل لهذه الجلسة', 'info');
                               }
                             }}
-                            className="min-h-[42px] bg-slate-100 hover:bg-slate-200 text-slate-700 px-2 py-2 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1"
+                            className="min-h-[36px] bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 px-2 py-1.5 rounded-lg text-xs font-semibold transition flex items-center justify-center gap-1 cursor-pointer"
                           >
-                            📄 سند
+                            <FileText className="w-3.5 h-3.5" />
+                            <span>سند</span>
                           </button>
                         )}
                       </div>
@@ -1104,19 +1135,19 @@ export const InventoryStocktakingView: React.FC<InventoryStocktakingViewProps> =
 
             {/* Desktop Table View */}
             <div className="hidden lg:block overflow-x-auto">
-              <table className="w-full text-right text-xs md:text-sm">
-                <thead className="bg-[#1a237e] text-white">
-                  <tr>
-                    <th className="p-3 rounded-r-xl">رقم الجلسة</th>
-                    <th className="p-3">عنوان الجلسة</th>
-                    <th className="p-3">التاريخ</th>
-                    <th className="p-3">الفرع / المستودع</th>
-                    <th className="p-3">المجموعة</th>
-                    <th className="p-3 text-center">الأصناف</th>
-                    <th className="p-3 text-center">التطابق</th>
-                    <th className="p-3">صافي الأثر المالي</th>
-                    <th className="p-3">الحالة</th>
-                    <th className="p-3 rounded-l-xl text-center">الإجراءات</th>
+              <table className="w-full text-right text-xs md:text-sm border-collapse">
+                <thead>
+                  <tr className="bg-[#0f2756] text-white">
+                    <th className="p-3 font-semibold">رقم الجلسة</th>
+                    <th className="p-3 font-semibold">عنوان الجلسة</th>
+                    <th className="p-3 font-semibold">التاريخ</th>
+                    <th className="p-3 font-semibold">الفرع / المستودع</th>
+                    <th className="p-3 font-semibold">المجموعة</th>
+                    <th className="p-3 font-semibold text-center">الأصناف</th>
+                    <th className="p-3 font-semibold text-center">التطابق</th>
+                    <th className="p-3 font-semibold">صافي الأثر المالي</th>
+                    <th className="p-3 font-semibold">الحالة</th>
+                    <th className="p-3 font-semibold text-center">الإجراءات</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -1131,26 +1162,26 @@ export const InventoryStocktakingView: React.FC<InventoryStocktakingViewProps> =
                       const matchPercent = sess.totalItemsCounted > 0 ? Math.round((sess.matchedItemsCount / sess.totalItemsCounted) * 100) : 100;
                       return (
                         <tr key={sess.id} className="hover:bg-slate-50 transition">
-                          <td className="p-3 font-mono font-bold text-indigo-700">{sess.sessionNumber}</td>
+                          <td className="p-3 font-mono font-bold text-blue-900 tabular-nums">{sess.sessionNumber}</td>
                           <td className="p-3 font-bold text-slate-900">{sess.title}</td>
-                          <td className="p-3 font-mono text-slate-600">{sess.date}</td>
+                          <td className="p-3 font-mono text-slate-600 tabular-nums">{sess.date}</td>
                           <td className="p-3 text-slate-600">{sess.branchName || 'الفرع الرئيسي'}</td>
                           <td className="p-3 text-slate-600">{sess.category || 'الكل'}</td>
-                          <td className="p-3 text-center font-bold">{sess.totalItemsCounted}</td>
+                          <td className="p-3 text-center font-bold tabular-nums">{sess.totalItemsCounted}</td>
                           <td className="p-3 text-center">
                             <span
-                              className={`px-2 py-0.5 rounded-full text-xs font-bold ${
+                              className={`px-2 py-0.5 rounded text-xs font-semibold tabular-nums border ${
                                 matchPercent === 100
-                                  ? 'bg-emerald-100 text-emerald-800'
+                                  ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
                                   : matchPercent >= 80
-                                  ? 'bg-amber-100 text-amber-800'
-                                  : 'bg-rose-100 text-rose-800'
+                                  ? 'bg-amber-50 text-amber-800 border-amber-200'
+                                  : 'bg-rose-50 text-rose-800 border-rose-200'
                               }`}
                             >
                               {matchPercent}%
                             </span>
                           </td>
-                          <td className="p-3 font-mono font-bold">
+                          <td className="p-3 font-mono font-bold tabular-nums">
                             <span
                               className={
                                 sess.netVarianceValue < 0
@@ -1165,12 +1196,14 @@ export const InventoryStocktakingView: React.FC<InventoryStocktakingViewProps> =
                           </td>
                           <td className="p-3">
                             {sess.status === 'approved_settled' ? (
-                              <span className="bg-emerald-100 text-emerald-800 text-xs px-2.5 py-1 rounded-full font-bold inline-flex items-center gap-1">
-                                <span>✅</span> معتمد ومسوى
+                              <span className="bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs px-2 py-0.5 rounded font-semibold inline-flex items-center gap-1">
+                                <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                                <span>معتمد ومسوى</span>
                               </span>
                             ) : (
-                              <span className="bg-amber-100 text-amber-800 text-xs px-2.5 py-1 rounded-full font-bold inline-flex items-center gap-1">
-                                <span>📝</span> مسودة قيد العد
+                              <span className="bg-amber-50 text-amber-800 border border-amber-200 text-xs px-2 py-0.5 rounded font-semibold inline-flex items-center gap-1">
+                                <Clock className="w-3 h-3 text-amber-600" />
+                                <span>مسودة قيد العد</span>
                               </span>
                             )}
                           </td>
@@ -1181,25 +1214,28 @@ export const InventoryStocktakingView: React.FC<InventoryStocktakingViewProps> =
                                   setActiveSessionId(sess.id);
                                   setActiveTab('active_count');
                                 }}
-                                className="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 px-3 py-1 rounded-xl text-xs font-bold transition cursor-pointer"
+                                className="bg-blue-50 hover:bg-blue-100 text-blue-900 border border-blue-200 px-2.5 py-1 rounded text-xs font-semibold transition cursor-pointer flex items-center gap-1"
                                 title="فتح شاشة العد والمطابقة"
                               >
-                                🔍 فحص وعد
+                                <Eye className="w-3 h-3" />
+                                <span>عد وفحص</span>
                               </button>
                               <button
                                 onClick={() => printStocktakeSession(sess, appData)}
-                                className="bg-blue-50 hover:bg-blue-100 text-blue-700 px-3 py-1 rounded-xl text-xs font-bold transition cursor-pointer"
+                                className="bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 px-2.5 py-1 rounded text-xs font-semibold transition cursor-pointer flex items-center gap-1"
                                 title="طباعة تقرير الجرد والتسوية المعتمد"
                               >
-                                🖨️ طباعة
+                                <Printer className="w-3 h-3" />
+                                <span>طباعة</span>
                               </button>
                               {sess.status !== 'approved_settled' && (
                                 <button
                                   onClick={() => handleApproveAndSettle(sess)}
-                                  className="bg-[#2e7d32] hover:bg-[#1b5e20] text-white px-3 py-1 rounded-xl text-xs font-bold transition cursor-pointer shadow-sm"
+                                  className="bg-emerald-700 hover:bg-emerald-800 text-white px-2.5 py-1 rounded text-xs font-semibold transition cursor-pointer shadow-2xs flex items-center gap-1"
                                   title="اعتماد وتسوية الجرد آلياً"
                                 >
-                                  ⚡ اعتماد
+                                  <CheckCircle2 className="w-3 h-3" />
+                                  <span>اعتماد</span>
                                 </button>
                               )}
                             </div>

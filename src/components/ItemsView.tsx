@@ -9,7 +9,7 @@ import { TableActionButtons } from './TableActionButtons';
 interface ItemsViewProps {
   appData: AppData;
   subPage?: string;
-  onUpdateData: (newData: AppData) => void;
+  onUpdateData: (newData: AppData, actionInfo?: { action?: string; module?: string; details?: string; deletedId?: string | number }) => void;
   showToast: (msg: string, type?: 'success' | 'error' | 'warning' | 'info') => void;
   onShareCatalog?: () => void;
   onOpenCatalog?: () => void;
@@ -156,42 +156,66 @@ export const ItemsView: React.FC<ItemsViewProps> = ({
     const pPrice = parseFloat(purchasePrice) || 0;
     const sPrice = parseFloat(salePrice) || pPrice * 1.2;
     const qVal = parseFloat(qty) || 0;
+    const currentUser = appData.users.find((u) => u.id === appData.currentUser) || appData.users[0];
+    const nowIso = new Date().toISOString();
 
     if (editingItem) {
       const idx = updatedData.items.findIndex((i) => i.id === editingItem.id);
       if (idx !== -1) {
         updatedData.items[idx] = {
           ...updatedData.items[idx],
+          companyId: updatedData.items[idx].companyId || appData.companyId || 'COMP-000001',
           name: name.trim(),
           description: desc.trim(),
           quantity: qVal,
           purchasePrice: pPrice,
           salePrice: sPrice,
+          updatedAt: nowIso,
+          updatedBy: currentUser?.name || 'مدير النظام',
         };
       }
       showToast('تم تعديل بيانات الصنف بنجاح', 'success');
     } else {
       updatedData.items.push({
         id: 'i' + Date.now(),
+        companyId: appData.companyId || 'COMP-000001',
+        branchId: appData.activeBranchId || 'main',
         name: name.trim(),
         description: desc.trim(),
         quantity: qVal,
         purchasePrice: pPrice,
         salePrice: sPrice,
         movements: [],
+        createdAt: nowIso,
+        updatedAt: nowIso,
+        createdBy: currentUser?.name || 'مدير النظام',
+        createdByUserId: currentUser?.id,
+        createdByUserCode: currentUser?.code || 1,
       });
       showToast('تم إضافة الصنف بنجاح', 'success');
     }
 
-    onUpdateData(updatedData);
+    onUpdateData(updatedData, {
+      action: editingItem ? 'edit_item' : 'create_item',
+      module: 'الأصناف والمخزون',
+      details: `${editingItem ? 'تعديل' : 'إضافة'} صنف: ${name.trim()}`,
+    });
     setIsModalOpen(false);
   };
 
   const handleDeleteItem = (id: string) => {
     if (!confirm('هل أنت متأكد من حذف هذا الصنف؟')) return;
+    const targetItem = appData.items.find((i) => i.id === id);
     const updatedData = { ...appData };
+    if (!updatedData.deletedRecords) updatedData.deletedRecords = {};
+    updatedData.deletedRecords[`items_${id}`] = Date.now();
     updatedData.items = updatedData.items.filter((i) => i.id !== id);
-    onUpdateData(updatedData);
+    onUpdateData(updatedData, {
+      action: 'delete_item',
+      module: 'الأصناف والمخزون',
+      details: `حذف الصنف: ${targetItem?.name || id}`,
+      deletedId: id,
+    });
     showToast('تم حذف الصنف بنجاح');
   };
 
