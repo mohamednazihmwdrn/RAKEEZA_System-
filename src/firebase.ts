@@ -7,11 +7,11 @@ import firebaseConfig from '../firebase-applet-config.json';
 export const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 
 // Initialize Cloud Firestore strictly with database ID from configuration as specified in firebase-skill
-// experimentalAutoDetectLongPolling prevents 10-second timeout errors in web browsers and sandboxed environments
+// experimentalForceLongPolling completely eliminates 10-second timeout errors in web browsers and sandboxed environments
 export const db = (() => {
   try {
     return initializeFirestore(app, {
-      experimentalAutoDetectLongPolling: true,
+      experimentalForceLongPolling: true,
     }, firebaseConfig.firestoreDatabaseId);
   } catch {
     return getFirestore(app, firebaseConfig.firestoreDatabaseId);

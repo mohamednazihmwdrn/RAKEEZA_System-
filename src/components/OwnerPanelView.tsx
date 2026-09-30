@@ -26,6 +26,9 @@ import {
   fetchOwnerCompaniesCloud,
   deleteCompanyCloudApi,
   cleanEntireSystemCloudApi,
+  loginOwnerApi,
+  logoutOwnerApi,
+  getStoredOwnerToken,
 } from '../services/cloudApi';
 import {
   firestoreShardingService,
@@ -35,6 +38,7 @@ import {
 
 interface OwnerPanelViewProps {
   appData: AppData;
+  ownerSession?: { token: string; user?: any } | null;
   onUpdateAppData: (data: Partial<AppData>) => void;
   onEnterCompany: (company: TenantCompany, asSupportSession?: boolean, supportReason?: string) => void;
   onClose: () => void;
@@ -43,6 +47,7 @@ interface OwnerPanelViewProps {
 
 export const OwnerPanelView: React.FC<OwnerPanelViewProps> = ({
   appData,
+  ownerSession,
   onUpdateAppData,
   onEnterCompany,
   onClose,
@@ -50,10 +55,20 @@ export const OwnerPanelView: React.FC<OwnerPanelViewProps> = ({
 }) => {
   // Authentication State
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(
-    appData.isOwnerAuthenticated || false
+    () => !!ownerSession || !!getStoredOwnerToken()
   );
-  const [ownerPin, setOwnerPin] = useState<string>('');
+
+  useEffect(() => {
+    if (ownerSession) {
+      setIsAuthenticated(true);
+    } else if (!getStoredOwnerToken()) {
+      setIsAuthenticated(false);
+    }
+  }, [ownerSession]);
+  const [ownerUsername, setOwnerUsername] = useState<string>('');
+  const [ownerPassword, setOwnerPassword] = useState<string>('');
   const [authError, setAuthError] = useState<string>('');
+  const [isLoggingIn, setIsLoggingIn] = useState<boolean>(false);
 
   // Active Tab
   const [activeTab, setActiveTab] = useState<
@@ -388,24 +403,44 @@ export const OwnerPanelView: React.FC<OwnerPanelViewProps> = ({
   };
 
   // Authenticate Owner
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Default Owner PIN or password
-    if (ownerPin === '123456' || ownerPin === 'rakeeza' || ownerPin === 'owner' || ownerPin === 'admin') {
-      setIsAuthenticated(true);
-      setAuthError('');
-      updateOwnerState({ isOwnerAuthenticated: true });
-    } else {
-      setAuthError('كلمة المرور غير صحيحة. كلمة المرور الافتراضية للوحة التحكم هي 123456');
+    const cleanUser = ownerUsername.trim();
+    const cleanPass = ownerPassword.trim();
+    if (!cleanUser || !cleanPass) {
+      setAuthError('يرجى إدخال اسم المستخدم وكلمة المرور لمالك المنظومة');
+      return;
+    }
+
+    setIsLoggingIn(true);
+    setAuthError('');
+    try {
+      const res = await loginOwnerApi(cleanUser, cleanPass);
+      if (res.success && res.token) {
+        setIsAuthenticated(true);
+        setAuthError('');
+        updateOwnerState({ isOwnerAuthenticated: true });
+      } else {
+        setAuthError(res.error || 'بيانات اعتماد مالك المنظومة غير صحيحة');
+      }
+    } catch (err: any) {
+      setAuthError(err?.message || 'بيانات اعتماد مالك المنظومة غير صحيحة');
+    } finally {
+      setIsLoggingIn(false);
     }
   };
 
   // Logout Owner
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    try {
+      await logoutOwnerApi();
+    } catch {}
     setIsAuthenticated(false);
     updateOwnerState({ isOwnerAuthenticated: false });
     if (onLogout) {
       onLogout();
+    } else {
+      onClose();
     }
   };
 
@@ -593,15 +628,30 @@ export const OwnerPanelView: React.FC<OwnerPanelViewProps> = ({
           <form onSubmit={handleLogin} className="space-y-4">
             <div>
               <label className="block text-xs font-bold text-slate-300 mb-1">
-                رمز المرور السري للمالك (Owner PIN / Password)
+                اسم المستخدم / المعرف (Owner Username / ID)
+              </label>
+              <input
+                type="text"
+                autoComplete="username"
+                value={ownerUsername}
+                onChange={(e) => setOwnerUsername(e.target.value)}
+                placeholder="أدخل اسم مستخدم المالك..."
+                className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-amber-500"
+                autoFocus
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-300 mb-1">
+                كلمة المرور (Owner Password)
               </label>
               <input
                 type="password"
-                value={ownerPin}
-                onChange={(e) => setOwnerPin(e.target.value)}
-                placeholder="أدخل رمز المالك (الافتراضي: 123456)"
-                className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-amber-500 font-mono tracking-widest text-center"
-                autoFocus
+                autoComplete="current-password"
+                value={ownerPassword}
+                onChange={(e) => setOwnerPassword(e.target.value)}
+                placeholder="أدخل كلمة المرور..."
+                className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-amber-500"
               />
             </div>
 
@@ -613,9 +663,10 @@ export const OwnerPanelView: React.FC<OwnerPanelViewProps> = ({
 
             <button
               type="submit"
-              className="w-full bg-linear-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 font-black py-3 rounded-xl transition shadow-lg cursor-pointer flex items-center justify-center gap-2"
+              disabled={isLoggingIn}
+              className="w-full bg-linear-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 font-black py-3 rounded-xl transition shadow-lg cursor-pointer flex items-center justify-center gap-2 disabled:opacity-60"
             >
-              <span>تسجيل الدخول إلى لوحة التحكم</span>
+              <span>{isLoggingIn ? 'جاري التحقق الآمن...' : 'تسجيل الدخول إلى لوحة التحكم'}</span>
               <span>🔒</span>
             </button>
 

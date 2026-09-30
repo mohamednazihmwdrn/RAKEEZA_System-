@@ -62,6 +62,9 @@ import {
   activateTenantLicenseCloud,
   verifyOwnerSecretApi,
   verifyUserIdentityInFirebase,
+  fetchOwnerSessionApi,
+  logoutOwnerApi,
+  getStoredOwnerToken,
   AuthSessionResponse,
 } from './services/cloudApi';
 import { realtimeSync } from './services/realtimeSync';
@@ -81,9 +84,13 @@ export default function App() {
   const [currentPage, setCurrentPage] = useState<string>(() => {
     if (typeof window !== 'undefined') {
       const hash = window.location.hash.replace('#', '').trim();
+      // Block direct unauthenticated access to Owner dashboard via URL hash
+      if (hash === 'owner_panel' || hash === 'owner' || hash === 'admin' || hash === 'master' || hash === 'owner-dashboard') {
+        return 'home';
+      }
       if (hash && hash !== 'login') return hash;
       const saved = localStorage.getItem('rakeeza_current_page');
-      if (saved && saved.trim() && saved !== 'login') return saved.trim();
+      if (saved && saved.trim() && saved !== 'login' && saved.trim() !== 'owner_panel') return saved.trim();
     }
     return 'home';
   });
@@ -103,6 +110,7 @@ export default function App() {
 
   // Cloud Authentication & Tenant Session State
   const [session, setSession] = useState<AuthSessionResponse | null>(null);
+  const [ownerSession, setOwnerSession] = useState<{ token: string; user?: any } | null>(null);
   const [isAuthLoading, setIsAuthLoading] = useState<boolean>(true);
   const [isLicenseModalOpen, setIsLicenseModalOpen] = useState<boolean>(false);
   const [licenseCodeInput, setLicenseCodeInput] = useState<string>('');
@@ -448,7 +456,7 @@ export default function App() {
             const cloudRes = await fetchTenantDataCloud(activeSession.company.id, activeSession.user?.uid);
             if (cloudRes.success && cloudRes.data) {
               setAppData((prev) => {
-                const merged = mergeAppDataMonotonically(prev, cloudRes.data);
+                const merged = mergeAppDataMonotonically(prev, cloudRes.data!, true);
                 saveAppData(merged, activeSession.company.id);
                 return merged;
               });
@@ -461,6 +469,17 @@ export default function App() {
           } else {
             setSession(null);
           }
+
+          // Check for active Owner session (isolated from tenant session)
+          try {
+            const ownerCheck = await fetchOwnerSessionApi();
+            if (ownerCheck.valid && ownerCheck.user && isMounted) {
+              setOwnerSession({
+                token: getStoredOwnerToken() || '',
+                user: ownerCheck.user,
+              });
+            }
+          } catch {}
         }
       } catch (err) {
         console.error('Session init error:', err);
@@ -530,7 +549,7 @@ export default function App() {
       const cloudRes = await fetchTenantDataCloud(loginResult.company.id, loginResult.user.uid);
       if (cloudRes.success && cloudRes.data) {
         setAppData((prev) => {
-          const merged = mergeAppDataMonotonically(prev, cloudRes.data);
+          const merged = mergeAppDataMonotonically(prev, cloudRes.data!, true);
           saveAppData(merged, loginResult.company.id);
           return merged;
         });
@@ -574,8 +593,23 @@ export default function App() {
       localStorage.removeItem('rakeeza_current_page');
     } catch {}
     setSession(null);
+    setOwnerSession(null);
     setCurrentPage('home');
     showToast('تم تسجيل الخروج بنجاح من المنظومة', 'info');
+  };
+
+  // 👑 Secure Owner Exit / Revoke Handler
+  const handleOwnerLogout = async () => {
+    try {
+      await logoutOwnerApi();
+    } catch (e) {
+      console.warn('Owner logout error:', e);
+    }
+    setOwnerSession(null);
+    showToast('تم إنهاء جلسة مالك المنظومة بنجاح والعودة لحسابك المعتاد', 'info');
+    const activeUser = session?.user || appData.users?.find((u) => u.id === appData.currentUser) || appData.users?.[0];
+    const safePage = getDefaultLandingPage(activeUser);
+    handleNavigate(safePage);
   };
 
   // 🔑 License Activation Submission
@@ -697,10 +731,15 @@ export default function App() {
   const handleNavigate = (page: string, pushHistory = true) => {
     if (page === currentPage) return;
 
-    // 🛡️ User Permission Access Guard
+    // 🛡️ User Permission Access Guard with Isolated Owner Context
     const activeUser = session?.user || appData.users?.find((u) => u.id === appData.currentUser) || appData.users?.[0];
-    if (!canAccessPage(activeUser, page)) {
-      showToast(`عفواً، حسابك لا يمتلك صلاحية الدخول لشاشة "${page}". تم توجيهك لصفحتك المصرح بها.`, 'warning');
+    const hasOwnerAccess = !!ownerSession || !!getStoredOwnerToken() || activeUser?.role === 'owner' || isOwner;
+    if (!canAccessPage(activeUser, page, hasOwnerAccess)) {
+      if (page === 'owner_panel') {
+        showToast('عفواً، يتطلب الوصول للوحة المالك مصادقة منفصلة وخاصة بالمالك.', 'warning');
+      } else {
+        showToast(`عفواً، حسابك لا يمتلك صلاحية الدخول لشاشة "${page}". تم توجيهك لصفحتك المصرح بها.`, 'warning');
+      }
       const safePage = getDefaultLandingPage(activeUser);
       if (safePage !== currentPage) {
         if (pushHistory) window.history.pushState({ page: safePage }, '', `#${safePage}`);
@@ -727,7 +766,8 @@ export default function App() {
     // Initialize initial state if empty
     const currentHash = window.location.hash.replace('#', '') || currentPage || 'home';
     const activeUser = session?.user || appData.users?.find((u) => u.id === appData.currentUser) || appData.users?.[0];
-    const safeInitPage = canAccessPage(activeUser, currentHash) ? currentHash : getDefaultLandingPage(activeUser);
+    const hasOwnerAccess = !!ownerSession || !!getStoredOwnerToken() || activeUser?.role === 'owner' || isOwner;
+    const safeInitPage = canAccessPage(activeUser, currentHash, hasOwnerAccess) ? currentHash : getDefaultLandingPage(activeUser);
     window.history.replaceState({ page: safeInitPage }, '', `#${safeInitPage}`);
 
     const handlePopState = (event: PopStateEvent) => {
@@ -751,7 +791,8 @@ export default function App() {
       // 3. Navigate back to previous page in app with permission validation
       const targetPage = event.state?.page || window.location.hash.replace('#', '') || 'home';
       const currentUserActive = session?.user || appData.users?.find((u) => u.id === appData.currentUser) || appData.users?.[0];
-      const verifiedTarget = canAccessPage(currentUserActive, targetPage) ? targetPage : getDefaultLandingPage(currentUserActive);
+      const hasTargetOwnerAccess = !!ownerSession || !!getStoredOwnerToken() || currentUserActive?.role === 'owner' || isOwner;
+      const verifiedTarget = canAccessPage(currentUserActive, targetPage, hasTargetOwnerAccess) ? targetPage : getDefaultLandingPage(currentUserActive);
       try {
         localStorage.setItem('rakeeza_current_page', verifiedTarget);
       } catch {}
@@ -763,8 +804,13 @@ export default function App() {
     const handleHashChange = () => {
       const hashPage = window.location.hash.replace('#', '') || 'home';
       const currentUserActive = session?.user || appData.users?.find((u) => u.id === appData.currentUser) || appData.users?.[0];
-      if (!canAccessPage(currentUserActive, hashPage)) {
-        showToast(`عفواً، لا يمتلك حسابك صلاحية الدخول لشاشة "${hashPage}". تم منع التجاوز وتوجيهك لصفحتك المصرح بها.`, 'error');
+      const hasHashOwnerAccess = !!ownerSession || !!getStoredOwnerToken() || currentUserActive?.role === 'owner' || isOwner;
+      if (!canAccessPage(currentUserActive, hashPage, hasHashOwnerAccess)) {
+        if (hashPage === 'owner_panel') {
+          showToast('عفواً، يتطلب الوصول للوحة المالك مصادقة منفصلة وخاصة بالمالك.', 'error');
+        } else {
+          showToast(`عفواً، لا يمتلك حسابك صلاحية الدخول لشاشة "${hashPage}". تم منع التجاوز وتوجيهك لصفحتك المصرح بها.`, 'error');
+        }
         const safePage = getDefaultLandingPage(currentUserActive);
         window.history.replaceState({ page: safePage }, '', `#${safePage}`);
         setCurrentPage(safePage);
@@ -782,7 +828,7 @@ export default function App() {
       window.removeEventListener('popstate', handlePopState);
       window.removeEventListener('hashchange', handleHashChange);
     };
-  }, [isSidebarOpen, isInspectModalOpen, isShareCatalogOpen, currentPage]);
+  }, [isSidebarOpen, isInspectModalOpen, isShareCatalogOpen, currentPage, ownerSession]);
 
   // Keyboard Shortcuts (Ctrl+1: Sales, Ctrl+2: Purchases, Ctrl+3: POS, Ctrl+4: Items, Ctrl+5: Accounts, Ctrl+0: Home)
   useEffect(() => {
@@ -856,7 +902,9 @@ export default function App() {
   const isOwner =
     session?.user?.role === 'owner' ||
     currentUser?.role === 'owner' ||
-    appData.isOwnerAuthenticated;
+    !!ownerSession ||
+    !!getStoredOwnerToken();
+  const hasOwnerAccess = isOwner || !!ownerSession || !!getStoredOwnerToken();
   const userCompanyId =
     session?.company?.id || currentUser?.companyId || appData.companyId || 'COMP-000001';
 
@@ -928,7 +976,8 @@ export default function App() {
   const renderContent = () => {
     // 🛡️ Top-Level Permission Gate (Guards against manually modified URLs, hashes or tampered client state)
     const activeUser = session?.user || appData.users?.find((u) => u.id === appData.currentUser) || appData.users?.[0];
-    if (!canAccessPage(activeUser, currentPage)) {
+    const hasOwnerAccess = !!ownerSession || !!getStoredOwnerToken() || activeUser?.role === 'owner' || isOwner;
+    if (!canAccessPage(activeUser, currentPage, hasOwnerAccess)) {
       return (
         <div className="erp-card max-w-lg mx-auto text-center py-10 px-6 space-y-4 my-8 select-none" dir="rtl">
           <div className="w-16 h-16 rounded-2xl bg-rose-50 text-rose-600 border border-rose-200 flex items-center justify-center mx-auto shadow-xs">
@@ -1052,8 +1101,6 @@ export default function App() {
       case 'items':
       case 'item_movement':
       case 'inventory':
-      case 'physical_inventory':
-      case 'inventory_settlement':
         return (
           <ItemsView
             appData={appData}
@@ -1062,6 +1109,16 @@ export default function App() {
             showToast={showToast}
             onShareCatalog={() => setIsShareCatalogOpen(true)}
             onOpenCatalog={() => handleNavigate('catalog')}
+          />
+        );
+      case 'physical_inventory':
+      case 'inventory_settlement':
+        return (
+          <InventoryStocktakingView
+            appData={appData}
+            subPage={currentPage}
+            onUpdateData={updateData}
+            showToast={showToast}
           />
         );
       case 'daily_operations':
@@ -1106,6 +1163,7 @@ export default function App() {
         return (
           <OwnerPanelView
             appData={appData}
+            ownerSession={ownerSession}
             onUpdateAppData={(partial) => {
               const updated = { ...appData, ...partial };
               updateData(updated);
@@ -1135,8 +1193,8 @@ export default function App() {
                 showToast('حدث خطأ أثناء تحميل بيانات الشركة', 'error');
               }
             }}
-            onClose={() => handleNavigate('home')}
-            onLogout={handleLogout}
+            onClose={handleOwnerLogout}
+            onLogout={handleOwnerLogout}
           />
         );
       case 'reports':
@@ -1198,6 +1256,50 @@ export default function App() {
     );
   }
 
+  // Standalone Owner Master Admin Dashboard View
+  if (currentPage === 'owner_panel' && hasOwnerAccess) {
+    return (
+      <div className="min-h-screen bg-slate-950 text-slate-100 font-sans max-w-full overflow-x-hidden" dir="rtl">
+        <OwnerPanelView
+          appData={appData}
+          ownerSession={ownerSession || (getStoredOwnerToken() ? { token: getStoredOwnerToken()!, user: { name: 'Mohamed Nazih', role: 'owner' } } : null)}
+          onUpdateAppData={(partial) => {
+            const updated = { ...appData, ...partial };
+            updateData(updated);
+          }}
+          onEnterCompany={async (company, asSupport, supportReason) => {
+            try {
+              if (session) {
+                setSession({
+                  ...session,
+                  company: company,
+                });
+              }
+              const cloudRes = await fetchTenantDataCloud(company.id, session?.user?.uid);
+              if (cloudRes.success && cloudRes.data) {
+                setAppData(cloudRes.data);
+                saveAppData(cloudRes.data, company.id);
+              } else {
+                const localData = loadAppData(company.id);
+                if (localData) {
+                  setAppData(localData);
+                }
+              }
+              showToast(`تم الدخول بنجاح إلى شركة: ${company.name} ${asSupport ? '(وضع الدعم الفني)' : ''}`, 'success');
+              handleNavigate('home');
+            } catch (e) {
+              console.error('Failed to enter company:', e);
+              showToast('حدث خطأ أثناء تحميل بيانات الشركة', 'error');
+            }
+          }}
+          onClose={handleOwnerLogout}
+          onLogout={handleOwnerLogout}
+        />
+        <Toast message={toastMessage} type={toastType} />
+      </div>
+    );
+  }
+
   // Cloud Auth Loading State
   if (isAuthLoading) {
     return (
@@ -1215,24 +1317,13 @@ export default function App() {
   }
 
   // Not Logged In Gate: Display Login Page
-  if (!session?.valid && currentPage !== 'catalog' && currentPage !== 'owner_panel') {
+  if (!session?.valid && currentPage !== 'catalog' && !(currentPage === 'owner_panel' && ownerSession)) {
     return (
       <>
         <LoginView
           onLoginSuccess={handleLoginSuccess}
-          onOpenOwnerPanelDirectly={async () => {
-            try {
-              const res = await verifyOwnerSecretApi('29190615');
-              if (res.success && res.user && res.company) {
-                handleLoginSuccess({
-                  user: res.user,
-                  company: res.company,
-                  subscription: res.subscription,
-                });
-                return;
-              }
-            } catch {}
-            setCurrentPage('owner_panel');
+          onOpenOwnerPanelDirectly={() => {
+            handleNavigate('owner_panel');
           }}
         />
         <Toast message={toastMessage} type={toastType} />
@@ -1253,6 +1344,20 @@ export default function App() {
         autoBackupActive={appData.autoBackupConfig?.enabled ?? true}
         onNavigateBackup={() => handleNavigate('backup')}
         onNavigateOwner={() => handleNavigate('owner_panel')}
+        onOwnerLoginSuccess={(ownerData) => {
+          if (ownerData && ownerData.token) {
+            setOwnerSession({
+              token: ownerData.token,
+              user: ownerData.user,
+            });
+            showToast(`👑 تم التحقق بنجاح! مرحباً بمالك المنظومة [${ownerData.user?.name || 'المالك'}]`, 'success');
+            setCurrentPage('owner_panel');
+            try {
+              localStorage.setItem('rakeeza_current_page', 'owner_panel');
+              window.history.pushState({ page: 'owner_panel' }, '', '#owner_panel');
+            } catch {}
+          }
+        }}
         onShareCatalog={() => setIsShareCatalogOpen(true)}
         onOpenCatalog={() => handleNavigate('catalog')}
         pendingWebOrdersCount={pendingWebOrdersCount}

@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { AppData, Item } from '../types';
 import { Modal } from './Modal';
-import { InventoryStocktakingView } from './InventoryStocktakingView';
 import { exportToExcel } from '../utils/excelExport';
 import { openUnifiedPrintWindow } from '../utils/printUnified';
 import { TableActionButtons } from './TableActionButtons';
@@ -23,18 +22,6 @@ export const ItemsView: React.FC<ItemsViewProps> = ({
   onShareCatalog,
   onOpenCatalog,
 }) => {
-  // If the user navigated to physical inventory or settlement, render the enterprise stocktaking engine
-  if (subPage === 'physical_inventory' || subPage === 'inventory_settlement') {
-    return (
-      <InventoryStocktakingView
-        appData={appData}
-        subPage={subPage}
-        onUpdateData={onUpdateData}
-        showToast={showToast}
-      />
-    );
-  }
-
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<Item | null>(null);
@@ -45,9 +32,6 @@ export const ItemsView: React.FC<ItemsViewProps> = ({
   const [qty, setQty] = useState('');
   const [purchasePrice, setPurchasePrice] = useState('');
   const [salePrice, setSalePrice] = useState('');
-
-  // Physical count state
-  const [physicalCounts, setPhysicalCounts] = useState<Record<string, number>>({});
 
   const filteredItems = appData.items.filter((item) => {
     const s = searchTerm.toLowerCase();
@@ -219,32 +203,6 @@ export const ItemsView: React.FC<ItemsViewProps> = ({
     showToast('تم حذف الصنف بنجاح');
   };
 
-  const handleApplySettlement = () => {
-    const updatedData = { ...appData };
-    let totalAdjustments = 0;
-
-    updatedData.items.forEach((item) => {
-      const pCount = physicalCounts[item.id];
-      if (pCount !== undefined && pCount !== item.quantity) {
-        const diff = pCount - item.quantity;
-        item.quantity = pCount;
-        if (!item.movements) item.movements = [];
-        item.movements.push({
-          date: new Date().toISOString().split('T')[0],
-          type: 'adjustment',
-          qty: diff,
-          price: item.purchasePrice,
-          total: diff * item.purchasePrice,
-          note: 'تسوية جرد فعلي',
-        });
-        totalAdjustments += 1;
-      }
-    });
-
-    onUpdateData(updatedData);
-    showToast(`تم تطبيق التسوية وتحديث ${totalAdjustments} أصناف بنجاح`, 'success');
-  };
-
   return (
     <div className="space-y-4">
       {/* Search & Actions Bar */}
@@ -276,14 +234,6 @@ export const ItemsView: React.FC<ItemsViewProps> = ({
                 </button>
               )}
             </>
-          )}
-          {subPage === 'physical_inventory' && (
-            <button
-              onClick={handleApplySettlement}
-              className="min-h-[42px] bg-[#1a237e] hover:bg-[#0d47a1] active:bg-[#082a61] text-white px-4 py-2 rounded-xl text-xs md:text-sm font-bold transition cursor-pointer flex items-center justify-center gap-1 shadow-xs flex-1 sm:flex-initial"
-            >
-              ✅ تطبيق نتائج الجرد
-            </button>
           )}
         </div>
         <div className="w-full sm:w-auto min-w-[220px]">
@@ -625,149 +575,6 @@ export const ItemsView: React.FC<ItemsViewProps> = ({
               .reduce((sum, item) => sum + (item.quantity || 0) * (item.purchasePrice || 0), 0)
               .toFixed(2)}{' '}
             ج.م
-          </div>
-        </div>
-      )}
-
-      {subPage === 'physical_inventory' && (
-        <div className="bg-white rounded-2xl p-4 shadow-sm space-y-3">
-          <h4 className="font-bold text-[#1a237e]">إدخال الجرد الفعلي للمخازن</h4>
-
-          {/* Mobile Physical Inventory Cards (< md) */}
-          <div className="block md:hidden space-y-3">
-            {filteredItems.map((item) => {
-              const currentPhysical = physicalCounts[item.id] ?? item.quantity;
-              const diff = currentPhysical - item.quantity;
-              return (
-                <div key={item.id} className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200 text-xs space-y-2">
-                  <div className="flex items-center justify-between font-bold">
-                    <span className="text-slate-900 text-sm">{item.name}</span>
-                    <span
-                      className={`font-mono font-bold px-2 py-0.5 rounded-lg text-xs ${
-                        diff < 0
-                          ? 'bg-rose-100 text-rose-800'
-                          : diff > 0
-                          ? 'bg-emerald-100 text-emerald-800'
-                          : 'bg-slate-200 text-slate-600'
-                      }`}
-                    >
-                      الفارق: {diff > 0 ? `+${diff}` : diff}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-slate-500">
-                      المسجلة: <strong className="font-mono text-slate-800">{item.quantity}</strong>
-                    </span>
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-slate-600 font-semibold text-[11px]">الفعلية:</span>
-                      <input
-                        type="number"
-                        value={currentPhysical}
-                        onChange={(e) =>
-                          setPhysicalCounts({
-                            ...physicalCounts,
-                            [item.id]: parseFloat(e.target.value) || 0,
-                          })
-                        }
-                        className="w-24 p-1.5 bg-white border-2 border-slate-200 rounded-lg text-center font-mono font-bold focus:border-[#1a237e] focus:outline-none"
-                      />
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-
-          {/* Desktop Physical Inventory Table (>= md) */}
-          <div className="hidden md:block overflow-x-auto">
-            <table className="w-full text-right text-xs md:text-sm">
-            <thead>
-              <tr className="bg-[#1a237e] text-white">
-                <th className="p-3 rounded-r-lg">الصنف</th>
-                <th className="p-3">الكمية المسجلة</th>
-                <th className="p-3">الكمية الفعلية بالمخزن</th>
-                <th className="p-3 rounded-l-lg">الفارق</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {filteredItems.map((item) => {
-                const currentPhysical = physicalCounts[item.id] ?? item.quantity;
-                const diff = currentPhysical - item.quantity;
-                return (
-                  <tr key={item.id}>
-                    <td className="p-3 font-bold">{item.name}</td>
-                    <td className="p-3">{item.quantity}</td>
-                    <td className="p-3">
-                      <input
-                        type="number"
-                        value={currentPhysical}
-                        onChange={(e) =>
-                          setPhysicalCounts({
-                            ...physicalCounts,
-                            [item.id]: parseFloat(e.target.value) || 0,
-                          })
-                        }
-                        className="w-28 p-1.5 border-2 border-gray-200 rounded-lg text-center focus:border-[#1a237e] focus:outline-none"
-                      />
-                    </td>
-                    <td
-                      className={`p-3 font-bold ${
-                        diff < 0 ? 'text-[#c62828]' : diff > 0 ? 'text-[#2e7d32]' : 'text-gray-400'
-                      }`}
-                    >
-                      {diff > 0 ? `+${diff}` : diff}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-        </div>
-      )}
-
-      {subPage === 'inventory_settlement' && (
-        <div className="bg-white rounded-2xl p-4 shadow-sm space-y-3">
-          <h4 className="font-bold text-[#1a237e]">تقرير مطابقة وتسوية الجرد</h4>
-          <p className="text-gray-500 text-xs">حالة مطابقة أرصدة الدفتر مع الأرصدة الفعلية في المخازن</p>
-          {/* Mobile Settlement Cards (< md) */}
-          <div className="block md:hidden space-y-2.5">
-            {filteredItems.map((item) => (
-              <div key={item.id} className="bg-slate-50 p-3 rounded-xl border border-slate-200 text-xs space-y-1.5">
-                <div className="flex items-center justify-between font-bold">
-                  <span className="text-slate-900">{item.name}</span>
-                  <span className="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full text-[11px] font-bold">
-                    ⚪ مطابق
-                  </span>
-                </div>
-                <div className="flex items-center justify-between text-[11px] text-slate-500">
-                  <span>الدفترية: <strong className="font-mono text-slate-800">{item.quantity}</strong></span>
-                  <span>الفعلية: <strong className="font-mono text-slate-800">{item.quantity}</strong></span>
-                  <span>الفارق: <strong className="font-mono text-slate-800">0</strong></span>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {/* Desktop Settlement Table (>= md) */}
-          <div className="hidden md:block overflow-x-auto">
-            <table className="w-full text-right text-xs md:text-sm">
-              <tbody className="divide-y divide-gray-100">
-                {filteredItems.map((item) => (
-                  <tr key={item.id}>
-                    <td className="p-3 font-bold">{item.name}</td>
-                    <td className="p-3">{item.quantity}</td>
-                    <td className="p-3">{item.quantity}</td>
-                    <td className="p-3">0</td>
-                    <td className="p-3">
-                      <span className="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full text-xs font-bold">
-                        ⚪ مطابق
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
           </div>
         </div>
       )}

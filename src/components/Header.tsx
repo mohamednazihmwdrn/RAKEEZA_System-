@@ -30,6 +30,7 @@ import { PWAInstallButton } from './PWAInstallButton';
 import { realtimeSync } from '../services/realtimeSync';
 import { offlineSyncManager, SyncStatus } from '../services/offlineSyncManager';
 import { FiscalYearSelectorModal } from './FiscalYearSelectorModal';
+import { loginOwnerApi } from '../services/cloudApi';
 
 interface HeaderProps {
   currentUser: User | undefined;
@@ -41,6 +42,7 @@ interface HeaderProps {
   autoBackupActive?: boolean;
   onNavigateBackup?: () => void;
   onNavigateOwner?: () => void;
+  onOwnerLoginSuccess?: (ownerSession: any) => void;
   onShareCatalog?: () => void;
   onOpenCatalog?: () => void;
   pendingWebOrdersCount?: number;
@@ -62,6 +64,7 @@ export const Header: React.FC<HeaderProps> = ({
   autoBackupActive = true,
   onNavigateBackup,
   onNavigateOwner,
+  onOwnerLoginSuccess,
   onShareCatalog,
   onOpenCatalog,
   pendingWebOrdersCount = 0,
@@ -78,14 +81,13 @@ export const Header: React.FC<HeaderProps> = ({
   const [isFiscalYearModalOpen, setIsFiscalYearModalOpen] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
-  const [ownerPin, setOwnerPin] = useState('');
+  const [ownerUsername, setOwnerUsername] = useState('');
+  const [ownerPassword, setOwnerPassword] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
   const [isVerifyingOwner, setIsVerifyingOwner] = useState(false);
-  const [isHoldingLogo, setIsHoldingLogo] = useState(false);
   const [isRealtimeConnected, setIsRealtimeConnected] = useState(true);
   const [syncStatus, setSyncStatus] = useState<SyncStatus>(() => offlineSyncManager.getStatus());
   const clickTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const holdTimerRef = useRef<NodeJS.Timeout | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
   const notificationsRef = useRef<HTMLDivElement | null>(null);
 
@@ -140,28 +142,6 @@ export const Header: React.FC<HeaderProps> = ({
     };
   }, [isMenuOpen, isNotificationsOpen]);
 
-  // Long press handler (holding on system name for 1.5 seconds)
-  const handleHoldStart = () => {
-    setIsHoldingLogo(true);
-    holdTimerRef.current = setTimeout(() => {
-      setIsHoldingLogo(false);
-      setShowOwnerModal(true);
-      setOwnerPin('');
-      setErrorMessage('');
-      if (typeof navigator !== 'undefined' && navigator.vibrate) {
-        navigator.vibrate(80);
-      }
-    }, 1500);
-  };
-
-  const handleHoldEnd = () => {
-    if (holdTimerRef.current) {
-      clearTimeout(holdTimerRef.current);
-      holdTimerRef.current = null;
-    }
-    setIsHoldingLogo(false);
-  };
-
   const handleSystemNameClick = () => {
     if (clickTimerRef.current) {
       clearTimeout(clickTimerRef.current);
@@ -170,58 +150,50 @@ export const Header: React.FC<HeaderProps> = ({
     const nextCount = clickCount + 1;
     setClickCount(nextCount);
 
-    if (nextCount >= 5) {
+    // 🔒 Configurable threshold: 7 consecutive taps within the active time window
+    if (nextCount >= 7) {
       setClickCount(0);
       setShowOwnerModal(true);
-      setOwnerPin('');
+      setOwnerUsername('');
+      setOwnerPassword('');
       setErrorMessage('');
     } else {
+      // Reset if inactive for 2500ms
       clickTimerRef.current = setTimeout(() => {
         setClickCount(0);
-      }, 3500);
+      }, 2500);
     }
   };
 
   const handleOwnerLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const clean = ownerPin.trim();
-    if (!clean) {
-      setErrorMessage('يرجى إدخال الرقم السري أو كلمة المرور للمالك');
+    const cleanUser = ownerUsername.trim();
+    const cleanPass = ownerPassword.trim();
+    if (!cleanUser || !cleanPass) {
+      setErrorMessage('يرجى إدخال اسم المستخدم وكلمة المرور لمالك المنظومة.');
       return;
     }
 
     setIsVerifyingOwner(true);
     setErrorMessage('');
 
-    // Fast local verification for master PINs
-    if (clean === '29190615' || clean === '123' || clean.toLowerCase() === 'rakeeza') {
-      setShowOwnerModal(false);
-      setOwnerPin('');
-      setIsVerifyingOwner(false);
-      if (onNavigateOwner) {
-        onNavigateOwner();
-      }
-      return;
-    }
-
     try {
-      const res = await fetch('/api/auth/owner-verify', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ secret: clean }),
-      });
-      const data = await res.json();
-      if (res.ok && data.success) {
+      const data = await loginOwnerApi(cleanUser, cleanPass);
+      if (data.success && data.token) {
         setShowOwnerModal(false);
-        setOwnerPin('');
-        if (onNavigateOwner) {
+        setOwnerUsername('');
+        setOwnerPassword('');
+        setErrorMessage('');
+        if (onOwnerLoginSuccess) {
+          onOwnerLoginSuccess(data);
+        } else if (onNavigateOwner) {
           onNavigateOwner();
         }
       } else {
-        setErrorMessage(data.error || 'رمز المرور السري غير صحيح! يرجى التأكد وإعادة المحاولة.');
+        setErrorMessage(data.error || 'بيانات اعتماد مالك المنظومة غير صحيحة.');
       }
-    } catch {
-      setErrorMessage('فشل الاتصال بالخادم للتحقق من كلمة المرور.');
+    } catch (err: any) {
+      setErrorMessage(err?.message || 'بيانات اعتماد مالك المنظومة غير صحيحة.');
     } finally {
       setIsVerifyingOwner(false);
     }
@@ -240,19 +212,9 @@ export const Header: React.FC<HeaderProps> = ({
             <Menu className="w-5 h-5" />
           </button>
           <div
-            className={`flex items-center gap-2 cursor-pointer select-none py-1 px-2 rounded-xl transition-all relative ${
-              isHoldingLogo
-                ? 'scale-105 bg-amber-400/25 ring-2 ring-amber-400 shadow-lg shadow-amber-400/30'
-                : 'hover:bg-white/10 active:scale-98'
-            }`}
+            className="flex items-center gap-2 cursor-pointer select-none py-1 px-2 rounded-xl transition-all relative hover:bg-white/10 active:scale-98"
             onClick={handleSystemNameClick}
-            onMouseDown={handleHoldStart}
-            onMouseUp={handleHoldEnd}
-            onMouseLeave={handleHoldEnd}
-            onTouchStart={handleHoldStart}
-            onTouchEnd={handleHoldEnd}
-            onTouchCancel={handleHoldEnd}
-            title={`منشأة: ${companyName || 'الشركة المسجلة'}${companyCode ? ` (كود: ${companyCode})` : ''} - انقر مطولاً للدخول للإدارة`}
+            title={`منشأة: ${companyName || 'الشركة المسجلة'}${companyCode ? ` (كود: ${companyCode})` : ''}`}
           >
             <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-amber-400/20 to-amber-500/30 border border-amber-300/40 flex items-center justify-center text-amber-300 shadow-xs shrink-0">
               <Building2 className="w-4 h-4" />
@@ -287,9 +249,6 @@ export const Header: React.FC<HeaderProps> = ({
                 </div>
               )}
             </div>
-            {isHoldingLogo && (
-              <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-10 h-1 bg-amber-400 rounded-full animate-pulse" />
-            )}
           </div>
         </div>
 
@@ -779,38 +738,6 @@ export const Header: React.FC<HeaderProps> = ({
                           <ChevronLeft className="w-4 h-4 text-slate-400" />
                         </div>
                       </button>
-
-                      {/* لوحة المالك والمدير العام */}
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setIsMenuOpen(false);
-                          setShowOwnerModal(true);
-                          setOwnerPin('');
-                          setErrorMessage('');
-                        }}
-                        className="w-full min-h-[56px] flex items-center justify-between p-3 rounded-2xl text-right transition cursor-pointer bg-white hover:bg-indigo-50/70 border border-slate-200/90 shadow-2xs active:scale-[0.98] group"
-                      >
-                        <div className="flex items-center gap-3 min-w-0">
-                          <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 border border-indigo-100 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
-                            <KeyRound className="w-5 h-5" />
-                          </div>
-                          <div className="flex flex-col text-right truncate">
-                            <span className="text-xs sm:text-sm font-black text-slate-900 group-hover:text-indigo-900 truncate">
-                              المدير العام (لوحة المالك)
-                            </span>
-                            <span className="text-[11px] text-slate-500 font-medium truncate">
-                              إدارة التراخيص والمشتركين والشركات
-                            </span>
-                          </div>
-                        </div>
-                        <div className="shrink-0 mr-2 flex items-center gap-1.5">
-                          <span className="text-[10px] bg-indigo-50 text-indigo-900 border border-indigo-200 font-bold px-2.5 py-1 rounded-lg">
-                            لوحة المالك
-                          </span>
-                          <ChevronLeft className="w-4 h-4 text-slate-400" />
-                        </div>
-                      </button>
                     </div>
                   </div>
 
@@ -1061,35 +988,6 @@ export const Header: React.FC<HeaderProps> = ({
                           )}
                         </div>
                       </button>
-
-                      {/* المدير العام */}
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setIsMenuOpen(false);
-                          setShowOwnerModal(true);
-                          setOwnerPin('');
-                          setErrorMessage('');
-                        }}
-                        className="w-full flex items-center justify-between p-2 rounded-xl text-right transition cursor-pointer hover:bg-slate-100 group border border-transparent hover:border-slate-200/60"
-                      >
-                        <div className="flex items-center gap-2.5 min-w-0">
-                          <div className="w-8 h-8 rounded-lg bg-indigo-500/15 border border-indigo-400/40 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform text-indigo-600">
-                            <KeyRound className="w-4 h-4" />
-                          </div>
-                          <div className="flex flex-col text-right truncate">
-                            <span className="text-xs font-black text-slate-900 group-hover:text-indigo-900 truncate">
-                              المدير العام (لوحة المالك)
-                            </span>
-                            <span className="text-[10px] text-slate-500 font-medium truncate">
-                              إدارة التراخيص والشركات
-                            </span>
-                          </div>
-                        </div>
-                        <span className="text-[10px] bg-indigo-100 text-indigo-900 font-bold px-2 py-0.5 rounded-md shrink-0 mr-1">
-                          لوحة المالك
-                        </span>
-                      </button>
                     </div>
                   </div>
 
@@ -1210,71 +1108,128 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
       )}
 
-      {/* Secret Owner Login Modal */}
+      {/* 👑 Hidden Owner Authentication Dialog */}
       {showOwnerModal && (
         <div
-          className="fixed inset-0 bg-black/75 backdrop-blur-sm z-[100] flex items-center justify-center p-4 animate-fade-in"
+          className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-[200] flex items-center justify-center p-4 animate-fade-in"
           dir="rtl"
-          onClick={() => setShowOwnerModal(false)}
+          onClick={() => {
+            if (!isVerifyingOwner) {
+              setShowOwnerModal(false);
+              setOwnerUsername('');
+              setOwnerPassword('');
+              setErrorMessage('');
+            }
+          }}
         >
           <div
-            className="bg-slate-900 border border-amber-500/40 rounded-2xl p-6 w-full max-w-md shadow-2xl relative text-slate-100"
+            className="bg-slate-900 border border-slate-700/80 rounded-2xl p-6 sm:p-7 w-full max-w-md shadow-2xl relative text-slate-100 select-none animate-scale-up"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between pb-3 border-b border-slate-700/60 mb-4">
-              <div className="flex items-center gap-2">
-                <span className="text-2xl">👑</span>
-                <h3 className="text-base sm:text-lg font-bold text-amber-400">
-                  تسجيل دخول مالك المنظومة السحابية
-                </h3>
+            {/* Header */}
+            <div className="flex items-center justify-between pb-3.5 border-b border-slate-800 mb-4">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-300">
+                  <KeyRound className="w-4.5 h-4.5 text-amber-400" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-white tracking-wide">
+                    دخول مالك المنظومة | Owner Access
+                  </h3>
+                  <p className="text-[11px] text-slate-400">
+                    أدخل بيانات اعتماد المالك للمتابعة
+                  </p>
+                </div>
               </div>
               <button
-                onClick={() => setShowOwnerModal(false)}
-                className="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center transition"
+                type="button"
+                disabled={isVerifyingOwner}
+                onClick={() => {
+                  setShowOwnerModal(false);
+                  setOwnerUsername('');
+                  setOwnerPassword('');
+                  setErrorMessage('');
+                }}
+                className="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center transition cursor-pointer disabled:opacity-50"
+                aria-label="إلغاء"
               >
                 ✕
               </button>
             </div>
 
-            <p className="text-xs sm:text-sm text-slate-300 mb-4 leading-relaxed">
-              يرجى إدخال الرقم السري الخاص بمالك النظام للوصول إلى لوحة المالك المركزية وإدارة اشتراكات الشركات والمستأجرين (SaaS).
-            </p>
-
             <form onSubmit={handleOwnerLoginSubmit} className="space-y-4">
               <div>
                 <label className="block text-xs font-bold text-slate-300 mb-1.5">
-                  الرقم السري للمالك (Owner PIN):
+                  اسم المستخدم / المعرف (Owner Username / ID):
+                </label>
+                <input
+                  type="text"
+                  autoFocus
+                  autoComplete="username"
+                  value={ownerUsername}
+                  onChange={(e) => {
+                    setOwnerUsername(e.target.value);
+                    if (errorMessage) setErrorMessage('');
+                  }}
+                  placeholder="أدخل اسم مستخدم المالك..."
+                  className="w-full bg-slate-800/90 border border-slate-700 focus:border-amber-400 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 outline-none transition"
+                  disabled={isVerifyingOwner}
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-300 mb-1.5">
+                  كلمة المرور (Owner Password):
                 </label>
                 <input
                   type="password"
-                  autoFocus
-                  value={ownerPin}
+                  autoComplete="current-password"
+                  value={ownerPassword}
                   onChange={(e) => {
-                    setOwnerPin(e.target.value);
+                    setOwnerPassword(e.target.value);
                     if (errorMessage) setErrorMessage('');
                   }}
-                  placeholder="أدخل الرقم السري..."
-                  className="w-full bg-slate-800 border border-slate-600 focus:border-amber-400 rounded-xl px-4 py-2.5 text-center text-lg tracking-widest text-white outline-none font-mono transition"
+                  placeholder="أدخل كلمة المرور..."
+                  className="w-full bg-slate-800/90 border border-slate-700 focus:border-amber-400 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 outline-none transition"
+                  disabled={isVerifyingOwner}
                 />
-                {errorMessage && (
-                  <p className="text-xs text-red-400 mt-2 font-bold flex items-center gap-1">
-                    <span>⚠️</span> {errorMessage}
-                  </p>
-                )}
               </div>
 
-              <div className="flex items-center gap-2 pt-2">
+              {errorMessage && (
+                <div className="p-3 bg-red-950/60 border border-red-500/40 rounded-xl text-xs text-red-200 flex items-center gap-2">
+                  <span className="shrink-0 text-red-400 text-sm">⚠️</span>
+                  <span>{errorMessage}</span>
+                </div>
+              )}
+
+              <div className="flex items-center gap-2.5 pt-2">
                 <button
                   type="submit"
-                  className="flex-1 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 active:scale-[0.98] text-slate-950 font-black py-2.5 px-4 rounded-xl text-sm transition shadow-lg shadow-amber-500/20 cursor-pointer flex items-center justify-center gap-1.5"
+                  disabled={isVerifyingOwner}
+                  className="flex-1 bg-amber-500 hover:bg-amber-400 active:scale-[0.98] text-slate-950 font-black py-2.5 px-4 rounded-xl text-xs sm:text-sm transition shadow-md cursor-pointer flex items-center justify-center gap-2 disabled:opacity-60"
                 >
-                  <span>👑</span>
-                  <span>دخول لوحة المالك</span>
+                  {isVerifyingOwner ? (
+                    <>
+                      <RefreshCw className="w-4 h-4 animate-spin text-slate-950" />
+                      <span>جاري التحقق الآمن...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Lock className="w-4 h-4 text-slate-950" />
+                      <span>تسجيل دخول آمن (Secure Login)</span>
+                    </>
+                  )}
                 </button>
                 <button
                   type="button"
-                  onClick={() => setShowOwnerModal(false)}
-                  className="bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold py-2.5 px-4 rounded-xl text-sm transition cursor-pointer"
+                  disabled={isVerifyingOwner}
+                  onClick={() => {
+                    setShowOwnerModal(false);
+                    setOwnerUsername('');
+                    setOwnerPassword('');
+                    setErrorMessage('');
+                  }}
+                  className="bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold py-2.5 px-4 rounded-xl text-xs sm:text-sm transition cursor-pointer border border-slate-700 disabled:opacity-50"
                 >
                   إلغاء
                 </button>

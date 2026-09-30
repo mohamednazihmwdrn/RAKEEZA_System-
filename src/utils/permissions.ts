@@ -263,13 +263,18 @@ export const PAGE_PERMISSION_MAP: Record<string, string[]> = {
 
 /**
  * Verifies whether the active user has authorization to view a given page.
+ * Supports isolated Owner session context without changing the tenant user's role.
  */
-export function canAccessPage(user: User | undefined, pageId: string): boolean {
+export function canAccessPage(
+  user: User | undefined,
+  pageId: string,
+  hasActiveOwnerSession: boolean = false
+): boolean {
   if (!user) return true;
 
-  // 1. Owner panel is strictly reserved for the owner role
+  // 1. Owner panel is strictly reserved for an authenticated Owner session or native owner role
   if (pageId === 'owner_panel') {
-    return user.role === 'owner';
+    return hasActiveOwnerSession === true || user.role === 'owner';
   }
 
   // 2. Administrators have access to all tenant pages

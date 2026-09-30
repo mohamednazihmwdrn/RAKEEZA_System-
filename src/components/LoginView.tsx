@@ -406,15 +406,6 @@ export const LoginView: React.FC<LoginViewProps> = ({
     setIsVerifyingOwner(true);
     setOwnerPinError(null);
 
-    if (clean === '29190615' || clean === '123' || clean.toLowerCase() === 'rakeeza') {
-      setShowSecretOwnerModal(false);
-      setIsVerifyingOwner(false);
-      if (onOpenOwnerPanelDirectly) {
-        onOpenOwnerPanelDirectly();
-      }
-      return;
-    }
-
     try {
       const res = await verifyOwnerSecretApi(clean);
       if (res.success && res.user && res.company) {

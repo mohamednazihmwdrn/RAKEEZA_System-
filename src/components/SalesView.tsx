@@ -25,6 +25,7 @@ import { printInvoiceWindow } from '../utils/printInvoice';
 import { InvoiceCardTemplate } from './InvoiceCardTemplate';
 import { getProductActivePrice } from '../utils/priceService';
 import { InvoiceItemModal } from './InvoiceItemModal';
+import { UnifiedInvoiceItemSystem, InvoiceItemUnified, PaymentRow } from './UnifiedInvoiceItemSystem';
 import { exportToExcel } from '../utils/excelExport';
 import { openUnifiedPrintWindow } from '../utils/printUnified';
 import { TableActionButtons } from './TableActionButtons';
@@ -69,6 +70,18 @@ export const SalesView: React.FC<SalesViewProps> = ({ appData, onUpdateData, sho
   const [paidAmountInput, setPaidAmountInput] = useState<string>('');
   const [paymentMethod, setPaymentMethod] = useState<'drawer' | 'vodafone' | 'instapay' | 'bank'>('drawer');
   const [tempItems, setTempItems] = useState<InvoiceItem[]>([]);
+
+  // 🚀 Unified Invoice Registration System State (الأصناف والخصومات والضرائب ووسائل الدفع)
+  const [unifiedItems, setUnifiedItems] = useState<InvoiceItemUnified[]>([]);
+  const [globalInvDisc, setGlobalInvDisc] = useState<number>(0);
+  const [invDiscType, setInvDiscType] = useState<'val' | 'percent'>('percent');
+  const [globalInvTax, setGlobalInvTax] = useState<number>(0);
+  const [invTaxType, setInvTaxType] = useState<'percent' | 'val'>('percent');
+  const [extraIncomeName, setExtraIncomeName] = useState<string>('');
+  const [extraIncomeVal, setExtraIncomeVal] = useState<number>(0);
+  const [paymentRows, setPaymentRows] = useState<PaymentRow[]>([
+    { id: 'pay_1', method: 'نقدي / كاش', amount: 0 },
+  ]);
 
   // Item Draft Input
   const [itemName, setItemName] = useState('');
@@ -154,6 +167,17 @@ export const SalesView: React.FC<SalesViewProps> = ({ appData, onUpdateData, sho
     setPaymentMethod('drawer');
     setPaidAmountInput(type === 'ajel' || type === 'return_ajel' ? '0' : '');
     setTempItems([]);
+
+    // Reset Unified System state
+    setUnifiedItems([]);
+    setGlobalInvDisc(0);
+    setInvDiscType('percent');
+    setGlobalInvTax(0);
+    setInvTaxType('percent');
+    setExtraIncomeName('');
+    setExtraIncomeVal(0);
+    setPaymentRows([{ id: `pay_${Date.now()}`, method: 'نقدي / كاش', amount: 0 }]);
+
     setItemName('');
     setItemNote('');
     setItemQty('');
@@ -194,6 +218,55 @@ export const SalesView: React.FC<SalesViewProps> = ({ appData, onUpdateData, sho
     setPaymentMethod((inv.paymentMethod as any) || 'drawer');
     setPaidAmountInput(inv.paidAmount !== undefined ? inv.paidAmount.toString() : '0');
     setTempItems(inv.items ? [...inv.items] : []);
+
+    // Map items to unified items
+    const mappedItems: InvoiceItemUnified[] = (inv.items || []).map((i) => ({
+      code: i.code || (i.itemId ? `ITM-${i.itemId.substring(0, 6)}` : 'G000'),
+      name: i.name,
+      price: Number(i.price || 0),
+      qty: Number(i.qty || 1),
+      discVal: Number(i.discVal ?? i.discountValue ?? 0),
+      discType: (i.discType === 'val' || i.discountType === 'fixed') ? 'val' : 'percent',
+      actualDisc: Number(i.actualDisc ?? i.discount ?? 0),
+      taxVal: Number(i.taxVal ?? i.taxValue ?? 0),
+      taxType: (i.taxType === 'val' || i.taxType === 'fixed') ? 'val' : 'percent',
+      actualTax: Number(i.actualTax ?? i.tax ?? 0),
+      spec: i.spec || i.notes || '',
+      total: Number(i.total || 0),
+      itemId: i.itemId,
+      costPrice: i.costPrice,
+    }));
+    setUnifiedItems(mappedItems);
+
+    setGlobalInvDisc(inv.discountValue || (inv.discountType === 'percent' ? inv.discount : 0) || 0);
+    setInvDiscType(inv.discountType === 'fixed' ? 'val' : 'percent');
+    setGlobalInvTax(inv.taxValue || (inv.taxType === 'fixed' ? inv.tax : 0) || 0);
+    setInvTaxType(inv.taxType === 'fixed' ? 'val' : 'percent');
+    setExtraIncomeName(inv.extraRevenueName || '');
+    setExtraIncomeVal(inv.extraRevenueAmount || 0);
+
+    if (inv.paymentSplits && inv.paymentSplits.length > 0) {
+      setPaymentRows(
+        inv.paymentSplits.map((p, idx) => ({
+          id: `pay_${idx}_${Date.now()}`,
+          method: p.method,
+          amount: p.amount,
+        }))
+      );
+    } else {
+      const methodLabel =
+        inv.paymentMethod === 'vodafone'
+          ? 'فودافون كاش Vodafone Cash'
+          : inv.paymentMethod === 'instapay'
+          ? 'انستاباي Instapay'
+          : inv.paymentMethod === 'bank'
+          ? 'فيزا / كارت Visa'
+          : 'نقدي / كاش';
+      setPaymentRows([
+        { id: `pay_${Date.now()}`, method: methodLabel, amount: inv.paidAmount || 0 },
+      ]);
+    }
+
     setItemName('');
     setItemNote('');
     setItemQty('');
@@ -234,7 +307,34 @@ export const SalesView: React.FC<SalesViewProps> = ({ appData, onUpdateData, sho
     }
 
     // If there are already items in the invoice table, recalculate them to match master price
-    if (tempItems.length > 0) {
+    if (unifiedItems.length > 0) {
+      let updatedCount = 0;
+      const updatedUnified = unifiedItems.map((itm) => {
+        const res = getProductActivePrice(appData, itm.itemId || itm.name, newType);
+        if (res.hasPrice) {
+          updatedCount++;
+          const newUnit = res.price;
+          const baseTot = (itm.qty || 1) * newUnit;
+          const itemDiscAmt = itm.discType === 'val' ? (itm.discVal || 0) : (baseTot * (itm.discVal || 0)) / 100;
+          const afterDisc = Math.max(0, baseTot - itemDiscAmt);
+          const itemTaxAmt = itm.taxType === 'val' ? (itm.taxVal || 0) : (afterDisc * (itm.taxVal || 0)) / 100;
+          const newTot = Math.max(0, afterDisc + itemTaxAmt);
+          return {
+            ...itm,
+            price: newUnit,
+            actualDisc: itemDiscAmt,
+            actualTax: itemTaxAmt,
+            total: newTot,
+          };
+        }
+        return itm;
+      });
+      setUnifiedItems(updatedUnified);
+      showToast(
+        `تم إعادة احتساب أسعار (${updatedCount}) صنف وفق تسعيرة (${newType === 'wholesale' ? 'الجملة' : 'النقدي'}) من إدارة الأسعار`,
+        'info'
+      );
+    } else if (tempItems.length > 0) {
       let updatedCount = 0;
       const updatedTemp = tempItems.map((itm) => {
         const res = getProductActivePrice(appData, itm.itemId || itm.name, newType);
@@ -374,76 +474,45 @@ export const SalesView: React.FC<SalesViewProps> = ({ appData, onUpdateData, sho
     let totalItemDiscounts = 0;
     let totalItemTaxes = 0;
 
-    tempItems.forEach((itm) => {
-      const base = (itm.qty || 0) * (itm.price || 0);
-      itemsBaseSubtotal += base;
-
-      let itmDisc = 0;
-      if (itm.discountType === 'percent') {
-        const p = itm.discountValue !== undefined ? itm.discountValue : itm.discount || 0;
-        itmDisc = (base * p) / 100;
-      } else if (itm.discountType === 'fixed') {
-        itmDisc = itm.discountValue !== undefined ? itm.discountValue : itm.discount || 0;
-      } else if (typeof itm.discount === 'number' && itm.discount > 0) {
-        itmDisc = itm.discount;
-      }
-      totalItemDiscounts += itmDisc;
-
-      let itmTax = 0;
-      const afterDisc = Math.max(0, base - itmDisc);
-      if (itm.taxType === 'percent') {
-        const tp = itm.taxValue !== undefined ? itm.taxValue : itm.tax || 0;
-        itmTax = (afterDisc * tp) / 100;
-      } else if (itm.taxType === 'fixed') {
-        itmTax = itm.taxValue !== undefined ? itm.taxValue : itm.tax || 0;
-      } else if (typeof itm.tax === 'number' && itm.tax > 0) {
-        itmTax = itm.tax;
-      }
-      totalItemTaxes += itmTax;
+    unifiedItems.forEach((itm) => {
+      itemsBaseSubtotal += (itm.price || 0) * (itm.qty || 1);
+      totalItemDiscounts += itm.actualDisc || 0;
+      totalItemTaxes += itm.actualTax || 0;
     });
 
-    let invoiceDiscountAmount = 0;
-    if (typeof discount === 'number' && discount > 0) {
-      if (discountType === 'percent') {
-        invoiceDiscountAmount = (itemsBaseSubtotal * discount) / 100;
-      } else {
-        invoiceDiscountAmount = discount;
-      }
-    }
-    const totalDiscountAmount = totalItemDiscounts + invoiceDiscountAmount;
+    const globalDiscAmount =
+      invDiscType === 'percent'
+        ? (itemsBaseSubtotal - totalItemDiscounts) * (globalInvDisc / 100)
+        : (globalInvDisc || 0);
 
-    const baseForInvoiceTax = Math.max(0, itemsBaseSubtotal - totalDiscountAmount);
-    let invoiceTaxAmount = 0;
-    if (typeof tax === 'number' && tax > 0) {
-      if (taxType === 'percent') {
-        invoiceTaxAmount = (baseForInvoiceTax * tax) / 100;
-      } else {
-        invoiceTaxAmount = tax;
-      }
-    }
-    const totalTaxAmount = totalItemTaxes + invoiceTaxAmount;
+    const baseForGlobalTax = Math.max(0, itemsBaseSubtotal - totalItemDiscounts - globalDiscAmount);
+    const globalTaxAmount =
+      invTaxType === 'percent'
+        ? baseForGlobalTax * (globalInvTax / 100)
+        : (globalInvTax || 0);
 
-    const extraRev = typeof extraRevenueAmount === 'number' && extraRevenueAmount > 0 ? extraRevenueAmount : 0;
+    const totalDiscountAmount = totalItemDiscounts + globalDiscAmount;
+    const totalTaxAmount = totalItemTaxes + globalTaxAmount;
+    const extraRev = extraIncomeVal || 0;
     const grandTotal = Math.max(0, itemsBaseSubtotal - totalDiscountAmount + totalTaxAmount + extraRev);
 
-    let effectivePaid = 0;
-    let effectiveRemaining = 0;
+    let paidTotal = 0;
+    paymentRows.forEach((r) => {
+      paidTotal += r.amount || 0;
+    });
 
-    if (modalType === 'nagdi' || modalType === 'return_nagdi') {
+    let effectivePaid = paidTotal;
+    if ((modalType === 'nagdi' || modalType === 'return_nagdi') && effectivePaid === 0 && grandTotal > 0) {
       effectivePaid = grandTotal;
-      effectiveRemaining = 0;
-    } else {
-      const rawPaid = parseFloat(paidAmountInput) || 0;
-      effectivePaid = Math.max(0, Math.min(grandTotal, rawPaid));
-      effectiveRemaining = Math.max(0, grandTotal - effectivePaid);
     }
+    const effectiveRemaining = Math.max(0, grandTotal - effectivePaid);
 
     return {
       subtotal: itemsBaseSubtotal,
       totalItemDiscounts,
       totalItemTaxes,
-      invoiceDiscountAmount,
-      invoiceTaxAmount,
+      invoiceDiscountAmount: globalDiscAmount,
+      invoiceTaxAmount: globalTaxAmount,
       totalDiscount: totalDiscountAmount,
       totalTax: totalTaxAmount,
       extraRevenueAmount: extraRev,
@@ -454,8 +523,8 @@ export const SalesView: React.FC<SalesViewProps> = ({ appData, onUpdateData, sho
   };
 
   const handleSaveInvoice = () => {
-    if (tempItems.length === 0) {
-      showToast('يرجى إضافة صنف واحد على الأقل', 'warning');
+    if (unifiedItems.length === 0) {
+      showToast('يرجى إضافة صنف واحد على الأقل في الفاتورة', 'warning');
       return;
     }
     if (!customerName.trim()) {
@@ -463,18 +532,8 @@ export const SalesView: React.FC<SalesViewProps> = ({ appData, onUpdateData, sho
       return;
     }
 
-    const { subtotal, totalDiscount, totalTax, total, effectivePaid, effectiveRemaining } = calculateTotals();
+    const { subtotal, totalDiscount, totalTax, total, effectivePaid, effectiveRemaining, extraRevenueAmount } = calculateTotals();
     const isReturn = modalType.startsWith('return_');
-
-    // 1. Mandatory Payment Method Validation for Cash operations
-    if ((modalType === 'nagdi' || modalType === 'return_nagdi') && !paymentMethod) {
-      showToast('يرجى اختيار وسيلة دفع إجبارية (الخزينة أو الحساب البنكي) للعملية النقدية', 'error');
-      return;
-    }
-    if ((modalType === 'ajel' || modalType === 'return_ajel') && effectivePaid > 0 && !paymentMethod) {
-      showToast('يرجى اختيار وسيلة استلام/صرف الدفعة المقدمة', 'error');
-      return;
-    }
 
     // 2. Customer Credit Limit Verification for Credit Sale (Ajel)
     if (modalType === 'ajel' && effectiveRemaining > 0) {
@@ -510,6 +569,39 @@ export const SalesView: React.FC<SalesViewProps> = ({ appData, onUpdateData, sho
     const oldInvForMeta = isEditing ? appData.salesInvoices.find((i) => i.id === editingInvoiceId) : null;
     const nowIso = new Date().toISOString();
 
+    const finalItems: InvoiceItem[] = unifiedItems.map((u) => ({
+      itemId: u.itemId,
+      code: u.code,
+      name: u.name,
+      qty: u.qty,
+      price: u.price,
+      costPrice: u.costPrice,
+      total: u.total,
+      spec: u.spec,
+      notes: u.spec,
+      discVal: u.discVal,
+      discType: u.discType,
+      actualDisc: u.actualDisc,
+      taxVal: u.taxVal,
+      taxType: u.taxType,
+      actualTax: u.actualTax,
+      discount: u.actualDisc,
+      discountType: u.discType === 'percent' ? 'percent' : 'fixed',
+      discountValue: u.discVal,
+      tax: u.actualTax,
+      taxValue: u.taxVal,
+    }));
+
+    const firstRowMethod = paymentRows[0]?.method || 'نقدي / كاش';
+    const primaryMethodKey: 'drawer' | 'vodafone' | 'instapay' | 'bank' =
+      firstRowMethod.includes('فودافون')
+        ? 'vodafone'
+        : firstRowMethod.includes('انستاباي')
+        ? 'instapay'
+        : firstRowMethod.includes('فيزا') || firstRowMethod.includes('بنك')
+        ? 'bank'
+        : 'drawer';
+
     const newInvoice: SaleInvoice = {
       id: invId,
       clientSyncId: isEditing ? ((oldInvForMeta as any)?.clientSyncId || `sale_${invId}_${Date.now()}`) : `sale_${invId}_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
@@ -524,19 +616,20 @@ export const SalesView: React.FC<SalesViewProps> = ({ appData, onUpdateData, sho
       notes: notes.trim() || undefined,
       date: date,
       time: new Date().toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' }),
-      items: tempItems,
+      items: finalItems,
       subtotal,
       discount: totalDiscount || 0,
-      discountType,
-      discountValue: discount || 0,
+      discountType: invDiscType === 'percent' ? 'percent' : 'fixed',
+      discountValue: globalInvDisc || 0,
       tax: totalTax || 0,
-      taxType,
-      taxValue: tax || 0,
-      extraRevenueName: extraRevenueName.trim() || undefined,
-      extraRevenueAmount: extraRevenueAmount > 0 ? extraRevenueAmount : undefined,
-      fees: fees || 0,
+      taxType: invTaxType === 'percent' ? 'percent' : 'fixed',
+      taxValue: globalInvTax || 0,
+      extraRevenueName: extraIncomeName.trim() || undefined,
+      extraRevenueAmount: extraIncomeVal > 0 ? extraIncomeVal : (extraRevenueAmount > 0 ? extraRevenueAmount : undefined),
+      fees: 0,
       total,
-      paymentMethod,
+      paymentMethod: paymentRows.length > 1 ? 'split' : primaryMethodKey,
+      paymentSplits: paymentRows.map((r) => ({ method: r.method, amount: r.amount })),
       type: modalType,
       salesType: salesPricingType,
       paidAmount: effectivePaid,
@@ -622,7 +715,7 @@ export const SalesView: React.FC<SalesViewProps> = ({ appData, onUpdateData, sho
     }
 
     // Update Stock with new items
-    tempItems.forEach((item) => {
+    finalItems.forEach((item) => {
       const stockItem = updatedData.items.find((i) => (item.itemId && i.id === item.itemId) || i.name.trim() === item.name.trim());
       if (stockItem) {
         stockItem.quantity = isReturn ? (stockItem.quantity || 0) + item.qty : (stockItem.quantity || 0) - item.qty;
@@ -642,32 +735,74 @@ export const SalesView: React.FC<SalesViewProps> = ({ appData, onUpdateData, sho
 
     // Cashbox & Customer Balance Handling
     if (modalType === 'nagdi') {
-      // 1. Cash Sale: Full amount directly to selected payment method, 0 customer debt
-      updatedData.cashBox[paymentMethod] = (updatedData.cashBox[paymentMethod] || 0) + total;
-      updatedData.cashTransactions.push({
-        id: updatedData.nextCashId++,
-        date: date,
-        type: 'receive',
-        method: paymentMethod,
-        amount: total,
-        note: `فاتورة بيع نقدي #${newInvoice.id} - العميل: ${customerName}`,
-        customerName: customerName,
-        invoiceId: newInvoice.id,
+      // 1. Cash Sale:
+      paymentRows.forEach((row) => {
+        if (row.amount > 0) {
+          const mKey: 'drawer' | 'vodafone' | 'instapay' | 'bank' =
+            row.method.includes('فودافون') ? 'vodafone' :
+            row.method.includes('انستاباي') ? 'instapay' :
+            row.method.includes('فيزا') || row.method.includes('بنك') ? 'bank' : 'drawer';
+          updatedData.cashBox[mKey] = (updatedData.cashBox[mKey] || 0) + row.amount;
+          updatedData.cashTransactions.push({
+            id: updatedData.nextCashId++,
+            date: date,
+            type: 'receive',
+            method: mKey,
+            amount: row.amount,
+            note: `فاتورة بيع نقدي #${newInvoice.id} (${row.method}) - العميل: ${customerName}`,
+            customerName: customerName,
+            invoiceId: newInvoice.id,
+          });
+        }
       });
-    } else if (modalType === 'ajel') {
-      // 2. Credit Sale: If downpayment made, add to cashbox; remaining goes to customer debt
-      if (effectivePaid > 0) {
-        updatedData.cashBox[paymentMethod] = (updatedData.cashBox[paymentMethod] || 0) + effectivePaid;
+      if (effectivePaid > 0 && paymentRows.every((r) => !r.amount)) {
+        updatedData.cashBox[primaryMethodKey] = (updatedData.cashBox[primaryMethodKey] || 0) + effectivePaid;
         updatedData.cashTransactions.push({
           id: updatedData.nextCashId++,
           date: date,
           type: 'receive',
-          method: paymentMethod,
+          method: primaryMethodKey,
           amount: effectivePaid,
-          note: `دفعة مقدمة فاتورة بيع آجل #${newInvoice.id} (${getMethodLabel(paymentMethod)}) - العميل: ${customerName}`,
+          note: `فاتورة بيع نقدي #${newInvoice.id} - العميل: ${customerName}`,
           customerName: customerName,
           invoiceId: newInvoice.id,
         });
+      }
+    } else if (modalType === 'ajel') {
+      // 2. Credit Sale:
+      if (effectivePaid > 0) {
+        paymentRows.forEach((row) => {
+          if (row.amount > 0) {
+            const mKey: 'drawer' | 'vodafone' | 'instapay' | 'bank' =
+              row.method.includes('فودافون') ? 'vodafone' :
+              row.method.includes('انستاباي') ? 'instapay' :
+              row.method.includes('فيزا') || row.method.includes('بنك') ? 'bank' : 'drawer';
+            updatedData.cashBox[mKey] = (updatedData.cashBox[mKey] || 0) + row.amount;
+            updatedData.cashTransactions.push({
+              id: updatedData.nextCashId++,
+              date: date,
+              type: 'receive',
+              method: mKey,
+              amount: row.amount,
+              note: `دفعة مقدمة فاتورة بيع آجل #${newInvoice.id} (${row.method}) - العميل: ${customerName}`,
+              customerName: customerName,
+              invoiceId: newInvoice.id,
+            });
+          }
+        });
+        if (paymentRows.every((r) => !r.amount)) {
+          updatedData.cashBox[primaryMethodKey] = (updatedData.cashBox[primaryMethodKey] || 0) + effectivePaid;
+          updatedData.cashTransactions.push({
+            id: updatedData.nextCashId++,
+            date: date,
+            type: 'receive',
+            method: primaryMethodKey,
+            amount: effectivePaid,
+            note: `دفعة مقدمة فاتورة بيع آجل #${newInvoice.id} - العميل: ${customerName}`,
+            customerName: customerName,
+            invoiceId: newInvoice.id,
+          });
+        }
       }
       const cust = updatedData.customers.find((c) => c.name === customerName);
       if (cust) {
@@ -682,27 +817,28 @@ export const SalesView: React.FC<SalesViewProps> = ({ appData, onUpdateData, sho
         });
       }
     } else if (modalType === 'return_nagdi') {
-      // 3. Cash Return: Full amount paid back to customer from selected method, 0 customer debt impact
-      updatedData.cashBox[paymentMethod] = (updatedData.cashBox[paymentMethod] || 0) - total;
+      // 3. Cash Return:
+      const refundAmount = effectivePaid > 0 ? effectivePaid : total;
+      updatedData.cashBox[primaryMethodKey] = (updatedData.cashBox[primaryMethodKey] || 0) - refundAmount;
       updatedData.cashTransactions.push({
         id: updatedData.nextCashId++,
         date: date,
         type: 'pay',
-        method: paymentMethod,
-        amount: total,
+        method: primaryMethodKey,
+        amount: refundAmount,
         note: `مرتجع بيع نقدي (صرف فوري للعميل) #${newInvoice.id} - العميل: ${customerName}`,
         customerName: customerName,
         invoiceId: newInvoice.id,
       });
     } else if (modalType === 'return_ajel') {
-      // 4. Credit Return: If partial cash refunded, deduct from cashbox; remaining deducted from customer debt
+      // 4. Credit Return:
       if (effectivePaid > 0) {
-        updatedData.cashBox[paymentMethod] = (updatedData.cashBox[paymentMethod] || 0) - effectivePaid;
+        updatedData.cashBox[primaryMethodKey] = (updatedData.cashBox[primaryMethodKey] || 0) - effectivePaid;
         updatedData.cashTransactions.push({
           id: updatedData.nextCashId++,
           date: date,
           type: 'pay',
-          method: paymentMethod,
+          method: primaryMethodKey,
           amount: effectivePaid,
           note: `صرف نقدي من مرتجع مبيعات آجل #${newInvoice.id} - العميل: ${customerName}`,
           customerName: customerName,
@@ -1059,7 +1195,7 @@ export const SalesView: React.FC<SalesViewProps> = ({ appData, onUpdateData, sho
       {/* Mobile Card List View (< md) */}
       <div className="block md:hidden space-y-3">
         {filteredInvoices.length === 0 ? (
-          <div className="bg-white rounded-2xl p-6 text-center text-gray-400 text-sm">
+          <div className="bg-white rounded-2xl p-6 text-center text-black font-bold text-sm border-2 border-slate-300">
             لا توجد فواتير مبيعات مسجلة
           </div>
         ) : (
@@ -1068,10 +1204,10 @@ export const SalesView: React.FC<SalesViewProps> = ({ appData, onUpdateData, sho
             return (
               <div
                 key={inv.id}
-                className="bg-white rounded-2xl p-4 shadow-xs border border-slate-200 space-y-3 hover:border-indigo-300 transition"
+                className="bg-white rounded-2xl p-4 shadow-xs border-2 border-slate-300 space-y-3 hover:border-slate-500 transition"
               >
                 {/* Top Row: Invoice ID, Date & Type Badge */}
-                <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                <div className="flex items-center justify-between border-b-2 border-slate-200 pb-2">
                   <div
                     onClick={() => {
                       setSelectedInvoice(inv);
@@ -1079,16 +1215,16 @@ export const SalesView: React.FC<SalesViewProps> = ({ appData, onUpdateData, sho
                     }}
                     className="flex items-center gap-1.5 cursor-pointer"
                   >
-                    <span className="text-[#1a237e] font-black text-sm">#{inv.id}</span>
-                    <span className="text-slate-400 text-xs">| {inv.date}</span>
+                    <span className="text-blue-900 font-black text-sm font-mono">#{inv.id}</span>
+                    <span className="text-black font-bold text-xs font-mono">| {inv.date}</span>
                   </div>
                   <span
-                    className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold ${
+                    className={`px-2.5 py-0.5 rounded-full text-xs font-black border ${
                       inv.type === 'nagdi'
-                        ? 'bg-emerald-100 text-emerald-800'
+                        ? 'bg-emerald-50 text-emerald-950 border-emerald-300'
                         : inv.type === 'ajel'
-                        ? 'bg-orange-100 text-orange-800'
-                        : 'bg-rose-100 text-rose-800'
+                        ? 'bg-amber-50 text-amber-950 border-amber-300'
+                        : 'bg-rose-50 text-rose-950 border-rose-300'
                     }`}
                   >
                     {inv.type === 'nagdi'
@@ -1104,41 +1240,41 @@ export const SalesView: React.FC<SalesViewProps> = ({ appData, onUpdateData, sho
                 {/* Middle Info: Customer & Financials */}
                 <div className="flex items-start justify-between gap-2">
                   <div>
-                    <div className="font-bold text-slate-900 text-sm">{inv.customerName}</div>
+                    <div className="font-black text-black text-sm">{inv.customerName}</div>
                     {inv.salesRep && (
-                      <div className="text-[11px] text-indigo-700 font-medium mt-0.5">👔 مندوب: {inv.salesRep}</div>
+                      <div className="text-xs text-blue-950 font-bold mt-0.5">👔 مندوب: {inv.salesRep}</div>
                     )}
                     {inv.notes && (
-                      <div className="text-[11px] text-slate-500 italic mt-0.5 line-clamp-1">📝 {inv.notes}</div>
+                      <div className="text-xs text-black font-medium mt-0.5 line-clamp-1">📝 {inv.notes}</div>
                     )}
                   </div>
                   <div className="text-left shrink-0">
-                    <div className="text-xs text-slate-500">القيمة الإجمالية</div>
-                    <div className="font-black text-[#1a237e] text-base font-mono">
+                    <div className="text-xs text-slate-800 font-bold">القيمة الإجمالية</div>
+                    <div className="font-black text-black text-base font-mono">
                       {(inv.total || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })} ج.م
                     </div>
                   </div>
                 </div>
 
                 {/* Status & Payment breakdown if Ajel */}
-                <div className="flex items-center justify-between text-xs bg-slate-50 p-2.5 rounded-lg border border-slate-100">
+                <div className="flex items-center justify-between text-xs bg-slate-50 p-2.5 rounded-lg border border-slate-300">
                   <span
-                    className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-bold border ${
+                    className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded text-xs font-black border ${
                       isPaidFull
-                        ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                        ? 'bg-emerald-100 text-emerald-950 border-emerald-300'
                         : inv.paidAmount > 0
-                        ? 'bg-amber-50 text-amber-700 border-amber-200'
-                        : 'bg-rose-50 text-rose-700 border-rose-200'
+                        ? 'bg-amber-100 text-amber-950 border-amber-300'
+                        : 'bg-rose-100 text-rose-950 border-rose-300'
                     }`}
                   >
                     {isPaidFull ? (
                       <>
-                        <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-700" />
                         <span>مدفوع بالكامل</span>
                       </>
                     ) : inv.paidAmount > 0 ? (
                       <>
-                        <AlertCircle className="w-3 h-3 text-amber-600" />
+                        <AlertCircle className="w-3.5 h-3.5 text-amber-700" />
                         <span>مدفوع جزئياً</span>
                       </>
                     ) : (
@@ -1147,10 +1283,10 @@ export const SalesView: React.FC<SalesViewProps> = ({ appData, onUpdateData, sho
                   </span>
 
                   {inv.type === 'ajel' && (
-                    <div className="text-[11px] text-slate-600 font-mono">
-                      <span>المدفوع: <strong className="text-emerald-700">{inv.paidAmount.toFixed(0)}</strong></span>
-                      <span className="mx-1 font-sans text-slate-300">/</span>
-                      <span>المتبقي: <strong className="text-rose-700 font-bold">{(inv.total - inv.paidAmount).toFixed(0)}</strong></span>
+                    <div className="text-xs text-black font-mono font-bold">
+                      <span>المدفوع: <strong className="text-emerald-900 font-black">{inv.paidAmount.toFixed(0)}</strong></span>
+                      <span className="mx-1 text-slate-400">/</span>
+                      <span>المتبقي: <strong className="text-rose-900 font-black">{(inv.total - inv.paidAmount).toFixed(0)}</strong></span>
                     </div>
                   )}
                 </div>
@@ -1162,44 +1298,44 @@ export const SalesView: React.FC<SalesViewProps> = ({ appData, onUpdateData, sho
                       setSelectedInvoice(inv);
                       setActiveModal('view');
                     }}
-                    className="min-h-[40px] bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold rounded-lg text-xs transition flex items-center justify-center gap-1.5 cursor-pointer"
+                    className="min-h-[40px] bg-slate-100 hover:bg-slate-200 active:bg-slate-300 text-black border border-slate-300 font-bold rounded-lg text-xs transition flex items-center justify-center gap-1.5 cursor-pointer"
                   >
                     <Eye className="w-3.5 h-3.5 text-blue-700" />
                     <span>عرض</span>
                   </button>
                   <button
                     onClick={() => openEditModal(inv)}
-                    className="min-h-[40px] bg-blue-50 hover:bg-blue-100 text-blue-700 font-semibold rounded-lg text-xs transition flex items-center justify-center gap-1.5 cursor-pointer"
+                    className="min-h-[40px] bg-blue-100 hover:bg-blue-200 active:bg-blue-300 text-blue-950 border border-blue-400 font-bold rounded-lg text-xs transition flex items-center justify-center gap-1.5 cursor-pointer"
                   >
-                    <Pencil className="w-3.5 h-3.5" />
+                    <Pencil className="w-3.5 h-3.5 text-blue-700" />
                     <span>تعديل</span>
                   </button>
                   <button
                     onClick={() => handlePrintInvoice(inv)}
-                    className="min-h-[40px] bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-lg text-xs transition flex items-center justify-center gap-1.5 cursor-pointer"
+                    className="min-h-[40px] bg-slate-100 hover:bg-slate-200 active:bg-slate-300 text-black border border-slate-300 font-bold rounded-lg text-xs transition flex items-center justify-center gap-1.5 cursor-pointer"
                   >
-                    <Printer className="w-3.5 h-3.5 text-slate-600" />
+                    <Printer className="w-3.5 h-3.5 text-slate-700" />
                     <span>طباعة</span>
                   </button>
                   <button
                     onClick={() => handleWhatsAppShare(inv)}
-                    className="min-h-[40px] bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-semibold rounded-lg text-xs transition flex items-center justify-center gap-1.5 cursor-pointer"
+                    className="min-h-[40px] bg-emerald-100 hover:bg-emerald-200 active:bg-emerald-300 text-emerald-950 border border-emerald-400 font-bold rounded-lg text-xs transition flex items-center justify-center gap-1.5 cursor-pointer"
                     title="إرسال عبر واتساب"
                   >
-                    <MessageSquare className="w-3.5 h-3.5" />
+                    <MessageSquare className="w-3.5 h-3.5 text-emerald-800" />
                     <span>واتساب</span>
                   </button>
                   <button
                     onClick={() => handleDeleteInvoice(inv.id)}
-                    className="min-h-[40px] bg-rose-50 hover:bg-rose-100 text-rose-700 font-semibold rounded-lg text-xs transition flex items-center justify-center gap-1.5 cursor-pointer"
+                    className="min-h-[40px] bg-rose-100 hover:bg-rose-200 active:bg-rose-300 text-rose-950 border border-rose-400 font-bold rounded-lg text-xs transition flex items-center justify-center gap-1.5 cursor-pointer"
                   >
-                    <Trash2 className="w-3.5 h-3.5" />
+                    <Trash2 className="w-3.5 h-3.5 text-rose-700" />
                     <span>حذف</span>
                   </button>
                   {inv.type === 'ajel' && !isPaidFull && (
                     <button
                       onClick={() => handleOpenPayModal(inv)}
-                      className="min-h-[40px] bg-emerald-700 hover:bg-emerald-800 active:bg-emerald-900 text-white font-semibold rounded-lg text-xs transition flex items-center justify-center gap-1.5 shadow-xs col-span-2 sm:col-span-4 cursor-pointer"
+                      className="min-h-[40px] bg-emerald-700 hover:bg-emerald-800 active:bg-emerald-900 text-white font-black rounded-lg text-xs transition flex items-center justify-center gap-1.5 shadow-xs col-span-2 sm:col-span-4 cursor-pointer"
                     >
                       <DollarSign className="w-4 h-4" />
                       <span>تسديد دفعة من الفاتورة الآجلة</span>
@@ -1213,24 +1349,24 @@ export const SalesView: React.FC<SalesViewProps> = ({ appData, onUpdateData, sho
       </div>
 
       {/* Invoices Desktop Table (>= md) */}
-      <div className="hidden md:block bg-white rounded-xl shadow-xs border border-slate-200/90 overflow-x-auto">
-        <table className="w-full text-right text-xs md:text-sm border-collapse">
+      <div className="hidden md:block bg-white rounded-xl shadow-xs border-2 border-slate-300 overflow-x-auto">
+        <table className="w-full text-right text-xs md:text-sm border-collapse border border-slate-300">
           <thead>
-            <tr className="bg-[#0f2756] text-white">
-              <th className="p-3 font-semibold">رقم الفاتورة</th>
-              <th className="p-3 font-semibold">العميل</th>
-              {appData.branches && appData.branches.length > 1 && <th className="p-3 font-semibold">الفرع</th>}
-              <th className="p-3 font-semibold">التاريخ</th>
-              <th className="p-3 font-semibold">القيمة (ج.م)</th>
-              <th className="p-3 font-semibold">النوع</th>
-              <th className="p-3 font-semibold">الحالة</th>
-              <th className="p-3 font-semibold">الإجراءات</th>
+            <tr className="bg-[#0f172a] text-white">
+              <th className="p-3 font-black border border-slate-700 text-white">رقم الفاتورة</th>
+              <th className="p-3 font-black border border-slate-700 text-white">العميل</th>
+              {appData.branches && appData.branches.length > 1 && <th className="p-3 font-black border border-slate-700 text-white">الفرع</th>}
+              <th className="p-3 font-black border border-slate-700 text-white">التاريخ</th>
+              <th className="p-3 font-black border border-slate-700 text-white">القيمة (ج.م)</th>
+              <th className="p-3 font-black border border-slate-700 text-white">النوع</th>
+              <th className="p-3 font-black border border-slate-700 text-white">الحالة</th>
+              <th className="p-3 font-black border border-slate-700 text-white">الإجراءات</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100">
+          <tbody className="divide-y divide-slate-300 bg-white">
             {filteredInvoices.length === 0 ? (
               <tr>
-                <td colSpan={8} className="text-center py-8 text-slate-400">
+                <td colSpan={8} className="text-center py-8 text-black font-bold">
                   لا توجد فواتير مبيعات مسجلة
                 </td>
               </tr>
@@ -1238,50 +1374,50 @@ export const SalesView: React.FC<SalesViewProps> = ({ appData, onUpdateData, sho
               filteredInvoices.map((inv) => {
                 const isPaidFull = inv.paidAmount >= inv.total;
                 return (
-                  <tr key={inv.id} className="hover:bg-slate-50 transition">
+                  <tr key={inv.id} className="bg-white hover:bg-slate-100 transition border-b border-slate-300">
                     <td
                       onClick={() => {
                         setSelectedInvoice(inv);
                         setActiveModal('view');
                       }}
-                      className="p-3 text-blue-700 font-bold font-mono cursor-pointer hover:underline"
+                      className="p-3 text-blue-900 font-black font-mono cursor-pointer hover:underline border border-slate-300"
                     >
                       #{inv.id}
                     </td>
-                    <td className="p-3">
-                      <div className="font-bold text-slate-900">{inv.customerName}</div>
+                    <td className="p-3 border border-slate-300">
+                      <div className="font-black text-black">{inv.customerName}</div>
                       {inv.salesRep && (
-                        <div className="text-[11px] text-blue-700 font-medium flex items-center gap-1 mt-0.5">
-                          <UserIcon className="w-3 h-3 text-blue-500" />
+                        <div className="text-xs text-blue-950 font-bold flex items-center gap-1 mt-0.5">
+                          <UserIcon className="w-3 h-3 text-blue-700" />
                           <span>مندوب: {inv.salesRep}</span>
                         </div>
                       )}
                       {inv.notes && (
-                        <div className="text-[10px] text-slate-500 italic truncate max-w-[160px] flex items-center gap-1 mt-0.5" title={inv.notes}>
-                          <FileText className="w-3 h-3 text-slate-400 shrink-0" />
+                        <div className="text-xs text-black font-medium truncate max-w-[160px] flex items-center gap-1 mt-0.5" title={inv.notes}>
+                          <FileText className="w-3 h-3 text-slate-700 shrink-0" />
                           <span>{inv.notes}</span>
                         </div>
                       )}
                     </td>
                     {appData.branches && appData.branches.length > 1 && (
-                      <td className="p-3">
-                        <span className="text-[11px] font-bold px-2 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-100">
+                      <td className="p-3 border border-slate-300">
+                        <span className="text-xs font-black px-2 py-0.5 rounded bg-blue-100 text-blue-950 border border-blue-300">
                           {appData.branches.find((b) => b.id === inv.branchId)?.name || 'الفرع الرئيسي'}
                         </span>
                       </td>
                     )}
-                    <td className="p-3 font-mono text-slate-600">{inv.date}</td>
-                    <td className="p-3 font-bold font-mono text-slate-900 tabular-nums">
+                    <td className="p-3 font-mono font-bold text-black border border-slate-300">{inv.date}</td>
+                    <td className="p-3 font-black font-mono text-black tabular-nums border border-slate-300 text-sm">
                       {(inv.total || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </td>
-                    <td className="p-3">
+                    <td className="p-3 border border-slate-300">
                       <span
-                        className={`inline-block px-2 py-0.5 rounded text-[11px] font-bold border ${
+                        className={`inline-block px-2.5 py-0.5 rounded text-xs font-black border ${
                           inv.type === 'nagdi'
-                            ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                            ? 'bg-emerald-50 text-emerald-950 border-emerald-300'
                             : inv.type === 'ajel'
-                            ? 'bg-amber-50 text-amber-700 border-amber-200'
-                            : 'bg-rose-50 text-rose-700 border-rose-200'
+                            ? 'bg-amber-50 text-amber-950 border-amber-300'
+                            : 'bg-rose-50 text-rose-950 border-rose-300'
                         }`}
                       >
                         {inv.type === 'nagdi'
@@ -1293,24 +1429,24 @@ export const SalesView: React.FC<SalesViewProps> = ({ appData, onUpdateData, sho
                           : 'مرتجع أجل'}
                       </span>
                     </td>
-                    <td className="p-3">
+                    <td className="p-3 border border-slate-300">
                       <span
-                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-bold border ${
+                        className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded text-xs font-black border ${
                           isPaidFull
-                            ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                            ? 'bg-emerald-50 text-emerald-950 border-emerald-300'
                             : inv.paidAmount > 0
-                            ? 'bg-amber-50 text-amber-700 border-amber-200'
-                            : 'bg-rose-50 text-rose-700 border-rose-200'
+                            ? 'bg-amber-50 text-amber-950 border-amber-300'
+                            : 'bg-rose-50 text-rose-950 border-rose-300'
                         }`}
                       >
                         {isPaidFull ? (
                           <>
-                            <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-700" />
                             <span>مكتمل</span>
                           </>
                         ) : inv.paidAmount > 0 ? (
                           <>
-                            <AlertCircle className="w-3 h-3 text-amber-600" />
+                            <AlertCircle className="w-3.5 h-3.5 text-amber-700" />
                             <span>مدفوع جزئياً</span>
                           </>
                         ) : (
@@ -1382,6 +1518,7 @@ export const SalesView: React.FC<SalesViewProps> = ({ appData, onUpdateData, sho
         isOpen={activeModal === 'create' || activeModal === 'edit'}
         title={getTitleForModal()}
         onClose={() => setActiveModal(null)}
+        maxWidth="max-w-6xl"
         footer={
           <div className="flex flex-col sm:flex-row gap-2 w-full">
             <button
@@ -1404,18 +1541,11 @@ export const SalesView: React.FC<SalesViewProps> = ({ appData, onUpdateData, sho
         }
       >
         <div className="space-y-4 text-xs md:text-sm">
-          {/* Quick Top Bar with Save Button */}
-          <div className="flex justify-between items-center bg-emerald-50/80 border border-emerald-200 p-2.5 rounded-xl">
-            <span className="text-emerald-900 font-bold text-xs flex items-center gap-1.5">
+          {/* Modal Header Banner */}
+          <div className="flex justify-between items-center bg-slate-100 border-2 border-slate-200 p-2.5 rounded-xl">
+            <span className="text-slate-900 font-black text-xs sm:text-sm flex items-center gap-1.5">
               <span>📌</span> {getTitleForModal()}
             </span>
-            <button
-              type="button"
-              onClick={handleSaveInvoice}
-              className="bg-[#2e7d32] hover:bg-[#1b5e20] active:bg-[#124116] text-white px-4 py-1.5 rounded-lg font-bold text-xs cursor-pointer transition shadow-xs flex items-center gap-1"
-            >
-              <span>💾</span> {editingInvoiceId !== null ? 'تحديث وحفظ' : 'حفظ الفاتورة الآن'}
-            </button>
           </div>
           {/* Header Controls */}
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
@@ -1438,7 +1568,7 @@ export const SalesView: React.FC<SalesViewProps> = ({ appData, onUpdateData, sho
               </div>
             )}
             <div className="relative">
-              <label className="block font-bold mb-1 text-gray-700">العميل</label>
+              <label className="block font-black mb-1 text-black">العميل</label>
               <input
                 type="text"
                 placeholder="ابحث باسم العميل أو هاتفه..."
@@ -1467,13 +1597,13 @@ export const SalesView: React.FC<SalesViewProps> = ({ appData, onUpdateData, sho
                     }
                   }
                 }}
-                className="w-full p-2 border-2 border-gray-200 rounded-xl focus:border-[#1a237e] focus:outline-none text-xs md:text-sm"
+                className="w-full p-2.5 bg-white border-2 border-slate-400 rounded-xl focus:border-blue-700 focus:outline-none text-xs md:text-sm font-bold text-black placeholder:text-slate-500"
               />
               {showCustomerDropdown && (
-                <div className="absolute top-full right-0 left-0 z-50 bg-white border border-indigo-200 rounded-xl shadow-2xl max-h-52 overflow-y-auto mt-1 divide-y divide-gray-100">
+                <div className="absolute top-full right-0 left-0 z-50 bg-white border-2 border-slate-400 rounded-xl shadow-2xl max-h-52 overflow-y-auto mt-1 divide-y divide-slate-200">
                   {filteredCustomersForName.length === 0 ? (
-                    <div className="p-2.5 text-xs text-gray-500 text-center">
-                      عميل جديد: <strong>"{customerName}"</strong> (سيتم تسجيله بالاسم والرقم عند الحفظ)
+                    <div className="p-3 text-xs text-black font-bold text-center">
+                      عميل جديد: <strong className="text-blue-900">"{customerName}"</strong> (سيتم تسجيله بالاسم والرقم عند الحفظ)
                     </div>
                   ) : (
                     filteredCustomersForName.map((c) => (
@@ -1495,14 +1625,14 @@ export const SalesView: React.FC<SalesViewProps> = ({ appData, onUpdateData, sho
                           }
                           setShowCustomerDropdown(false);
                         }}
-                        className="p-2.5 hover:bg-indigo-50 cursor-pointer flex justify-between items-center text-xs transition"
+                        className="p-2.5 hover:bg-slate-100 cursor-pointer flex justify-between items-center text-xs transition border-b border-slate-100"
                       >
                         <div>
-                          <span className="font-bold text-[#1a237e] block">👤 {c.name}</span>
-                          <span className="text-gray-500 text-[11px]">📞 {c.phone || 'بدون رقم مسجل'}</span>
+                          <span className="font-black text-black block text-sm">👤 {c.name}</span>
+                          <span className="text-slate-800 font-bold text-xs">📞 {c.phone || 'بدون رقم مسجل'}</span>
                         </div>
                         {c.balance !== undefined && (
-                          <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${c.balance > 0 ? 'bg-red-50 text-red-700' : 'bg-emerald-50 text-emerald-700'}`}>
+                          <span className={`text-xs font-black px-2 py-0.5 rounded-full border ${c.balance > 0 ? 'bg-red-50 text-red-900 border-red-300' : 'bg-emerald-50 text-emerald-900 border-emerald-300'}`}>
                             الرصيد: {c.balance.toFixed(2)} ج.م
                           </span>
                         )}
@@ -1514,7 +1644,7 @@ export const SalesView: React.FC<SalesViewProps> = ({ appData, onUpdateData, sho
             </div>
 
             <div className="relative">
-              <label className="block font-bold mb-1 text-gray-700">الهاتف</label>
+              <label className="block font-black mb-1 text-black">الهاتف</label>
               <input
                 type="text"
                 placeholder="رقم الهاتف..."
@@ -1533,13 +1663,13 @@ export const SalesView: React.FC<SalesViewProps> = ({ appData, onUpdateData, sho
                     setPhone(matched.phone || val);
                   }
                 }}
-                className="w-full p-2 border-2 border-gray-200 rounded-xl focus:border-[#1a237e] focus:outline-none text-xs md:text-sm"
+                className="w-full p-2.5 bg-white border-2 border-slate-400 rounded-xl focus:border-blue-700 focus:outline-none text-xs md:text-sm font-bold text-black placeholder:text-slate-500"
               />
               {showPhoneDropdown && (
-                <div className="absolute top-full right-0 left-0 z-50 bg-white border border-indigo-200 rounded-xl shadow-2xl max-h-52 overflow-y-auto mt-1 divide-y divide-gray-100">
+                <div className="absolute top-full right-0 left-0 z-50 bg-white border-2 border-slate-400 rounded-xl shadow-2xl max-h-52 overflow-y-auto mt-1 divide-y divide-slate-200">
                   {filteredCustomersForPhone.length === 0 ? (
-                    <div className="p-2.5 text-xs text-gray-500 text-center">
-                      رقم جديد: <strong>"{phone}"</strong>
+                    <div className="p-3 text-xs text-black font-bold text-center">
+                      رقم جديد: <strong className="text-blue-900">"{phone}"</strong>
                     </div>
                   ) : (
                     filteredCustomersForPhone.map((c) => (
@@ -1551,11 +1681,11 @@ export const SalesView: React.FC<SalesViewProps> = ({ appData, onUpdateData, sho
                           setPhone(c.phone || '');
                           setShowPhoneDropdown(false);
                         }}
-                        className="p-2.5 hover:bg-indigo-50 cursor-pointer flex justify-between items-center text-xs transition"
+                        className="p-2.5 hover:bg-slate-100 cursor-pointer flex justify-between items-center text-xs transition border-b border-slate-100"
                       >
                         <div>
-                          <span className="font-bold text-[#1a237e] block">📞 {c.phone || 'بدون رقم'}</span>
-                          <span className="text-gray-600 text-[11px]">👤 {c.name}</span>
+                          <span className="font-black text-black block text-sm">📞 {c.phone || 'بدون رقم'}</span>
+                          <span className="text-slate-800 font-bold text-xs">👤 {c.name}</span>
                         </div>
                       </div>
                     ))
@@ -1565,12 +1695,12 @@ export const SalesView: React.FC<SalesViewProps> = ({ appData, onUpdateData, sho
             </div>
 
             <div>
-              <label className="block font-bold mb-1 text-gray-700">التاريخ</label>
+              <label className="block font-black mb-1 text-black">التاريخ</label>
               <input
                 type="date"
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
-                className="w-full p-2 border-2 border-gray-200 rounded-xl focus:border-[#1a237e] focus:outline-none text-xs md:text-sm"
+                className="w-full p-2.5 bg-white border-2 border-slate-400 rounded-xl focus:border-blue-700 focus:outline-none text-xs md:text-sm font-black text-black"
               />
             </div>
           </div>
@@ -1711,645 +1841,90 @@ export const SalesView: React.FC<SalesViewProps> = ({ appData, onUpdateData, sho
                 </button>
               </div>
             </div>
+          </div>
 
-            {/* Price Warning if product has no price */}
-            {priceWarning && (
-              <div className="bg-rose-50 border border-rose-200 text-rose-800 p-2.5 rounded-xl text-xs mb-3 flex items-center justify-between">
-                <span className="flex items-center gap-1.5 font-bold">
-                  <span>⚠️</span> {priceWarning}
-                </span>
-                <span className="text-[10px] bg-rose-200 text-rose-900 px-2 py-0.5 rounded-full font-bold">
-                  مطلوب تسعير
-                </span>
-              </div>
-            )}
-
-            {/* Add Item Form Bar with Prominent "Card Item Modal" Button */}
-            <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-2 mb-3 bg-white p-3 rounded-xl border border-indigo-100 shadow-xs">
-              <div className="flex items-center gap-2">
-                <span className="text-lg">📦</span>
-                <div>
-                  <h4 className="font-bold text-[#1a237e] text-xs sm:text-sm">أصناف الفاتورة ({tempItems.length})</h4>
-                  <p className="text-[11px] text-gray-500">يمكنك إضافة الأصناف عبر كارت الصنف التفصيلي أو عبر الإدخال المباشر</p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={handleOpenAddItemModal}
-                className="min-h-[42px] bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 active:scale-98 text-white px-4 py-2 rounded-xl font-bold text-xs sm:text-sm transition cursor-pointer flex items-center justify-center gap-2 shadow-md"
-              >
-                <span className="text-base font-bold">➕</span>
-                <span>فتح كارت الصنف (بيان / خصم / ضريبة)</span>
-              </button>
-            </div>
-
-            {/* Quick Add Item Form */}
-            <div className="grid grid-cols-2 sm:grid-cols-12 gap-2 sm:gap-3 items-end">
-              {/* Product Autocomplete */}
-              <div className="relative col-span-2 sm:col-span-6">
-                <label className="block text-xs font-bold mb-1 text-slate-700">الصنف والباركود (بحث سريع)</label>
-                <input
-                  type="text"
-                  placeholder="ابحث باسم الصنف، الباركود، أو الكود..."
-                  value={itemName}
-                  onFocus={() => setShowItemDropdown(true)}
-                  onBlur={() => setTimeout(() => setShowItemDropdown(false), 250)}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    setItemName(val);
-                    setShowItemDropdown(true);
-                    const matched = appData.items.find(
-                      (i) =>
-                        i.name.toLowerCase() === val.toLowerCase() ||
-                        (i.barcode && i.barcode === val) ||
-                        (i.code && i.code === val)
-                    );
-                    if (matched) {
-                      handleSelectItemFromCatalog(matched);
-                    }
-                  }}
-                  className="w-full p-2.5 border-2 border-slate-300 rounded-xl focus:border-[#1a237e] focus:outline-none bg-white text-xs md:text-sm font-medium"
-                />
-                {showItemDropdown && (
-                  <div className="absolute top-full right-0 left-0 z-50 bg-white border border-indigo-200 rounded-xl shadow-2xl max-h-60 overflow-y-auto mt-1 divide-y divide-gray-100">
-                    {filteredItemsForSearch.length === 0 ? (
-                      <div className="p-3 text-xs text-gray-500 text-center">
-                        لا يوجد صنف مطابق لـ <strong>"{itemName}"</strong>
-                      </div>
-                    ) : (
-                      filteredItemsForSearch.map((i) => {
-                        const normalP = i.normalSellingPrice || i.salePrice || 0;
-                        const wholeP = i.wholesaleSellingPrice || i.wholesalePrice || 0;
-                        return (
-                          <div
-                            key={i.id}
-                            onMouseDown={(e) => {
-                              e.preventDefault();
-                              handleSelectItemFromCatalog(i);
-                            }}
-                            className="p-2.5 hover:bg-indigo-50 cursor-pointer flex justify-between items-center text-xs transition"
-                          >
-                            <div>
-                              <div className="font-bold text-[#1a237e] flex items-center gap-1.5">
-                                <span>📦</span>
-                                <span>{i.name}</span>
-                                {i.code && (
-                                  <span className="text-[10px] bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded font-mono">
-                                    {i.code}
-                                  </span>
-                                )}
-                              </div>
-                              <div className="text-gray-500 text-[11px] mt-0.5 flex gap-2">
-                                <span>المخزون: <strong>{i.quantity || 0}</strong> {i.unit || 'قطعة'}</span>
-                                {i.barcode && <span className="font-mono">باركود: {i.barcode}</span>}
-                              </div>
-                            </div>
-                            <div className="text-left">
-                              <div className="text-xs font-bold text-emerald-700">
-                                نقدي: {normalP.toFixed(2)} ج.م
-                              </div>
-                              <div className="text-[11px] font-bold text-indigo-700">
-                                جملة: {wholeP.toFixed(2)} ج.م
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })
+          {/* Live Customer Credit Limit Alert if Ajel */}
+          {modalType === 'ajel' && (() => {
+            const matchedCust = appData.customers.find(
+              (c) => c.name.trim().toLowerCase() === customerName.trim().toLowerCase()
+            );
+            if (matchedCust && matchedCust.creditLimit && matchedCust.creditLimit > 0) {
+              const currentBal = matchedCust.balance || 0;
+              const rem = calculateTotals().effectiveRemaining;
+              const projBal = currentBal + rem;
+              const isExceeded = projBal > matchedCust.creditLimit;
+              return (
+                <div
+                  className={`p-3 rounded-xl border text-xs ${
+                    isExceeded
+                      ? 'bg-rose-50 border-rose-300 text-rose-900'
+                      : 'bg-indigo-50 border-indigo-200 text-indigo-900'
+                  }`}
+                >
+                  <div className="flex justify-between items-center font-bold">
+                    <span className="flex items-center gap-1.5">
+                      <span>{isExceeded ? '⚠️' : '🛡️'}</span>
+                      <span>
+                        {isExceeded
+                          ? 'تحذير: سيتم تجاوز الحد الائتماني المسموح به للعميل!'
+                          : 'فحص السقف الائتماني للعميل'}
+                      </span>
+                    </span>
+                    <span className="font-mono">
+                      الحد المسموح: {matchedCust.creditLimit.toFixed(2)} ج.م
+                    </span>
+                  </div>
+                  <div className="mt-1 flex flex-wrap gap-x-4 text-[11px]">
+                    <span>الرصيد الحالي: <strong>{currentBal.toFixed(2)} ج.م</strong></span>
+                    <span>+ متبقي الفاتورة: <strong>{rem.toFixed(2)} ج.م</strong></span>
+                    <span>
+                      = الرصيد المتوقع:{' '}
+                      <strong className={isExceeded ? 'text-rose-700 font-bold' : 'text-indigo-800 font-bold'}>
+                        {projBal.toFixed(2)} ج.م
+                      </strong>
+                    </span>
+                    {isExceeded && (
+                      <span className="text-rose-700 font-black">
+                        (تجاوز بمقدار: {(projBal - matchedCust.creditLimit).toFixed(2)} ج.م)
+                      </span>
                     )}
                   </div>
-                )}
-              </div>
-
-              {/* Quantity Input */}
-              <div className="col-span-1 sm:col-span-2">
-                <label className="block text-xs font-bold mb-1 text-slate-700">العدد</label>
-                <input
-                  type="number"
-                  placeholder="0"
-                  step="any"
-                  value={itemQty}
-                  onChange={(e) => setItemQty(e.target.value)}
-                  className="w-full p-2.5 border-2 border-slate-300 rounded-xl focus:border-[#1a237e] focus:outline-none bg-white text-xs md:text-sm font-bold font-mono"
-                />
-              </div>
-
-              {/* Price Field (Protected / Controlled) */}
-              <div className="col-span-1 sm:col-span-2">
-                <div className="flex justify-between items-center mb-1">
-                  <label className="block text-xs font-bold text-slate-700">
-                    السعر
-                  </label>
-                  {isPriceAutoFetched && (
-                    <span className="text-[9px] bg-emerald-100 text-emerald-800 px-1 py-0.2 rounded font-bold">
-                      🔒 آلي
-                    </span>
-                  )}
                 </div>
-                <input
-                  type="number"
-                  placeholder="0.00"
-                  step="any"
-                  value={itemPrice}
-                  readOnly={!canOverridePrice}
-                  onChange={(e) => {
-                    if (canOverridePrice) {
-                      setItemPrice(e.target.value);
-                      setIsPriceAutoFetched(false);
-                    }
-                  }}
-                  className={`w-full p-2.5 border-2 rounded-xl focus:outline-none text-xs md:text-sm font-bold font-mono ${
-                    !canOverridePrice
-                      ? 'bg-slate-100 text-slate-800 border-slate-300 cursor-not-allowed'
-                      : 'bg-white text-slate-900 border-indigo-300 focus:border-[#1a237e]'
-                  }`}
-                />
-              </div>
-
-              {/* Add Button */}
-              <div className="col-span-2 sm:col-span-2">
-                <button
-                  type="button"
-                  onClick={handleAddItem}
-                  className="w-full min-h-[44px] bg-[#1a237e] hover:bg-[#0d47a1] active:bg-[#002171] text-white px-3 py-2.5 rounded-xl font-bold transition cursor-pointer flex items-center justify-center gap-1 shadow-xs"
-                >
-                  <span>➕</span> إضافة سريعة
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {/* Items Container - Dual Mobile Cards / Desktop Table */}
-          {tempItems.length === 0 ? (
-            <div className="border-2 border-dashed border-gray-200 rounded-xl p-6 text-center text-gray-500 text-xs sm:text-sm flex flex-col items-center justify-center gap-2">
-              <span className="text-3xl">🛒</span>
-              <span className="font-bold text-gray-700">لم يتم إضافة أي أصناف إلى الفاتورة بعد</span>
-              <span className="text-gray-400 text-xs">اضغط على زر "فتح كارت الصنف" بالأعلى لإضافة صنف مع تحديد البيان والخصم والضريبة بحرية</span>
-            </div>
-          ) : (
-            <div>
-              {/* Mobile Card List for Added Items */}
-              <div className="block md:hidden space-y-2 max-h-56 overflow-y-auto pr-0.5">
-                {tempItems.map((item, idx) => (
-                  <div key={idx} className="bg-slate-50 border border-slate-200 rounded-xl p-3 flex flex-col gap-2 text-xs">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex-1 min-w-0">
-                        <div className="font-bold text-slate-900 truncate">{item.name}</div>
-                        {item.notes && (
-                          <div className="text-[11px] text-indigo-700 mt-0.5">بيان: {item.notes}</div>
-                        )}
-                        <div className="flex flex-wrap items-center gap-2 text-[11px] text-slate-500 mt-1">
-                          <span>العدد: <strong className="font-mono text-slate-800">{item.qty}</strong></span>
-                          <span>×</span>
-                          <span>{item.price.toFixed(2)} ج.م</span>
-                          {((item.discountValue || item.discount || 0) > 0) && (
-                            <span className="bg-amber-100 text-amber-800 px-1.5 py-0.2 rounded text-[10px] font-bold">
-                              خصم: {item.discountValue || item.discount}{item.discountType === 'percent' ? '%' : ' ج.م'}
-                            </span>
-                          )}
-                          {((item.taxValue || item.tax || 0) > 0) && (
-                            <span className="bg-indigo-100 text-indigo-800 px-1.5 py-0.2 rounded text-[10px] font-bold">
-                              ضريبة: {item.taxValue || item.tax}{item.taxType === 'percent' ? '%' : ' ج.م'}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                      <div className="text-left shrink-0">
-                        <span className="font-bold font-mono text-[#1a237e] text-sm block">{item.total.toFixed(2)} ج.م</span>
-                      </div>
-                    </div>
-                    <div className="flex justify-end gap-2 border-t border-slate-200 pt-1.5">
-                      <button
-                        type="button"
-                        onClick={() => handleOpenEditItemModal(item, idx)}
-                        className="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 px-2.5 py-1 rounded-lg text-xs font-bold transition flex items-center gap-1"
-                      >
-                        <span>✏️</span> تعديل
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveItem(idx)}
-                        className="bg-rose-50 hover:bg-rose-100 text-rose-700 px-2.5 py-1 rounded-lg text-xs font-bold transition flex items-center gap-1"
-                      >
-                        <span>🗑️</span> حذف
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              {/* Desktop Table for Added Items */}
-              <div className="hidden md:block border border-gray-200 rounded-xl overflow-x-auto max-h-56">
-                <table className="w-full text-right text-xs">
-                  <thead className="bg-gray-100 text-gray-700 font-bold">
-                    <tr>
-                      <th className="p-2.5">#</th>
-                      <th className="p-2.5">اسم الصنف</th>
-                      <th className="p-2.5">البيان / ملاحظة</th>
-                      <th className="p-2.5 text-center">العدد</th>
-                      <th className="p-2.5">السعر</th>
-                      <th className="p-2.5">الخصم والضريبة</th>
-                      <th className="p-2.5">الإجمالي</th>
-                      <th className="p-2.5 text-center">إجراءات</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-100">
-                    {tempItems.map((item, idx) => (
-                      <tr key={idx} className="hover:bg-slate-50 transition">
-                        <td className="p-2.5 font-mono text-gray-500">{idx + 1}</td>
-                        <td className="p-2.5 font-bold text-slate-900">{item.name}</td>
-                        <td className="p-2.5 text-gray-600 max-w-[180px] truncate" title={item.notes}>
-                          {item.notes || '-'}
-                        </td>
-                        <td className="p-2.5 font-mono font-bold text-center text-slate-800">{item.qty}</td>
-                        <td className="p-2.5 font-mono font-medium">{item.price.toFixed(2)} ج.م</td>
-                        <td className="p-2.5">
-                          <div className="flex flex-wrap gap-1">
-                            {((item.discountValue || item.discount || 0) > 0) ? (
-                              <span className="bg-amber-100 text-amber-900 px-1.5 py-0.5 rounded text-[10px] font-bold">
-                                خصم: {item.discountValue || item.discount}{item.discountType === 'percent' ? '%' : ' ج.م'}
-                              </span>
-                            ) : null}
-                            {((item.taxValue || item.tax || 0) > 0) ? (
-                              <span className="bg-indigo-100 text-indigo-900 px-1.5 py-0.5 rounded text-[10px] font-bold">
-                                ضريبة: {item.taxValue || item.tax}{item.taxType === 'percent' ? '%' : ' ج.م'}
-                              </span>
-                            ) : null}
-                            {!((item.discountValue || item.discount || 0) > 0) && !((item.taxValue || item.tax || 0) > 0) && (
-                              <span className="text-gray-400 text-[11px]">-</span>
-                            )}
-                          </div>
-                        </td>
-                        <td className="p-2.5 font-bold font-mono text-[#1a237e]">{item.total.toFixed(2)} ج.م</td>
-                        <td className="p-2.5 text-center">
-                          <div className="flex items-center justify-center gap-1.5">
-                            <button
-                              type="button"
-                              onClick={() => handleOpenEditItemModal(item, idx)}
-                              className="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 px-2 py-1 rounded text-xs transition cursor-pointer font-bold"
-                              title="تعديل في كارت الصنف"
-                            >
-                              ✏️
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleRemoveItem(idx)}
-                              className="bg-rose-50 hover:bg-rose-100 text-rose-700 px-2 py-1 rounded text-xs transition cursor-pointer font-bold"
-                              title="حذف الصنف"
-                            >
-                              🗑️
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
-
-          {/* Discounts, Tax & Extra Revenue Section - Dynamic & Comprehensive */}
-          <div className="bg-slate-50 border border-slate-200 p-3.5 rounded-2xl space-y-3">
-            <div className="flex flex-wrap items-center justify-between gap-2 text-xs font-bold text-slate-700 pb-1.5 border-b border-slate-200">
-              <span className="flex items-center gap-1.5">
-                <span>⚡</span>
-                <span>الخانات الإضافية أسفل بيانات الفاتورة (الخصم والضريبة والإيرادات)</span>
-              </span>
-              <span className="text-[11px] text-slate-500 font-normal">الخصم والضريبة اختياري (نسبة مئوية % أو مبلغ ثابت ج.م) + خانة الإيرادات الإضافية</span>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              {/* 1. الخصم الإضافي (اختياري بين نسبة % أو مبلغ ثابت) */}
-              <div className="bg-white p-2.5 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between">
-                <div className="flex items-center justify-between mb-1.5">
-                  <label className="text-xs font-bold text-slate-700">خصم الفاتورة</label>
-                  <div className="inline-flex rounded-lg bg-slate-100 p-0.5 border border-slate-200">
-                    <button
-                      type="button"
-                      onClick={() => setDiscountType('percent')}
-                      className={`px-2 py-0.5 text-[11px] font-bold rounded-md transition-all ${
-                        discountType === 'percent'
-                          ? 'bg-amber-600 text-white shadow-sm'
-                          : 'text-slate-600 hover:text-slate-900'
-                      }`}
-                      title="خصم نسبة مئوية"
-                    >
-                      % نسبة
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setDiscountType('fixed')}
-                      className={`px-2 py-0.5 text-[11px] font-bold rounded-md transition-all ${
-                        discountType === 'fixed'
-                          ? 'bg-amber-600 text-white shadow-sm'
-                          : 'text-slate-600 hover:text-slate-900'
-                      }`}
-                      title="خصم مبلغ ثابت"
-                    >
-                      ج.م ثابت
-                    </button>
-                  </div>
-                </div>
-                <div className="relative">
-                  <input
-                    type="number"
-                    placeholder={discountType === 'percent' ? '0 %' : '0.00 ج.م'}
-                    min="0"
-                    step="any"
-                    value={discount || ''}
-                    onChange={(e) => setDiscount(parseFloat(e.target.value) || 0)}
-                    className="w-full p-2 border-2 border-gray-200 rounded-lg focus:border-amber-600 focus:outline-none text-xs font-mono font-bold"
-                  />
-                  <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[11px] font-bold text-gray-400 pointer-events-none">
-                    {discountType === 'percent' ? '%' : 'ج.م'}
-                  </span>
-                </div>
-              </div>
-
-              {/* 2. الضريبة الإضافية (اختياري بين نسبة % أو مبلغ ثابت) */}
-              <div className="bg-white p-2.5 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between">
-                <div className="flex items-center justify-between mb-1.5">
-                  <label className="text-xs font-bold text-slate-700">ضريبة الفاتورة</label>
-                  <div className="inline-flex rounded-lg bg-slate-100 p-0.5 border border-slate-200">
-                    <button
-                      type="button"
-                      onClick={() => setTaxType('percent')}
-                      className={`px-2 py-0.5 text-[11px] font-bold rounded-md transition-all ${
-                        taxType === 'percent'
-                          ? 'bg-indigo-600 text-white shadow-sm'
-                          : 'text-slate-600 hover:text-slate-900'
-                      }`}
-                      title="ضريبة نسبة مئوية"
-                    >
-                      % نسبة
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setTaxType('fixed')}
-                      className={`px-2 py-0.5 text-[11px] font-bold rounded-md transition-all ${
-                        taxType === 'fixed'
-                          ? 'bg-indigo-600 text-white shadow-sm'
-                          : 'text-slate-600 hover:text-slate-900'
-                      }`}
-                      title="ضريبة مبلغ ثابت"
-                    >
-                      ج.م ثابت
-                    </button>
-                  </div>
-                </div>
-                <div className="relative">
-                  <input
-                    type="number"
-                    placeholder={taxType === 'percent' ? '0 %' : '0.00 ج.م'}
-                    min="0"
-                    step="any"
-                    value={tax || ''}
-                    onChange={(e) => setTax(parseFloat(e.target.value) || 0)}
-                    className="w-full p-2 border-2 border-gray-200 rounded-lg focus:border-indigo-600 focus:outline-none text-xs font-mono font-bold"
-                  />
-                  <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[11px] font-bold text-gray-400 pointer-events-none">
-                    {taxType === 'percent' ? '%' : 'ج.م'}
-                  </span>
-                </div>
-              </div>
-
-              {/* 3. الإيرادات الإضافية (خانة للاسم وخانة للمبلغ) */}
-              <div className="bg-emerald-50/70 p-2.5 rounded-xl border border-emerald-200 shadow-sm flex flex-col justify-between">
-                <div className="flex items-center justify-between mb-1.5">
-                  <label className="text-xs font-bold text-emerald-900 flex items-center gap-1">
-                    <span>💵</span>
-                    <span>الإيراد الإضافي</span>
-                  </label>
-                  <span className="text-[10px] text-emerald-700 font-medium">اسم ومبلغ</span>
-                </div>
-                <div className="grid grid-cols-5 gap-1.5">
-                  <div className="col-span-3">
-                    <input
-                      type="text"
-                      placeholder="اسم الإيراد (مثال: توصيل، تركيب)"
-                      value={extraRevenueName}
-                      onChange={(e) => setExtraRevenueName(e.target.value)}
-                      className="w-full p-2 border-2 border-emerald-200 rounded-lg focus:border-emerald-600 focus:outline-none text-[11px]"
-                    />
-                  </div>
-                  <div className="col-span-2">
-                    <input
-                      type="number"
-                      placeholder="المبلغ (ج.م)"
-                      min="0"
-                      step="any"
-                      value={extraRevenueAmount || ''}
-                      onChange={(e) => setExtraRevenueAmount(parseFloat(e.target.value) || 0)}
-                      className="w-full p-2 border-2 border-emerald-200 rounded-lg focus:border-emerald-600 focus:outline-none text-xs font-mono font-bold text-emerald-900"
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Aggregated Totals Preview */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 pt-2 border-t border-slate-200 text-xs">
-              <div className="p-2 bg-white rounded-lg border border-slate-200">
-                <span className="text-gray-500 text-[10px] block">إجمالي قيمة الأصناف</span>
-                <span className="font-bold font-mono text-slate-800">{calculateTotals().subtotal.toFixed(2)} ج.م</span>
-              </div>
-              <div className="p-2 bg-amber-50 rounded-lg border border-amber-200">
-                <span className="text-amber-800 text-[10px] flex items-center justify-between">
-                  <span>إجمالي الخصومات</span>
-                  <span className="text-[9px] font-mono font-semibold">({discountType === 'percent' ? `${discount}%` : 'ثابت'})</span>
-                </span>
-                <span className="font-bold font-mono text-amber-900">-{calculateTotals().totalDiscount.toFixed(2)} ج.م</span>
-              </div>
-              <div className="p-2 bg-indigo-50 rounded-lg border border-indigo-200">
-                <span className="text-indigo-800 text-[10px] flex items-center justify-between">
-                  <span>إجمالي الضرائب</span>
-                  <span className="text-[9px] font-mono font-semibold">({taxType === 'percent' ? `${tax}%` : 'ثابت'})</span>
-                </span>
-                <span className="font-bold font-mono text-indigo-900">+{calculateTotals().totalTax.toFixed(2)} ج.م</span>
-              </div>
-              <div className="p-2 bg-emerald-50 rounded-lg border border-emerald-200">
-                <span className="text-emerald-800 text-[10px] truncate block" title={extraRevenueName || 'الإيراد الإضافي'}>
-                  {extraRevenueName ? `إيراد: ${extraRevenueName}` : 'الإيراد الإضافي'}
-                </span>
-                <span className="font-bold font-mono text-emerald-900">+{calculateTotals().extraRevenueAmount.toFixed(2)} ج.م</span>
-              </div>
-              <div className="col-span-2 sm:col-span-1 p-2 bg-gradient-to-r from-blue-900 to-indigo-900 text-white rounded-lg shadow-sm">
-                <span className="text-blue-200 text-[10px] block">الصافي النهائي للفاتورة</span>
-                <span className="font-bold font-mono text-white text-sm">{calculateTotals().total.toFixed(2)} ج.م</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Financial Settlement Section according to Operation Type */}
-          <div className="border border-slate-200 bg-slate-50/80 p-3.5 rounded-2xl space-y-3">
-            {/* Live Customer Credit Limit Alert if Ajel */}
-            {modalType === 'ajel' && (() => {
-              const matchedCust = appData.customers.find(
-                (c) => c.name.trim().toLowerCase() === customerName.trim().toLowerCase()
               );
-              if (matchedCust && matchedCust.creditLimit && matchedCust.creditLimit > 0) {
-                const currentBal = matchedCust.balance || 0;
-                const rem = calculateTotals().effectiveRemaining;
-                const projBal = currentBal + rem;
-                const isExceeded = projBal > matchedCust.creditLimit;
-                return (
-                  <div
-                    className={`p-3 rounded-xl border text-xs ${
-                      isExceeded
-                        ? 'bg-rose-50 border-rose-300 text-rose-900'
-                        : 'bg-indigo-50 border-indigo-200 text-indigo-900'
-                    }`}
-                  >
-                    <div className="flex justify-between items-center font-bold">
-                      <span className="flex items-center gap-1.5">
-                        <span>{isExceeded ? '⚠️' : '🛡️'}</span>
-                        <span>
-                          {isExceeded
-                            ? 'تحذير: سيتم تجاوز الحد الائتماني المسموح به للعميل!'
-                            : 'فحص السقف الائتماني للعميل'}
-                        </span>
-                      </span>
-                      <span className="font-mono">
-                        الحد المسموح: {matchedCust.creditLimit.toFixed(2)} ج.م
-                      </span>
-                    </div>
-                    <div className="mt-1 flex flex-wrap gap-x-4 text-[11px]">
-                      <span>الرصيد الحالي: <strong>{currentBal.toFixed(2)} ج.م</strong></span>
-                      <span>+ متبقي الفاتورة: <strong>{rem.toFixed(2)} ج.م</strong></span>
-                      <span>
-                        = الرصيد المتوقع:{' '}
-                        <strong className={isExceeded ? 'text-rose-700 font-bold' : 'text-indigo-800 font-bold'}>
-                          {projBal.toFixed(2)} ج.م
-                        </strong>
-                      </span>
-                      {isExceeded && (
-                        <span className="text-rose-700 font-black">
-                          (تجاوز بمقدار: {(projBal - matchedCust.creditLimit).toFixed(2)} ج.م)
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                );
-              }
-              return null;
-            })()}
+            }
+            return null;
+          })()}
 
-            <div className="flex items-center justify-between border-b border-slate-200 pb-2">
-              <span className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
-                <span>💳</span>
-                {modalType === 'nagdi' && 'تسوية البيع النقدي (سداد فوري بالكامل)'}
-                {modalType === 'ajel' && 'تسوية البيع الآجل والذمم (دفعة مقدمة / متبقي)'}
-                {modalType === 'return_nagdi' && 'تسوية صرف المرتجع النقدي للعميل فوراً'}
-                {modalType === 'return_ajel' && 'تسوية المرتجع الآجل (خصم من ذمم العميل / رد نقدي)'}
-              </span>
-              <span
-                className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full ${
-                  modalType === 'nagdi'
-                    ? 'bg-emerald-100 text-emerald-800'
-                    : modalType === 'ajel'
-                    ? 'bg-amber-100 text-amber-900'
-                    : modalType === 'return_nagdi'
-                    ? 'bg-rose-100 text-rose-800'
-                    : 'bg-purple-100 text-purple-900'
-                }`}
-              >
-                {modalType === 'nagdi'
-                  ? '🟢 نقدي فوري'
-                  : modalType === 'ajel'
-                  ? '🟠 آجل (ذمم عملاء)'
-                  : modalType === 'return_nagdi'
-                  ? '🔴 مرتجع نقدي'
-                  : '⚫ مرتجع آجل'}
-              </span>
-            </div>
-
-            {/* Inputs based on type */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {/* If Ajel or Return Ajel: Show Paid / Downpayment amount input */}
-              {(modalType === 'ajel' || modalType === 'return_ajel') && (
-                <div>
-                  <label className="block text-xs font-bold mb-1 text-slate-700">
-                    {modalType === 'ajel'
-                      ? 'المسدد مقدماً / نقداً الآن (ج.م)'
-                      : 'المردود نقداً للعميل الآن إن وجد (ج.م)'}
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    max={calculateTotals().total}
-                    step="any"
-                    placeholder="0.00"
-                    value={paidAmountInput}
-                    onChange={(e) => setPaidAmountInput(e.target.value)}
-                    className="w-full p-2 border-2 border-amber-300 rounded-xl focus:border-[#1a237e] focus:outline-none bg-white text-xs md:text-sm font-mono font-bold"
-                  />
-                  <div className="text-[10px] text-slate-500 mt-1">
-                    {modalType === 'ajel'
-                      ? 'أدخل المبلغ المستلم من العميل الآن (أو اتركه 0 لتسجيل الفاتورة آجلة بالكامل كذمة)'
-                      : 'أدخل أي نقدية تم ردها للعميل فعلياً (أو اتركه 0 ليتم خصم كامل المرتجع من حسابه)'}
-                  </div>
-                </div>
-              )}
-
-              {/* Payment Method Selector */}
-              <div className={modalType === 'nagdi' || modalType === 'return_nagdi' ? 'sm:col-span-2' : ''}>
-                <label className="block text-xs font-bold mb-1 text-slate-700">
-                  {modalType === 'nagdi'
-                    ? 'وسيلة استلام المبلغ (الخزينة / الحساب البنكي)'
-                    : modalType === 'return_nagdi'
-                    ? 'وسيلة صرف المرتجع للعميل'
-                    : 'وسيلة استلام / صرف النقدية'}
-                </label>
-                <select
-                  value={paymentMethod}
-                  onChange={(e) => setPaymentMethod(e.target.value as any)}
-                  className="w-full p-2 border-2 border-gray-200 rounded-xl focus:border-[#1a237e] focus:outline-none bg-white text-xs md:text-sm font-semibold"
-                >
-                  <option value="drawer">💵 نقدي (الدرج / الخزينة الرئيسية)</option>
-                  <option value="vodafone">📱 فودافون كاش (محفظة إلكترونية)</option>
-                  <option value="instapay">⚡ إنستاباي (InstaPay)</option>
-                  <option value="bank">💳 حساب بنكي</option>
-                </select>
-              </div>
-            </div>
-
-            {/* Live Financial Impact Summary Box */}
-            <div className="bg-white border border-slate-200 rounded-xl p-3 grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
-              <div className="p-2 bg-slate-50 rounded-lg">
-                <span className="text-slate-500 block text-[10px]">إجمالي الفاتورة / المرتجع</span>
-                <span className="font-bold font-mono text-slate-900 text-sm">
-                  {calculateTotals().total.toFixed(2)} ج.م
-                </span>
-              </div>
-              <div className="p-2 bg-emerald-50 rounded-lg border border-emerald-100">
-                <span className="text-emerald-700 block text-[10px]">
-                  {modalType.startsWith('return') ? 'المصروف نقداً للعميل' : 'المحصل نقداً الآن'}
-                </span>
-                <span className="font-bold font-mono text-emerald-800 text-sm">
-                  {calculateTotals().effectivePaid.toFixed(2)} ج.م
-                </span>
-                <span className="text-[10px] text-emerald-600 block truncate">
-                  ({getMethodLabel(paymentMethod)})
-                </span>
-              </div>
-              <div className="p-2 bg-amber-50 rounded-lg border border-amber-100 col-span-2 sm:col-span-1">
-                <span className="text-amber-800 block text-[10px]">
-                  {modalType === 'ajel'
-                    ? 'المتبقي كمديونية (ذمم عملاء)'
-                    : modalType === 'return_ajel'
-                    ? 'المخصوم من مديونية العميل'
-                    : 'المتبقي كذمم'}
-                </span>
-                <span
-                  className={`font-bold font-mono text-sm ${
-                    calculateTotals().effectiveRemaining > 0 ? 'text-rose-700' : 'text-slate-700'
-                  }`}
-                >
-                  {calculateTotals().effectiveRemaining.toFixed(2)} ج.م
-                </span>
-              </div>
-            </div>
+          {/* 📦 نظام تسجيل وإدارة الأصناف الموحد للفاتورة (متجاوب مع الهواتف وشاشات اللمس) */}
+          <div className="bg-slate-50/70 p-1 sm:p-2 rounded-2xl border border-slate-200 shadow-xs">
+            <UnifiedInvoiceItemSystem
+              mode={modalType.startsWith('return') ? 'return_sale' : 'sale'}
+              items={unifiedItems}
+              onChangeItems={setUnifiedItems}
+              catalogItems={appData.items}
+              pricingType={salesPricingType}
+              globalInvDisc={globalInvDisc}
+              onChangeGlobalInvDisc={setGlobalInvDisc}
+              invDiscType={invDiscType}
+              onChangeInvDiscType={setInvDiscType}
+              globalInvTax={globalInvTax}
+              onChangeGlobalInvTax={setGlobalInvTax}
+              invTaxType={invTaxType}
+              onChangeInvTaxType={setInvTaxType}
+              extraIncomeName={extraIncomeName}
+              onChangeExtraIncomeName={setExtraIncomeName}
+              extraIncomeVal={extraIncomeVal}
+              onChangeExtraIncomeVal={setExtraIncomeVal}
+              paymentRows={paymentRows}
+              onChangePaymentRows={setPaymentRows}
+              hidePrintActions={true}
+              onSaveInvoice={handleSaveInvoice}
+            />
           </div>
+
+
+
+
         </div>
       </Modal>
 

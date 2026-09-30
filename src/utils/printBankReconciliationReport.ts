@@ -47,59 +47,13 @@ export function compileBankReconciliationData(
     bankAccounts.find((b) => b.id === bankAccountId) ||
     bankAccounts[0] || {
       id: 'b1',
-      name: 'البنك الأهلي المصري',
-      accountNumber: 'EG50000200012345678901',
-      balance: 145000,
+      name: 'الحساب البنكي',
+      accountNumber: '',
+      balance: 0,
     };
 
   const statementItems = (appData.bankStatements || []).filter((s) => s.bankAccountId === selectedBank.id);
-
-  // If no statements exist yet for this bank, provide realistic sample reconciliation items so report is complete and useful
-  const activeItems: BankStatementItem[] =
-    statementItems.length > 0
-      ? statementItems
-      : [
-          {
-            id: 'sample-stmt-1',
-            bankAccountId: selectedBank.id,
-            date: selectedDate,
-            reference: 'DEP-8841',
-            description: 'إيداع تحصيلات نقدية وحوالات عملاء',
-            debit: 0,
-            credit: 45000,
-            isReconciled: true,
-          },
-          {
-            id: 'sample-stmt-2',
-            bankAccountId: selectedBank.id,
-            date: selectedDate,
-            reference: 'CHQ-5520',
-            description: 'صرف شيك مقاصة للمورد شركة الأهرام',
-            debit: 20000,
-            credit: 0,
-            isReconciled: true,
-          },
-          {
-            id: 'sample-stmt-3',
-            bankAccountId: selectedBank.id,
-            date: selectedDate,
-            reference: 'FEE-019',
-            description: 'عمولات ومصاريف مسك حسابات وخدمات مصرفية',
-            debit: 450,
-            credit: 0,
-            isReconciled: false,
-          },
-          {
-            id: 'sample-stmt-4',
-            bankAccountId: selectedBank.id,
-            date: selectedDate,
-            reference: 'INT-331',
-            description: 'عوائد وفوائد دائنة للحساب الجاري',
-            debit: 0,
-            credit: 1200,
-            isReconciled: false,
-          },
-        ];
+  const activeItems: BankStatementItem[] = statementItems;
 
   const bookBalance = selectedBank.balance || 0;
   const totalCredits = activeItems.reduce((sum, item) => sum + (item.credit || 0), 0);

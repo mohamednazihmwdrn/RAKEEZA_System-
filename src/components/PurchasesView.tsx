@@ -22,8 +22,9 @@ import { printInvoiceWindow } from '../utils/printInvoice';
 import { InvoiceCardTemplate } from './InvoiceCardTemplate';
 import { exportToExcel } from '../utils/excelExport';
 import { openUnifiedPrintWindow } from '../utils/printUnified';
-import { InvoiceItemModal } from './InvoiceItemModal';
 import { TableActionButtons } from './TableActionButtons';
+import { InvoiceItemModal } from './InvoiceItemModal';
+import { UnifiedInvoiceItemSystem, InvoiceItemUnified, PaymentRow } from './UnifiedInvoiceItemSystem';
 
 interface PurchasesViewProps {
   appData: AppData;
@@ -53,6 +54,18 @@ export const PurchasesView: React.FC<PurchasesViewProps> = ({ appData, onUpdateD
   const [paidAmountInput, setPaidAmountInput] = useState<string>('');
   const [paymentMethod, setPaymentMethod] = useState<'drawer' | 'vodafone' | 'instapay' | 'bank'>('drawer');
   const [tempItems, setTempItems] = useState<InvoiceItem[]>([]);
+
+  // 📦 Unified Invoice Items & Financials State
+  const [unifiedItems, setUnifiedItems] = useState<InvoiceItemUnified[]>([]);
+  const [globalInvDisc, setGlobalInvDisc] = useState<number>(0);
+  const [invDiscType, setInvDiscType] = useState<'percent' | 'val'>('percent');
+  const [globalInvTax, setGlobalInvTax] = useState<number>(0);
+  const [invTaxType, setInvTaxType] = useState<'percent' | 'val'>('percent');
+  const [extraIncomeName, setExtraIncomeName] = useState<string>('');
+  const [extraIncomeVal, setExtraIncomeVal] = useState<number>(0);
+  const [paymentRows, setPaymentRows] = useState<PaymentRow[]>([
+    { id: 'pay_1', method: 'نقدي / كاش', amount: 0 },
+  ]);
 
   // 📦 Item Card Modal State (كارت الصنف)
   const [isItemCardModalOpen, setIsItemCardModalOpen] = useState(false);
@@ -144,6 +157,17 @@ export const PurchasesView: React.FC<PurchasesViewProps> = ({ appData, onUpdateD
     setPaymentMethod('drawer');
     setPaidAmountInput(type === 'ajel' || type === 'return_ajel' ? '0' : '');
     setTempItems([]);
+
+    // Reset Unified System state
+    setUnifiedItems([]);
+    setGlobalInvDisc(0);
+    setInvDiscType('percent');
+    setGlobalInvTax(0);
+    setInvTaxType('percent');
+    setExtraIncomeName('');
+    setExtraIncomeVal(0);
+    setPaymentRows([{ id: `pay_${Date.now()}`, method: 'نقدي / كاش', amount: 0 }]);
+
     setItemName('');
     setItemQty('');
     setItemPrice('');
@@ -175,6 +199,46 @@ export const PurchasesView: React.FC<PurchasesViewProps> = ({ appData, onUpdateD
     setPaymentMethod((inv.paymentMethod as any) || 'drawer');
     setPaidAmountInput(inv.paidAmount !== undefined ? inv.paidAmount.toString() : '');
     setTempItems(inv.items ? [...inv.items] : []);
+
+    // Map items to unified items
+    const mappedItems: InvoiceItemUnified[] = (inv.items || []).map((i) => ({
+      code: i.code || (i.itemId ? `ITM-${i.itemId.substring(0, 6)}` : 'G000'),
+      name: i.name,
+      price: Number(i.price || 0),
+      qty: Number(i.qty || 1),
+      discVal: Number(i.discVal ?? i.discountValue ?? 0),
+      discType: (i.discType === 'val' || i.discountType === 'fixed') ? 'val' : 'percent',
+      actualDisc: Number(i.actualDisc ?? i.discount ?? 0),
+      taxVal: Number(i.taxVal ?? i.taxValue ?? 0),
+      taxType: (i.taxType === 'val' || i.taxType === 'fixed') ? 'val' : 'percent',
+      actualTax: Number(i.actualTax ?? i.tax ?? 0),
+      spec: i.spec || i.notes || '',
+      total: Number(i.total || 0),
+      itemId: i.itemId,
+      costPrice: i.costPrice,
+    }));
+    setUnifiedItems(mappedItems);
+
+    setGlobalInvDisc(inv.discountValue || (inv.discountType === 'percent' ? inv.discount : 0) || 0);
+    setInvDiscType(inv.discountType === 'fixed' ? 'val' : 'percent');
+    setGlobalInvTax(inv.taxValue || (inv.taxType === 'fixed' ? inv.tax : 0) || 0);
+    setInvTaxType(inv.taxType === 'fixed' ? 'val' : 'percent');
+    setExtraIncomeName(inv.extraRevenueName || '');
+    setExtraIncomeVal(inv.extraRevenueAmount || 0);
+
+    if (inv.paymentSplits && inv.paymentSplits.length > 0) {
+      setPaymentRows(
+        inv.paymentSplits.map((p, idx) => ({
+          id: `pay_${idx}_${Date.now()}`,
+          method: p.method === 'drawer' ? 'نقدي / كاش' : p.method === 'vodafone' ? 'فودافون كاش' : p.method === 'instapay' ? 'إنستاباي (InstaPay)' : 'تحويل بنكي',
+          amount: Number(p.amount || 0),
+        }))
+      );
+    } else {
+      const pmLabel = inv.paymentMethod === 'vodafone' ? 'فودافون كاش' : inv.paymentMethod === 'instapay' ? 'إنستاباي (InstaPay)' : inv.paymentMethod === 'bank' ? 'تحويل بنكي' : 'نقدي / كاش';
+      setPaymentRows([{ id: `pay_${Date.now()}`, method: pmLabel, amount: Number(inv.paidAmount || 0) }]);
+    }
+
     setItemName('');
     setItemQty('');
     setItemPrice('');
@@ -249,20 +313,21 @@ export const PurchasesView: React.FC<PurchasesViewProps> = ({ appData, onUpdateD
 
   const calculateTotals = () => {
     // 1. Calculate per-item totals and accumulate item-level discounts and taxes
+    const activeItems = unifiedItems.length > 0 ? unifiedItems : tempItems;
     let itemsBaseSubtotal = 0;
     let totalItemDiscounts = 0;
     let totalItemTaxes = 0;
 
-    tempItems.forEach((itm) => {
-      const lineRaw = (itm.qty || 0) * (itm.price || 0);
+    activeItems.forEach((itm: any) => {
+      const lineRaw = (Number(itm.qty) || 0) * (Number(itm.price) || 0);
       itemsBaseSubtotal += lineRaw;
 
       // Item discount
       let lineDisc = 0;
-      if (itm.discountType === 'fixed') {
-        lineDisc = itm.discountValue !== undefined ? itm.discountValue : (itm.discount || 0);
+      if (itm.discType === 'val' || itm.discountType === 'fixed') {
+        lineDisc = itm.discVal !== undefined ? Number(itm.discVal) : (itm.discountValue !== undefined ? Number(itm.discountValue) : Number(itm.discount || 0));
       } else {
-        const discRate = itm.discountValue !== undefined ? itm.discountValue : (itm.discount || 0);
+        const discRate = itm.discVal !== undefined ? Number(itm.discVal) : (itm.discountValue !== undefined ? Number(itm.discountValue) : Number(itm.discount || 0));
         lineDisc = (lineRaw * discRate) / 100;
       }
       totalItemDiscounts += Math.max(0, lineDisc);
@@ -270,39 +335,45 @@ export const PurchasesView: React.FC<PurchasesViewProps> = ({ appData, onUpdateD
       // Item tax
       let lineTax = 0;
       const taxableBase = Math.max(0, lineRaw - lineDisc);
-      if (itm.taxType === 'fixed') {
-        lineTax = itm.taxValue !== undefined ? itm.taxValue : (itm.tax || 0);
+      if (itm.taxType === 'val' || itm.taxType === 'fixed') {
+        lineTax = itm.taxVal !== undefined ? Number(itm.taxVal) : (itm.taxValue !== undefined ? Number(itm.taxValue) : Number(itm.tax || 0));
       } else {
-        const taxRate = itm.taxValue !== undefined ? itm.taxValue : (itm.tax || 0);
+        const taxRate = itm.taxVal !== undefined ? Number(itm.taxVal) : (itm.taxValue !== undefined ? Number(itm.taxValue) : Number(itm.tax || 0));
         lineTax = (taxableBase * taxRate) / 100;
       }
       totalItemTaxes += Math.max(0, lineTax);
     });
 
     // 2. Invoice-level additional discount & tax
+    const activeDisc = globalInvDisc > 0 ? globalInvDisc : discount;
+    const activeDiscType = globalInvDisc > 0 ? invDiscType : (discountType === 'fixed' ? 'val' : 'percent');
+    const activeTax = globalInvTax > 0 ? globalInvTax : tax;
+    const activeTaxType = globalInvTax > 0 ? invTaxType : (taxType === 'fixed' ? 'val' : 'percent');
+    const activeExtraRev = extraIncomeVal > 0 ? extraIncomeVal : extraRevenueAmount;
+
     const afterItemDiscBase = Math.max(0, itemsBaseSubtotal - totalItemDiscounts);
     let invoiceLevelDiscount = 0;
-    if (typeof discount === 'number' && discount > 0) {
-      if (discountType === 'percent') {
-        invoiceLevelDiscount = (afterItemDiscBase * discount) / 100;
+    if (typeof activeDisc === 'number' && activeDisc > 0) {
+      if (activeDiscType === 'percent') {
+        invoiceLevelDiscount = (afterItemDiscBase * activeDisc) / 100;
       } else {
-        invoiceLevelDiscount = discount;
+        invoiceLevelDiscount = activeDisc;
       }
     }
 
     const finalTaxableBase = Math.max(0, afterItemDiscBase - invoiceLevelDiscount);
     let invoiceLevelTax = 0;
-    if (typeof tax === 'number' && tax > 0) {
-      if (taxType === 'percent') {
-        invoiceLevelTax = (finalTaxableBase * tax) / 100;
+    if (typeof activeTax === 'number' && activeTax > 0) {
+      if (activeTaxType === 'percent') {
+        invoiceLevelTax = (finalTaxableBase * activeTax) / 100;
       } else {
-        invoiceLevelTax = tax;
+        invoiceLevelTax = activeTax;
       }
     }
 
     const totalDiscount = totalItemDiscounts + invoiceLevelDiscount;
     const totalTax = totalItemTaxes + invoiceLevelTax;
-    const extraRev = typeof extraRevenueAmount === 'number' && extraRevenueAmount > 0 ? extraRevenueAmount : 0;
+    const extraRev = typeof activeExtraRev === 'number' && activeExtraRev > 0 ? activeExtraRev : 0;
     const grandTotal = Math.max(0, itemsBaseSubtotal - totalDiscount + totalTax + extraRev);
 
     let effectivePaid = 0;
@@ -312,7 +383,8 @@ export const PurchasesView: React.FC<PurchasesViewProps> = ({ appData, onUpdateD
       effectivePaid = grandTotal;
       effectiveRemaining = 0;
     } else {
-      const rawPaid = parseFloat(paidAmountInput) || 0;
+      const sumPayments = paymentRows.reduce((acc, p) => acc + (Number(p.amount) || 0), 0);
+      const rawPaid = sumPayments > 0 ? sumPayments : (parseFloat(paidAmountInput) || 0);
       effectivePaid = Math.max(0, Math.min(grandTotal, rawPaid));
       effectiveRemaining = Math.max(0, grandTotal - effectivePaid);
     }
@@ -333,7 +405,28 @@ export const PurchasesView: React.FC<PurchasesViewProps> = ({ appData, onUpdateD
   };
 
   const handleSaveInvoice = () => {
-    if (tempItems.length === 0) {
+    const finalItemsToSave: InvoiceItem[] =
+      unifiedItems.length > 0
+        ? unifiedItems.map((ui, idx) => ({
+            itemId: ui.itemId || `itm_${idx}_${Date.now()}`,
+            code: ui.code,
+            name: ui.name,
+            qty: ui.qty,
+            price: ui.price,
+            costPrice: ui.costPrice || ui.price,
+            discount: ui.actualDisc,
+            discountType: ui.discType === 'val' ? 'fixed' : 'percent',
+            discountValue: ui.discVal,
+            tax: ui.actualTax,
+            taxType: ui.taxType === 'val' ? 'fixed' : 'percent',
+            taxValue: ui.taxVal,
+            spec: ui.spec,
+            notes: ui.spec,
+            total: ui.total,
+          }))
+        : tempItems;
+
+    if (finalItemsToSave.length === 0) {
       showToast('يرجى إضافة صنف واحد على الأقل', 'warning');
       return;
     }
@@ -345,12 +438,22 @@ export const PurchasesView: React.FC<PurchasesViewProps> = ({ appData, onUpdateD
     const { subtotal, total, totalDiscount, totalTax, effectivePaid, effectiveRemaining } = calculateTotals();
     const isReturn = modalType.startsWith('return_');
 
+    // Primary payment method from paymentRows or state
+    let chosenPaymentMethod = paymentMethod;
+    if (paymentRows.length > 0 && paymentRows[0].method) {
+      const m = paymentRows[0].method;
+      if (m.includes('فودافون')) chosenPaymentMethod = 'vodafone';
+      else if (m.includes('إنستاباي') || m.includes('انستاباي')) chosenPaymentMethod = 'instapay';
+      else if (m.includes('بنك') || m.includes('تحويل')) chosenPaymentMethod = 'bank';
+      else chosenPaymentMethod = 'drawer';
+    }
+
     // 1. Mandatory Payment Method Validation for Cash operations
-    if ((modalType === 'nagdi' || modalType === 'return_nagdi') && !paymentMethod) {
+    if ((modalType === 'nagdi' || modalType === 'return_nagdi') && !chosenPaymentMethod) {
       showToast('يرجى اختيار وسيلة دفع إجبارية (الخزينة أو الحساب البنكي) للعملية النقدية', 'error');
       return;
     }
-    if ((modalType === 'ajel' || modalType === 'return_ajel') && effectivePaid > 0 && !paymentMethod) {
+    if ((modalType === 'ajel' || modalType === 'return_ajel') && effectivePaid > 0 && !chosenPaymentMethod) {
       showToast('يرجى اختيار وسيلة سداد/استلام الدفعة النقدية', 'error');
       return;
     }
@@ -359,6 +462,19 @@ export const PurchasesView: React.FC<PurchasesViewProps> = ({ appData, onUpdateD
     const invId = isEditing ? editingInvoiceId : appData.nextPurchaseNumber;
     const oldInvForMeta = isEditing ? appData.purchaseInvoices.find((i) => i.id === editingInvoiceId) : null;
     const nowIso = new Date().toISOString();
+
+    const paymentSplits = paymentRows
+      .filter((p) => Number(p.amount) > 0)
+      .map((p) => {
+        let pm: 'drawer' | 'vodafone' | 'instapay' | 'bank' = 'drawer';
+        if (p.method.includes('فودافون')) pm = 'vodafone';
+        else if (p.method.includes('إنستاباي') || p.method.includes('انستاباي')) pm = 'instapay';
+        else if (p.method.includes('بنك') || p.method.includes('تحويل')) pm = 'bank';
+        return {
+          method: pm,
+          amount: Number(p.amount),
+        };
+      });
 
     const newInvoice: PurchaseInvoice = {
       id: invId,
@@ -374,19 +490,19 @@ export const PurchasesView: React.FC<PurchasesViewProps> = ({ appData, onUpdateD
       notes: notes.trim() || undefined,
       date: date,
       time: new Date().toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' }),
-      items: tempItems,
+      items: finalItemsToSave,
       subtotal,
       discount: totalDiscount || 0,
-      discountType,
-      discountValue: discount || 0,
+      discountType: invDiscType === 'val' ? 'fixed' : 'percent',
+      discountValue: globalInvDisc || discount || 0,
       tax: totalTax || 0,
-      taxType,
-      taxValue: tax || 0,
-      extraRevenueName: extraRevenueName.trim() || undefined,
-      extraRevenueAmount: extraRevenueAmount > 0 ? extraRevenueAmount : undefined,
+      taxType: invTaxType === 'val' ? 'fixed' : 'percent',
+      taxValue: globalInvTax || tax || 0,
+      extraRevenueName: (extraIncomeName || extraRevenueName).trim() || undefined,
+      extraRevenueAmount: (extraIncomeVal || extraRevenueAmount) > 0 ? (extraIncomeVal || extraRevenueAmount) : undefined,
       fees: fees || 0,
       total,
-      paymentMethod,
+      paymentMethod: chosenPaymentMethod,
       type: modalType,
       paidAmount: effectivePaid,
       remainingAmount: effectiveRemaining,
@@ -396,6 +512,7 @@ export const PurchasesView: React.FC<PurchasesViewProps> = ({ appData, onUpdateD
       createdBy: isEditing ? (oldInvForMeta?.createdBy || appData.users.find((u) => u.id === appData.currentUser)?.name || 'مدير النظام') : (appData.users.find((u) => u.id === appData.currentUser)?.name || 'مدير النظام'),
       createdByUserId: appData.users.find((u) => u.id === appData.currentUser)?.id,
       createdByUserCode: appData.users.find((u) => u.id === appData.currentUser)?.code || 1,
+      paymentSplits: paymentSplits.length > 0 ? paymentSplits : undefined,
     };
 
     const updatedData = { ...appData };
@@ -419,7 +536,7 @@ export const PurchasesView: React.FC<PurchasesViewProps> = ({ appData, onUpdateD
     }
 
     // Update Stock & Purchase Prices
-    tempItems.forEach((item) => {
+    finalItemsToSave.forEach((item) => {
       const stockItem = updatedData.items.find((i) => i.name === item.name);
       if (stockItem) {
         stockItem.quantity = isReturn ? (stockItem.quantity || 0) - item.qty : (stockItem.quantity || 0) + item.qty;
@@ -857,17 +974,17 @@ export const PurchasesView: React.FC<PurchasesViewProps> = ({ appData, onUpdateD
       {/* Mobile Card List View (< md) */}
       <div className="block md:hidden space-y-3">
         {filteredInvoices.length === 0 ? (
-          <div className="bg-white rounded-xl p-6 text-center text-slate-400 text-sm border border-slate-200">
+          <div className="bg-white rounded-xl p-6 text-center text-black font-bold text-sm border-2 border-slate-300">
             لا توجد فواتير مشتريات مسجلة
           </div>
         ) : (
           filteredInvoices.map((inv) => (
             <div
               key={inv.id}
-              className="bg-white rounded-xl p-4 shadow-xs border border-slate-200 space-y-3 hover:border-blue-300 transition"
+              className="bg-white rounded-xl p-4 shadow-xs border-2 border-slate-300 space-y-3 hover:border-slate-500 transition"
             >
               {/* Top Row: Invoice ID, Date & Type Badge */}
-              <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+              <div className="flex items-center justify-between border-b-2 border-slate-200 pb-2">
                 <div
                   onClick={() => {
                     setSelectedInvoice(inv);
@@ -875,16 +992,16 @@ export const PurchasesView: React.FC<PurchasesViewProps> = ({ appData, onUpdateD
                   }}
                   className="flex items-center gap-1.5 cursor-pointer"
                 >
-                  <span className="text-blue-700 font-bold font-mono text-sm">#{inv.id}</span>
-                  <span className="text-slate-400 text-xs font-mono">| {inv.date}</span>
+                  <span className="text-blue-900 font-black font-mono text-sm">#{inv.id}</span>
+                  <span className="text-black font-bold text-xs font-mono">| {inv.date}</span>
                 </div>
                 <span
-                  className={`px-2 py-0.5 rounded text-[11px] font-bold border ${
+                  className={`px-2.5 py-0.5 rounded text-xs font-black border ${
                     inv.type === 'nagdi'
-                      ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                      ? 'bg-emerald-50 text-emerald-950 border-emerald-300'
                       : inv.type === 'ajel'
-                      ? 'bg-amber-50 text-amber-700 border-amber-200'
-                      : 'bg-rose-50 text-rose-700 border-rose-200'
+                      ? 'bg-amber-50 text-amber-950 border-amber-300'
+                      : 'bg-rose-50 text-rose-950 border-rose-300'
                   }`}
                 >
                   {inv.type === 'nagdi'
@@ -900,28 +1017,28 @@ export const PurchasesView: React.FC<PurchasesViewProps> = ({ appData, onUpdateD
               {/* Middle Info: Supplier & Financials */}
               <div className="flex items-start justify-between gap-2">
                 <div>
-                  <div className="font-bold text-slate-900 text-sm">{inv.supplierName}</div>
+                  <div className="font-black text-black text-sm">{inv.supplierName}</div>
                   {inv.salesRep && (
-                    <div className="text-[11px] text-blue-700 font-medium flex items-center gap-1 mt-0.5">
-                      <UserIcon className="w-3 h-3 text-blue-500" />
+                    <div className="text-xs text-blue-950 font-bold flex items-center gap-1 mt-0.5">
+                      <UserIcon className="w-3.5 h-3.5 text-blue-700" />
                       <span>مسؤول: {inv.salesRep}</span>
                     </div>
                   )}
                   {inv.notes && (
-                    <div className="text-[11px] text-slate-500 italic mt-0.5 line-clamp-1 flex items-center gap-1">
-                      <FileText className="w-3 h-3 text-slate-400 shrink-0" />
+                    <div className="text-xs text-black font-medium mt-0.5 line-clamp-1 flex items-center gap-1">
+                      <FileText className="w-3.5 h-3.5 text-slate-700 shrink-0" />
                       <span>{inv.notes}</span>
                     </div>
                   )}
                   {inv.type === 'ajel' && inv.remainingAmount !== undefined && (
-                    <div className="text-[11px] mt-1 font-mono">
+                    <div className="text-xs mt-1 font-mono">
                       {inv.remainingAmount > 0 ? (
-                        <span className="text-amber-800 font-bold bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
+                        <span className="text-amber-950 font-black bg-amber-50 px-2 py-0.5 rounded border border-amber-300">
                           متبقي للمورد: {inv.remainingAmount.toFixed(2)} ج.م
                         </span>
                       ) : (
-                        <span className="text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 inline-flex items-center gap-1">
-                          <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                        <span className="text-emerald-950 font-black bg-emerald-50 px-2 py-0.5 rounded border border-emerald-300 inline-flex items-center gap-1">
+                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-700" />
                           <span>مسددة بالكامل</span>
                         </span>
                       )}
@@ -929,8 +1046,8 @@ export const PurchasesView: React.FC<PurchasesViewProps> = ({ appData, onUpdateD
                   )}
                 </div>
                 <div className="text-left shrink-0">
-                  <div className="text-xs text-slate-500">القيمة الإجمالية</div>
-                  <div className="font-bold text-blue-700 text-base font-mono tabular-nums">
+                  <div className="text-xs text-slate-800 font-bold">القيمة الإجمالية</div>
+                  <div className="font-black text-black text-base font-mono tabular-nums">
                     {(inv.total || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })} ج.م
                   </div>
                 </div>
@@ -941,7 +1058,7 @@ export const PurchasesView: React.FC<PurchasesViewProps> = ({ appData, onUpdateD
                 {inv.type === 'ajel' && (inv.remainingAmount ?? (inv.total - (inv.paidAmount || 0))) > 0 && (
                   <button
                     onClick={() => handleOpenPayModal(inv)}
-                    className="min-h-[40px] bg-emerald-700 hover:bg-emerald-800 text-white font-semibold rounded-lg text-xs transition flex items-center justify-center gap-1.5 shadow-xs cursor-pointer"
+                    className="min-h-[40px] bg-emerald-700 hover:bg-emerald-800 text-white font-black rounded-lg text-xs transition flex items-center justify-center gap-1.5 shadow-xs cursor-pointer"
                     title="تسديد دفعة للمورد"
                   >
                     <DollarSign className="w-4 h-4" />
@@ -953,30 +1070,30 @@ export const PurchasesView: React.FC<PurchasesViewProps> = ({ appData, onUpdateD
                     setSelectedInvoice(inv);
                     setActiveModal('view');
                   }}
-                  className="min-h-[40px] bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold rounded-lg text-xs transition flex items-center justify-center gap-1.5 cursor-pointer"
+                  className="min-h-[40px] bg-slate-100 hover:bg-slate-200 text-black border border-slate-300 font-bold rounded-lg text-xs transition flex items-center justify-center gap-1.5 cursor-pointer"
                 >
                   <Eye className="w-3.5 h-3.5 text-blue-700" />
                   <span>عرض</span>
                 </button>
                 <button
                   onClick={() => openEditModal(inv)}
-                  className="min-h-[40px] bg-blue-50 hover:bg-blue-100 text-blue-700 font-semibold rounded-lg text-xs transition flex items-center justify-center gap-1.5 cursor-pointer"
+                  className="min-h-[40px] bg-blue-100 hover:bg-blue-200 text-blue-950 border border-blue-400 font-bold rounded-lg text-xs transition flex items-center justify-center gap-1.5 cursor-pointer"
                 >
-                  <Pencil className="w-3.5 h-3.5" />
+                  <Pencil className="w-3.5 h-3.5 text-blue-700" />
                   <span>تعديل</span>
                 </button>
                 <button
                   onClick={() => handlePrintInvoice(inv)}
-                  className="min-h-[40px] bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-lg text-xs transition flex items-center justify-center gap-1.5 cursor-pointer"
+                  className="min-h-[40px] bg-slate-100 hover:bg-slate-200 text-black border border-slate-300 font-bold rounded-lg text-xs transition flex items-center justify-center gap-1.5 cursor-pointer"
                 >
-                  <Printer className="w-3.5 h-3.5 text-slate-600" />
+                  <Printer className="w-3.5 h-3.5 text-slate-700" />
                   <span>طباعة</span>
                 </button>
                 <button
                   onClick={() => handleDeleteInvoice(inv.id)}
-                  className="min-h-[40px] bg-rose-50 hover:bg-rose-100 text-rose-700 font-semibold rounded-lg text-xs transition flex items-center justify-center gap-1.5 cursor-pointer"
+                  className="min-h-[40px] bg-rose-100 hover:bg-rose-200 text-rose-950 border border-rose-400 font-bold rounded-lg text-xs transition flex items-center justify-center gap-1.5 cursor-pointer"
                 >
-                  <Trash2 className="w-3.5 h-3.5" />
+                  <Trash2 className="w-3.5 h-3.5 text-rose-700" />
                   <span>حذف</span>
                 </button>
               </div>
@@ -986,24 +1103,24 @@ export const PurchasesView: React.FC<PurchasesViewProps> = ({ appData, onUpdateD
       </div>
 
       {/* Invoices Desktop Table (>= md) */}
-      <div className="hidden md:block bg-white rounded-xl shadow-xs border border-slate-200/90 overflow-x-auto">
-        <table className="w-full text-right text-xs md:text-sm border-collapse">
+      <div className="hidden md:block bg-white rounded-xl shadow-xs border-2 border-slate-300 overflow-x-auto">
+        <table className="w-full text-right text-xs md:text-sm border-collapse border border-slate-300">
           <thead>
-            <tr className="bg-[#0f2756] text-white">
-              <th className="p-3 font-semibold">رقم الفاتورة</th>
-              <th className="p-3 font-semibold">المورد</th>
-              {appData.branches && appData.branches.length > 1 && <th className="p-3 font-semibold">الفرع</th>}
-              <th className="p-3 font-semibold">التاريخ</th>
-              <th className="p-3 font-semibold">القيمة (ج.م)</th>
-              <th className="p-3 font-semibold">المسدد / المتبقي</th>
-              <th className="p-3 font-semibold">النوع</th>
-              <th className="p-3 font-semibold">الإجراءات</th>
+            <tr className="bg-[#0f172a] text-white">
+              <th className="p-3 font-black border border-slate-700 text-white">رقم الفاتورة</th>
+              <th className="p-3 font-black border border-slate-700 text-white">المورد</th>
+              {appData.branches && appData.branches.length > 1 && <th className="p-3 font-black border border-slate-700 text-white">الفرع</th>}
+              <th className="p-3 font-black border border-slate-700 text-white">التاريخ</th>
+              <th className="p-3 font-black border border-slate-700 text-white">القيمة (ج.م)</th>
+              <th className="p-3 font-black border border-slate-700 text-white">المسدد / المتبقي</th>
+              <th className="p-3 font-black border border-slate-700 text-white">النوع</th>
+              <th className="p-3 font-black border border-slate-700 text-white">الإجراءات</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100">
+          <tbody className="divide-y divide-slate-300 bg-white">
             {filteredInvoices.length === 0 ? (
               <tr>
-                <td colSpan={8} className="text-center py-8 text-slate-400">
+                <td colSpan={8} className="text-center py-8 text-black font-bold">
                   لا توجد فواتير مشتريات مسجلة
                 </td>
               </tr>
@@ -1012,50 +1129,50 @@ export const PurchasesView: React.FC<PurchasesViewProps> = ({ appData, onUpdateD
                 const rem = inv.remainingAmount ?? (inv.type === 'ajel' ? inv.total - (inv.paidAmount || 0) : 0);
                 const paid = inv.paidAmount ?? (inv.type === 'nagdi' ? inv.total : 0);
                 return (
-                  <tr key={inv.id} className="hover:bg-slate-50 transition">
+                  <tr key={inv.id} className="bg-white hover:bg-slate-100 transition border-b border-slate-300">
                     <td
                       onClick={() => {
                         setSelectedInvoice(inv);
                         setActiveModal('view');
                       }}
-                      className="p-3 text-blue-700 font-bold font-mono cursor-pointer hover:underline"
+                      className="p-3 text-blue-900 font-black font-mono cursor-pointer hover:underline border border-slate-300"
                     >
                       #{inv.id}
                     </td>
-                    <td className="p-3">
-                      <div className="font-bold text-slate-900">{inv.supplierName}</div>
+                    <td className="p-3 border border-slate-300">
+                      <div className="font-black text-black">{inv.supplierName}</div>
                       {inv.salesRep && (
-                        <div className="text-[11px] text-blue-700 font-medium flex items-center gap-1 mt-0.5">
-                          <UserIcon className="w-3 h-3 text-blue-500" />
+                        <div className="text-xs text-blue-950 font-bold flex items-center gap-1 mt-0.5">
+                          <UserIcon className="w-3.5 h-3.5 text-blue-700" />
                           <span>مسؤول: {inv.salesRep}</span>
                         </div>
                       )}
                       {inv.notes && (
-                        <div className="text-[10px] text-slate-500 italic truncate max-w-[160px] flex items-center gap-1 mt-0.5" title={inv.notes}>
-                          <FileText className="w-3 h-3 text-slate-400 shrink-0" />
+                        <div className="text-xs text-black font-medium truncate max-w-[160px] flex items-center gap-1 mt-0.5" title={inv.notes}>
+                          <FileText className="w-3.5 h-3.5 text-slate-700 shrink-0" />
                           <span>{inv.notes}</span>
                         </div>
                       )}
                     </td>
                     {appData.branches && appData.branches.length > 1 && (
-                      <td className="p-3">
-                        <span className="text-[11px] font-bold px-2 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-100">
+                      <td className="p-3 border border-slate-300">
+                        <span className="text-xs font-black px-2 py-0.5 rounded bg-blue-100 text-blue-950 border border-blue-300">
                           {appData.branches.find((b) => b.id === inv.branchId)?.name || 'الفرع الرئيسي'}
                         </span>
                       </td>
                     )}
-                    <td className="p-3 font-mono text-slate-600">{inv.date}</td>
-                    <td className="p-3 font-bold font-mono text-slate-900 tabular-nums">
+                    <td className="p-3 font-mono font-bold text-black border border-slate-300">{inv.date}</td>
+                    <td className="p-3 font-black font-mono text-black tabular-nums border border-slate-300 text-sm">
                       {(inv.total || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </td>
-                    <td className="p-3">
+                    <td className="p-3 border border-slate-300">
                       {inv.type === 'ajel' ? (
                         <div className="text-xs space-y-0.5 font-mono">
-                          <div className="text-emerald-700 font-semibold tabular-nums">مسدد: {paid.toFixed(2)}</div>
+                          <div className="text-emerald-950 font-black tabular-nums">مسدد: {paid.toFixed(2)}</div>
                           {rem > 0 ? (
-                            <div className="text-rose-600 font-bold tabular-nums">متبقي: {rem.toFixed(2)}</div>
+                            <div className="text-rose-950 font-black tabular-nums">متبقي: {rem.toFixed(2)}</div>
                           ) : (
-                            <div className="text-emerald-600 font-bold text-[11px] inline-flex items-center gap-1 font-sans">
+                            <div className="text-emerald-950 font-black text-xs inline-flex items-center gap-1 font-sans">
                               <CheckCircle2 className="w-3 h-3 text-emerald-600" />
                               <span>مسددة بالكامل</span>
                             </div>
@@ -1141,6 +1258,7 @@ export const PurchasesView: React.FC<PurchasesViewProps> = ({ appData, onUpdateD
         isOpen={activeModal === 'create'}
         title={getTitleForModal()}
         onClose={() => setActiveModal(null)}
+        maxWidth="max-w-6xl"
         footer={
           <div className="flex flex-col sm:flex-row gap-2 w-full">
             <button
@@ -1198,7 +1316,7 @@ export const PurchasesView: React.FC<PurchasesViewProps> = ({ appData, onUpdateD
               </div>
             )}
             <div className="relative">
-              <label className="block font-bold mb-1 text-gray-700">المورد / الشركة</label>
+              <label className="block font-black mb-1 text-black">المورد / الشركة</label>
               <input
                 type="text"
                 placeholder="ابحث باسم المورد أو هاتفه..."
@@ -1217,13 +1335,13 @@ export const PurchasesView: React.FC<PurchasesViewProps> = ({ appData, onUpdateD
                     setPhone(matched.phone || '');
                   }
                 }}
-                className="w-full p-2 border-2 border-gray-200 rounded-xl focus:border-[#1a237e] focus:outline-none text-xs md:text-sm"
+                className="w-full p-2.5 bg-white border-2 border-slate-400 rounded-xl focus:border-blue-700 focus:outline-none text-xs md:text-sm font-bold text-black placeholder:text-slate-500"
               />
               {showSupplierDropdown && (
-                <div className="absolute top-full right-0 left-0 z-50 bg-white border border-indigo-200 rounded-xl shadow-2xl max-h-52 overflow-y-auto mt-1 divide-y divide-gray-100">
+                <div className="absolute top-full right-0 left-0 z-50 bg-white border-2 border-slate-400 rounded-xl shadow-2xl max-h-52 overflow-y-auto mt-1 divide-y divide-slate-200">
                   {filteredSuppliersForName.length === 0 ? (
-                    <div className="p-2.5 text-xs text-gray-500 text-center">
-                      مورد جديد: <strong>"{supplierName}"</strong> (سيتم تسجيله بالاسم والرقم عند الحفظ)
+                    <div className="p-3 text-xs text-black font-bold text-center">
+                      مورد جديد: <strong className="text-blue-900">"{supplierName}"</strong> (سيتم تسجيله بالاسم والرقم عند الحفظ)
                     </div>
                   ) : (
                     filteredSuppliersForName.map((s) => (
@@ -1241,14 +1359,14 @@ export const PurchasesView: React.FC<PurchasesViewProps> = ({ appData, onUpdateD
                             setSupplierRepPhone(primary.phone);
                           }
                         }}
-                        className="p-2.5 hover:bg-indigo-50 cursor-pointer flex justify-between items-center text-xs transition"
+                        className="p-2.5 hover:bg-slate-100 cursor-pointer flex justify-between items-center text-xs transition border-b border-slate-100"
                       >
                         <div>
-                          <span className="font-bold text-[#1a237e] block">🏢 {s.name}</span>
-                          <span className="text-gray-500 text-[11px]">📞 {s.phone || 'بدون رقم مسجل'}</span>
+                          <span className="font-black text-black block text-sm">🏢 {s.name}</span>
+                          <span className="text-slate-800 font-bold text-xs">📞 {s.phone || 'بدون رقم مسجل'}</span>
                         </div>
                         {s.balance !== undefined && (
-                          <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${s.balance > 0 ? 'bg-red-50 text-red-700' : 'bg-emerald-50 text-emerald-700'}`}>
+                          <span className={`text-xs font-black px-2 py-0.5 rounded-full border ${s.balance > 0 ? 'bg-red-50 text-red-900 border-red-300' : 'bg-emerald-50 text-emerald-900 border-emerald-300'}`}>
                             الرصيد: {s.balance.toFixed(2)} ج.م
                           </span>
                         )}
@@ -1260,7 +1378,7 @@ export const PurchasesView: React.FC<PurchasesViewProps> = ({ appData, onUpdateD
             </div>
 
             <div className="relative">
-              <label className="block font-bold mb-1 text-gray-700">الهاتف</label>
+              <label className="block font-black mb-1 text-black">الهاتف</label>
               <input
                 type="text"
                 placeholder="رقم الهاتف..."
@@ -1279,13 +1397,13 @@ export const PurchasesView: React.FC<PurchasesViewProps> = ({ appData, onUpdateD
                     setPhone(matched.phone || val);
                   }
                 }}
-                className="w-full p-2 border-2 border-gray-200 rounded-xl focus:border-[#1a237e] focus:outline-none text-xs md:text-sm"
+                className="w-full p-2.5 bg-white border-2 border-slate-400 rounded-xl focus:border-blue-700 focus:outline-none text-xs md:text-sm font-bold text-black placeholder:text-slate-500"
               />
               {showPhoneDropdown && (
-                <div className="absolute top-full right-0 left-0 z-50 bg-white border border-indigo-200 rounded-xl shadow-2xl max-h-52 overflow-y-auto mt-1 divide-y divide-gray-100">
+                <div className="absolute top-full right-0 left-0 z-50 bg-white border-2 border-slate-400 rounded-xl shadow-2xl max-h-52 overflow-y-auto mt-1 divide-y divide-slate-200">
                   {filteredSuppliersForPhone.length === 0 ? (
-                    <div className="p-2.5 text-xs text-gray-500 text-center">
-                      رقم جديد: <strong>"{phone}"</strong>
+                    <div className="p-3 text-xs text-black font-bold text-center">
+                      رقم جديد: <strong className="text-blue-900">"{phone}"</strong>
                     </div>
                   ) : (
                     filteredSuppliersForPhone.map((s) => (
@@ -1303,11 +1421,11 @@ export const PurchasesView: React.FC<PurchasesViewProps> = ({ appData, onUpdateD
                             setSupplierRepPhone(primary.phone);
                           }
                         }}
-                        className="p-2.5 hover:bg-indigo-50 cursor-pointer flex justify-between items-center text-xs transition"
+                        className="p-2.5 hover:bg-slate-100 cursor-pointer flex justify-between items-center text-xs transition border-b border-slate-100"
                       >
                         <div>
-                          <span className="font-bold text-[#1a237e] block">📞 {s.phone || 'بدون رقم'}</span>
-                          <span className="text-gray-600 text-[11px]">🏢 {s.name}</span>
+                          <span className="font-black text-black block text-sm">📞 {s.phone || 'بدون رقم'}</span>
+                          <span className="text-slate-800 font-bold text-xs">🏢 {s.name}</span>
                         </div>
                       </div>
                     ))
@@ -1425,531 +1543,31 @@ export const PurchasesView: React.FC<PurchasesViewProps> = ({ appData, onUpdateD
 
           <hr className="border-gray-200" />
 
-          {/* Add Item Row with Prominent "Card Item Modal" Button */}
-          <div className="bg-gradient-to-r from-teal-50 to-indigo-50 border border-teal-200 rounded-2xl p-3 sm:p-4 shadow-xs">
-            <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-2 mb-3 bg-white p-3 rounded-xl border border-teal-100 shadow-xs">
-              <div className="flex items-center gap-2">
-                <span className="text-lg">📦</span>
-                <div>
-                  <h4 className="font-bold text-[#1a237e] text-xs sm:text-sm">أصناف فاتورة الشراء ({tempItems.length})</h4>
-                  <p className="text-[11px] text-gray-500">يمكنك إضافة الأصناف عبر كارت الصنف التفصيلي أو عبر الإدخال السريع</p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={handleOpenAddItemModal}
-                className="min-h-[42px] bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 active:scale-98 text-white px-4 py-2 rounded-xl font-bold text-xs sm:text-sm transition cursor-pointer flex items-center justify-center gap-2 shadow-md"
-              >
-                <span className="text-base font-bold">➕</span>
-                <span>فتح كارت الصنف (بيان / خصم / ضريبة)</span>
-              </button>
-            </div>
-
-            {/* Quick Add Item Form */}
-            <div className="grid grid-cols-2 sm:grid-cols-12 gap-2 sm:gap-3 items-end">
-              <div className="relative col-span-2 sm:col-span-6">
-                <label className="block text-xs font-bold mb-1 text-slate-700">الصنف (بحث سريع)</label>
-                <input
-                  type="text"
-                  placeholder="ابحث باسم الصنف أو الكود..."
-                  value={itemName}
-                  onFocus={() => setShowItemDropdown(true)}
-                  onBlur={() => setTimeout(() => setShowItemDropdown(false), 200)}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    setItemName(val);
-                    setShowItemDropdown(true);
-                    const matched = appData.items.find((i) => i.name === val);
-                    if (matched) {
-                      setItemPrice(matched.purchasePrice.toString());
-                      if (!itemQty) setItemQty('1');
-                    }
-                  }}
-                  className="w-full p-2.5 border-2 border-slate-300 rounded-xl focus:border-[#1a237e] focus:outline-none bg-white text-xs md:text-sm font-medium"
-                />
-                {showItemDropdown && (
-                  <div className="absolute top-full right-0 left-0 z-50 bg-white border border-indigo-200 rounded-xl shadow-2xl max-h-52 overflow-y-auto mt-1 divide-y divide-gray-100">
-                    {filteredItemsForSearch.length === 0 ? (
-                      <div className="p-2.5 text-xs text-gray-500 text-center">
-                        صنف جديد: <strong>"{itemName}"</strong>
-                      </div>
-                    ) : (
-                      filteredItemsForSearch.map((i) => (
-                        <div
-                          key={i.id}
-                          onMouseDown={(e) => {
-                            e.preventDefault();
-                            setItemName(i.name);
-                            setItemPrice(i.purchasePrice.toString());
-                            if (!itemQty) setItemQty('1');
-                            setShowItemDropdown(false);
-                          }}
-                          className="p-2.5 hover:bg-indigo-50 cursor-pointer flex justify-between items-center text-xs transition"
-                        >
-                          <div>
-                            <span className="font-bold text-[#1a237e] block">📦 {i.name}</span>
-                            <span className="text-gray-500 text-[11px]">المخزون الحالي: {i.quantity || 0}</span>
-                          </div>
-                          <span className="font-bold text-[#2e7d32]">{i.purchasePrice.toFixed(2)} ج.م</span>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                )}
-              </div>
-              <div className="col-span-1 sm:col-span-2">
-                <label className="block text-xs font-bold mb-1 text-slate-700">العدد</label>
-                <input
-                  type="number"
-                  placeholder="0"
-                  step="any"
-                  value={itemQty}
-                  onChange={(e) => setItemQty(e.target.value)}
-                  className="w-full p-2.5 border-2 border-slate-300 rounded-xl focus:border-[#1a237e] focus:outline-none bg-white text-xs md:text-sm font-mono font-bold"
-                />
-              </div>
-              <div className="col-span-1 sm:col-span-2">
-                <label className="block text-xs font-bold mb-1 text-slate-700">سعر الشراء (ج.م)</label>
-                <input
-                  type="number"
-                  placeholder="0.00"
-                  step="any"
-                  value={itemPrice}
-                  onChange={(e) => setItemPrice(e.target.value)}
-                  className="w-full p-2.5 border-2 border-slate-300 rounded-xl focus:border-[#1a237e] focus:outline-none bg-white text-xs md:text-sm font-mono font-bold"
-                />
-              </div>
-              <div className="col-span-2 sm:col-span-2">
-                <button
-                  type="button"
-                  onClick={handleAddItem}
-                  className="w-full min-h-[44px] bg-[#1a237e] hover:bg-[#0d47a1] active:bg-[#002171] text-white px-3 py-2.5 rounded-xl font-bold transition cursor-pointer flex items-center justify-center gap-1 shadow-xs"
-                >
-                  <span>➕</span> إضافة سريعة
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {/* Items Container - Dual Mobile Cards / Desktop Table */}
-          {tempItems.length === 0 ? (
-            <div className="border-2 border-dashed border-gray-200 rounded-xl p-6 text-center text-gray-500 text-xs sm:text-sm flex flex-col items-center justify-center gap-2">
-              <span className="text-3xl">📦</span>
-              <span className="font-bold text-gray-700">لم يتم إضافة أي أصناف إلى فاتورة المشتريات بعد</span>
-              <span className="text-gray-400 text-xs">اضغط على زر "فتح كارت الصنف" بالأعلى لإضافة صنف مع تحديد البيان والخصم والضريبة بحرية</span>
-            </div>
-          ) : (
-            <div>
-              {/* Mobile Card List for Added Items */}
-              <div className="block md:hidden space-y-2 max-h-56 overflow-y-auto pr-0.5">
-                {tempItems.map((item, idx) => (
-                  <div key={idx} className="bg-slate-50 border border-slate-200 rounded-xl p-3 flex flex-col gap-2 text-xs">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex-1 min-w-0">
-                        <div className="font-bold text-slate-900 truncate">{item.name}</div>
-                        {item.notes && (
-                          <div className="text-[11px] text-indigo-700 mt-0.5">بيان: {item.notes}</div>
-                        )}
-                        <div className="flex flex-wrap items-center gap-2 text-[11px] text-slate-500 mt-1">
-                          <span>العدد: <strong className="font-mono text-slate-800">{item.qty}</strong></span>
-                          <span>×</span>
-                          <span>{item.price.toFixed(2)} ج.م</span>
-                          {((item.discountValue || item.discount || 0) > 0) && (
-                            <span className="bg-amber-100 text-amber-800 px-1.5 py-0.2 rounded text-[10px] font-bold">
-                              خصم: {item.discountValue || item.discount}{item.discountType === 'percent' ? '%' : ' ج.م'}
-                            </span>
-                          )}
-                          {((item.taxValue || item.tax || 0) > 0) && (
-                            <span className="bg-indigo-100 text-indigo-800 px-1.5 py-0.2 rounded text-[10px] font-bold">
-                              ضريبة: {item.taxValue || item.tax}{item.taxType === 'percent' ? '%' : ' ج.م'}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                      <div className="text-left shrink-0">
-                        <span className="font-bold font-mono text-[#1a237e] text-sm block">{item.total.toFixed(2)} ج.م</span>
-                      </div>
-                    </div>
-                    <div className="flex justify-end gap-2 border-t border-slate-200 pt-1.5">
-                      <button
-                        type="button"
-                        onClick={() => handleOpenEditItemModal(item, idx)}
-                        className="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 px-2.5 py-1 rounded-lg text-xs font-bold transition flex items-center gap-1"
-                      >
-                        <span>✏️</span> تعديل
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveItem(idx)}
-                        className="bg-rose-50 hover:bg-rose-100 text-rose-700 px-2.5 py-1 rounded-lg text-xs font-bold transition flex items-center gap-1"
-                      >
-                        <span>🗑️</span> حذف
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              {/* Desktop Table for Added Items */}
-              <div className="hidden md:block border border-gray-200 rounded-xl overflow-x-auto max-h-56">
-                <table className="w-full text-right text-xs">
-                  <thead className="bg-gray-100 text-gray-700 font-bold">
-                    <tr>
-                      <th className="p-2.5">#</th>
-                      <th className="p-2.5">اسم الصنف</th>
-                      <th className="p-2.5">البيان / ملاحظة</th>
-                      <th className="p-2.5 text-center">العدد</th>
-                      <th className="p-2.5">سعر الشراء</th>
-                      <th className="p-2.5">الخصم والضريبة</th>
-                      <th className="p-2.5">الإجمالي</th>
-                      <th className="p-2.5 text-center">إجراءات</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-100">
-                    {tempItems.map((item, idx) => (
-                      <tr key={idx} className="hover:bg-slate-50 transition">
-                        <td className="p-2.5 font-mono text-gray-500">{idx + 1}</td>
-                        <td className="p-2.5 font-bold text-slate-900">{item.name}</td>
-                        <td className="p-2.5 text-gray-600 max-w-[180px] truncate" title={item.notes}>
-                          {item.notes || '-'}
-                        </td>
-                        <td className="p-2.5 font-mono font-bold text-center text-slate-800">{item.qty}</td>
-                        <td className="p-2.5 font-mono font-medium">{item.price.toFixed(2)} ج.م</td>
-                        <td className="p-2.5">
-                          <div className="flex flex-wrap gap-1">
-                            {((item.discountValue || item.discount || 0) > 0) ? (
-                              <span className="bg-amber-100 text-amber-900 px-1.5 py-0.5 rounded text-[10px] font-bold">
-                                خصم: {item.discountValue || item.discount}{item.discountType === 'percent' ? '%' : ' ج.م'}
-                              </span>
-                            ) : null}
-                            {((item.taxValue || item.tax || 0) > 0) ? (
-                              <span className="bg-indigo-100 text-indigo-900 px-1.5 py-0.5 rounded text-[10px] font-bold">
-                                ضريبة: {item.taxValue || item.tax}{item.taxType === 'percent' ? '%' : ' ج.م'}
-                              </span>
-                            ) : null}
-                            {!((item.discountValue || item.discount || 0) > 0) && !((item.taxValue || item.tax || 0) > 0) && (
-                              <span className="text-gray-400 text-[11px]">-</span>
-                            )}
-                          </div>
-                        </td>
-                        <td className="p-2.5 font-bold font-mono text-[#1a237e]">{item.total.toFixed(2)} ج.م</td>
-                        <td className="p-2.5 text-center">
-                          <div className="flex items-center justify-center gap-1.5">
-                            <button
-                              type="button"
-                              onClick={() => handleOpenEditItemModal(item, idx)}
-                              className="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 px-2 py-1 rounded text-xs transition cursor-pointer font-bold"
-                              title="تعديل في كارت الصنف"
-                            >
-                              ✏️
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleRemoveItem(idx)}
-                              className="bg-rose-50 hover:bg-rose-100 text-rose-700 px-2 py-1 rounded text-xs transition cursor-pointer font-bold"
-                              title="حذف الصنف"
-                            >
-                              🗑️
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
-
-          {/* Discounts, Tax & Extra Adjustments Section */}
-          <div className="bg-slate-50 border border-slate-200 p-3.5 rounded-2xl space-y-3">
-            <div className="flex flex-wrap items-center justify-between gap-2 text-xs font-bold text-slate-700 pb-1.5 border-b border-slate-200">
-              <span className="flex items-center gap-1.5">
-                <span>⚡</span>
-                <span>الخانات الإضافية أسفل بيانات الفاتورة (الخصم والضريبة والتسويات/الإيرادات)</span>
-              </span>
-              <span className="text-[11px] text-slate-500 font-normal">الخصم والضريبة اختياري (نسبة مئوية % أو مبلغ ثابت ج.م)</span>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              {/* 1. الخصم الإضافي (اختياري بين نسبة % أو مبلغ ثابت) */}
-              <div className="bg-white p-2.5 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between">
-                <div className="flex items-center justify-between mb-1.5">
-                  <label className="text-xs font-bold text-slate-700">خصم الفاتورة</label>
-                  <div className="inline-flex rounded-lg bg-slate-100 p-0.5 border border-slate-200">
-                    <button
-                      type="button"
-                      onClick={() => setDiscountType('percent')}
-                      className={`px-2 py-0.5 text-[11px] font-bold rounded-md transition-all ${
-                        discountType === 'percent'
-                          ? 'bg-amber-600 text-white shadow-sm'
-                          : 'text-slate-600 hover:text-slate-900'
-                      }`}
-                      title="خصم نسبة مئوية"
-                    >
-                      % نسبة
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setDiscountType('fixed')}
-                      className={`px-2 py-0.5 text-[11px] font-bold rounded-md transition-all ${
-                        discountType === 'fixed'
-                          ? 'bg-amber-600 text-white shadow-sm'
-                          : 'text-slate-600 hover:text-slate-900'
-                      }`}
-                      title="خصم مبلغ ثابت"
-                    >
-                      ج.م ثابت
-                    </button>
-                  </div>
-                </div>
-                <div className="relative">
-                  <input
-                    type="number"
-                    placeholder={discountType === 'percent' ? '0 %' : '0.00 ج.م'}
-                    min="0"
-                    step="any"
-                    value={discount || ''}
-                    onChange={(e) => setDiscount(parseFloat(e.target.value) || 0)}
-                    className="w-full p-2 border-2 border-gray-200 rounded-lg focus:border-amber-600 focus:outline-none text-xs font-mono font-bold"
-                  />
-                  <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[11px] font-bold text-gray-400 pointer-events-none">
-                    {discountType === 'percent' ? '%' : 'ج.م'}
-                  </span>
-                </div>
-              </div>
-
-              {/* 2. الضريبة الإضافية (اختياري بين نسبة % أو مبلغ ثابت) */}
-              <div className="bg-white p-2.5 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between">
-                <div className="flex items-center justify-between mb-1.5">
-                  <label className="text-xs font-bold text-slate-700">ضريبة الفاتورة</label>
-                  <div className="inline-flex rounded-lg bg-slate-100 p-0.5 border border-slate-200">
-                    <button
-                      type="button"
-                      onClick={() => setTaxType('percent')}
-                      className={`px-2 py-0.5 text-[11px] font-bold rounded-md transition-all ${
-                        taxType === 'percent'
-                          ? 'bg-indigo-600 text-white shadow-sm'
-                          : 'text-slate-600 hover:text-slate-900'
-                      }`}
-                      title="ضريبة نسبة مئوية"
-                    >
-                      % نسبة
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setTaxType('fixed')}
-                      className={`px-2 py-0.5 text-[11px] font-bold rounded-md transition-all ${
-                        taxType === 'fixed'
-                          ? 'bg-indigo-600 text-white shadow-sm'
-                          : 'text-slate-600 hover:text-slate-900'
-                      }`}
-                      title="ضريبة مبلغ ثابت"
-                    >
-                      ج.م ثابت
-                    </button>
-                  </div>
-                </div>
-                <div className="relative">
-                  <input
-                    type="number"
-                    placeholder={taxType === 'percent' ? '0 %' : '0.00 ج.م'}
-                    min="0"
-                    step="any"
-                    value={tax || ''}
-                    onChange={(e) => setTax(parseFloat(e.target.value) || 0)}
-                    className="w-full p-2 border-2 border-gray-200 rounded-lg focus:border-indigo-600 focus:outline-none text-xs font-mono font-bold"
-                  />
-                  <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[11px] font-bold text-gray-400 pointer-events-none">
-                    {taxType === 'percent' ? '%' : 'ج.م'}
-                  </span>
-                </div>
-              </div>
-
-              {/* 3. تسوية / إيراد إضافي (خانة للاسم وخانة للمبلغ) */}
-              <div className="bg-emerald-50/70 p-2.5 rounded-xl border border-emerald-200 shadow-sm flex flex-col justify-between">
-                <div className="flex items-center justify-between mb-1.5">
-                  <label className="text-xs font-bold text-emerald-900 flex items-center gap-1">
-                    <span>💵</span>
-                    <span>إيراد / مصاريف إضافية</span>
-                  </label>
-                  <span className="text-[10px] text-emerald-700 font-medium">اسم ومبلغ</span>
-                </div>
-                <div className="grid grid-cols-5 gap-1.5">
-                  <div className="col-span-3">
-                    <input
-                      type="text"
-                      placeholder="اسم البند (مثال: نقل، عمالة)"
-                      value={extraRevenueName}
-                      onChange={(e) => setExtraRevenueName(e.target.value)}
-                      className="w-full p-2 border-2 border-emerald-200 rounded-lg focus:border-emerald-600 focus:outline-none text-[11px]"
-                    />
-                  </div>
-                  <div className="col-span-2">
-                    <input
-                      type="number"
-                      placeholder="المبلغ (ج.م)"
-                      min="0"
-                      step="any"
-                      value={extraRevenueAmount || ''}
-                      onChange={(e) => setExtraRevenueAmount(parseFloat(e.target.value) || 0)}
-                      className="w-full p-2 border-2 border-emerald-200 rounded-lg focus:border-emerald-600 focus:outline-none text-xs font-mono font-bold text-emerald-900"
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Aggregated Totals Preview */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 pt-2 border-t border-slate-200 text-xs">
-              <div className="p-2 bg-white rounded-lg border border-slate-200">
-                <span className="text-gray-500 text-[10px] block">إجمالي قيمة الأصناف</span>
-                <span className="font-bold font-mono text-slate-800">{calculateTotals().subtotal.toFixed(2)} ج.م</span>
-              </div>
-              <div className="p-2 bg-amber-50 rounded-lg border border-amber-200">
-                <span className="text-amber-800 text-[10px] flex items-center justify-between">
-                  <span>إجمالي الخصومات</span>
-                  <span className="text-[9px] font-mono font-semibold">({discountType === 'percent' ? `${discount}%` : 'ثابت'})</span>
-                </span>
-                <span className="font-bold font-mono text-amber-900">-{calculateTotals().totalDiscount.toFixed(2)} ج.م</span>
-              </div>
-              <div className="p-2 bg-indigo-50 rounded-lg border border-indigo-200">
-                <span className="text-indigo-800 text-[10px] flex items-center justify-between">
-                  <span>إجمالي الضرائب</span>
-                  <span className="text-[9px] font-mono font-semibold">({taxType === 'percent' ? `${tax}%` : 'ثابت'})</span>
-                </span>
-                <span className="font-bold font-mono text-indigo-900">+{calculateTotals().totalTax.toFixed(2)} ج.م</span>
-              </div>
-              <div className="p-2 bg-emerald-50 rounded-lg border border-emerald-200">
-                <span className="text-emerald-800 text-[10px] truncate block" title={extraRevenueName || 'تسوية / إضافي'}>
-                  {extraRevenueName ? `بند: ${extraRevenueName}` : 'تسوية / إضافي'}
-                </span>
-                <span className="font-bold font-mono text-emerald-900">+{calculateTotals().extraRevenueAmount.toFixed(2)} ج.م</span>
-              </div>
-              <div className="col-span-2 sm:col-span-1 p-2 bg-gradient-to-r from-blue-900 to-indigo-900 text-white rounded-lg shadow-sm">
-                <span className="text-blue-200 text-[10px] block">الصافي النهائي للفاتورة</span>
-                <span className="font-bold font-mono text-white text-sm">{calculateTotals().total.toFixed(2)} ج.م</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Financial Settlement Section according to Operation Type */}
-          <div className="border border-slate-200 bg-slate-50/80 p-3.5 rounded-2xl space-y-3">
-            <div className="flex items-center justify-between border-b border-slate-200 pb-2">
-              <span className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
-                <span>💳</span>
-                {modalType === 'nagdi' && 'تسوية الشراء النقدي (سداد فوري للمورد بالكامل)'}
-                {modalType === 'ajel' && 'تسوية الشراء الآجل والذمم (دفعة مقدمة / متبقي للمورد)'}
-                {modalType === 'return_nagdi' && 'تسوية استرداد مرتجع المشتريات نقداً فوراً'}
-                {modalType === 'return_ajel' && 'تسوية مرتجع المشتريات الآجل (خصم من مستحقات المورد)'}
-              </span>
-              <span
-                className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full ${
-                  modalType === 'nagdi'
-                    ? 'bg-emerald-100 text-emerald-800'
-                    : modalType === 'ajel'
-                    ? 'bg-amber-100 text-amber-900'
-                    : modalType === 'return_nagdi'
-                    ? 'bg-rose-100 text-rose-800'
-                    : 'bg-purple-100 text-purple-900'
-                }`}
-              >
-                {modalType === 'nagdi'
-                  ? '🟢 شراء نقدي'
-                  : modalType === 'ajel'
-                  ? '🟠 شراء آجل (ذمم موردين)'
-                  : modalType === 'return_nagdi'
-                  ? '🔴 مرتجع نقدي'
-                  : '⚫ مرتجع آجل'}
-              </span>
-            </div>
-
-            {/* Inputs based on type */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {/* If Ajel or Return Ajel: Show Paid / Downpayment amount input */}
-              {(modalType === 'ajel' || modalType === 'return_ajel') && (
-                <div>
-                  <label className="block text-xs font-bold mb-1 text-slate-700">
-                    {modalType === 'ajel'
-                      ? 'المسدد للمورد مقدماً / نقداً الآن (ج.م)'
-                      : 'المسترد نقداً من المورد الآن إن وجد (ج.م)'}
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    max={calculateTotals().total}
-                    step="any"
-                    placeholder="0.00"
-                    value={paidAmountInput}
-                    onChange={(e) => setPaidAmountInput(e.target.value)}
-                    className="w-full p-2 border-2 border-amber-300 rounded-xl focus:border-[#1a237e] focus:outline-none bg-white text-xs md:text-sm font-mono font-bold"
-                  />
-                  <div className="text-[10px] text-slate-500 mt-1">
-                    {modalType === 'ajel'
-                      ? 'أدخل المبلغ المسدد للمورد الآن (أو اتركه 0 لتسجيل الفاتورة آجلة بالكامل كذمة للمورد)'
-                      : 'أدخل أي نقدية استرددتها من المورد فعلياً (أو اتركه 0 ليتم خصم كامل المرتجع من حسابه)'}
-                  </div>
-                </div>
-              )}
-
-              {/* Payment Method Selector */}
-              <div className={modalType === 'nagdi' || modalType === 'return_nagdi' ? 'sm:col-span-2' : ''}>
-                <label className="block text-xs font-bold mb-1 text-slate-700">
-                  {modalType === 'nagdi'
-                    ? 'وسيلة دفع الفاتورة للمورد (الخزينة / الحساب البنكي)'
-                    : modalType === 'return_nagdi'
-                    ? 'وسيلة استلام قيمة المرتجع من المورد'
-                    : 'وسيلة سداد / استلام النقدية'}
-                </label>
-                <select
-                  value={paymentMethod}
-                  onChange={(e) => setPaymentMethod(e.target.value as any)}
-                  className="w-full p-2 border-2 border-gray-200 rounded-xl focus:border-[#1a237e] focus:outline-none bg-white text-xs md:text-sm font-semibold"
-                >
-                  <option value="drawer">💵 نقدي (الدرج / الخزينة الرئيسية)</option>
-                  <option value="vodafone">📱 فودافون كاش (محفظة إلكترونية)</option>
-                  <option value="instapay">⚡ إنستاباي (InstaPay)</option>
-                  <option value="bank">💳 حساب بنكي</option>
-                </select>
-              </div>
-            </div>
-
-            {/* Live Financial Impact Summary Box */}
-            <div className="bg-white border border-slate-200 rounded-xl p-3 grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
-              <div className="p-2 bg-slate-50 rounded-lg">
-                <span className="text-slate-500 block text-[10px]">إجمالي الفاتورة / المرتجع</span>
-                <span className="font-bold font-mono text-slate-900 text-sm">
-                  {calculateTotals().total.toFixed(2)} ج.م
-                </span>
-              </div>
-              <div className="p-2 bg-emerald-50 rounded-lg border border-emerald-100">
-                <span className="text-emerald-700 block text-[10px]">
-                  {modalType.startsWith('return') ? 'المسترد نقداً من المورد' : 'المسدد نقداً للمورد الآن'}
-                </span>
-                <span className="font-bold font-mono text-emerald-800 text-sm">
-                  {calculateTotals().effectivePaid.toFixed(2)} ج.م
-                </span>
-                <span className="text-[10px] text-emerald-600 block truncate">
-                  ({getMethodLabel(paymentMethod)})
-                </span>
-              </div>
-              <div className="p-2 bg-amber-50 rounded-lg border border-amber-100 col-span-2 sm:col-span-1">
-                <span className="text-amber-800 block text-[10px]">
-                  {modalType === 'ajel'
-                    ? 'المتبقي كمديونية للمورد (ذمم موردين)'
-                    : modalType === 'return_ajel'
-                    ? 'المخصوم من مستحقات المورد'
-                    : 'المتبقي كذمم'}
-                </span>
-                <span
-                  className={`font-bold font-mono text-sm ${
-                    calculateTotals().effectiveRemaining > 0 ? 'text-rose-700' : 'text-slate-700'
-                  }`}
-                >
-                  {calculateTotals().effectiveRemaining.toFixed(2)} ج.م
-                </span>
-              </div>
-            </div>
+          {/* 📦 نظام تسجيل وإدارة الأصناف الموحد للفاتورة (متجاوب مع الهواتف وشاشات اللمس) */}
+          <div className="bg-slate-50/70 p-1 sm:p-2 rounded-2xl border border-slate-200 shadow-xs">
+            <UnifiedInvoiceItemSystem
+              mode="purchase"
+              items={unifiedItems}
+              onChangeItems={setUnifiedItems}
+              catalogItems={appData.items}
+              pricingType="cash"
+              globalInvDisc={globalInvDisc}
+              onChangeGlobalInvDisc={setGlobalInvDisc}
+              invDiscType={invDiscType}
+              onChangeInvDiscType={setInvDiscType}
+              globalInvTax={globalInvTax}
+              onChangeGlobalInvTax={setGlobalInvTax}
+              invTaxType={invTaxType}
+              onChangeInvTaxType={setInvTaxType}
+              extraIncomeName={extraIncomeName}
+              onChangeExtraIncomeName={setExtraIncomeName}
+              extraIncomeVal={extraIncomeVal}
+              onChangeExtraIncomeVal={setExtraIncomeVal}
+              paymentRows={paymentRows}
+              onChangePaymentRows={setPaymentRows}
+              hidePrintActions={true}
+              onSaveInvoice={handleSaveInvoice}
+            />
           </div>
         </div>
       </Modal>

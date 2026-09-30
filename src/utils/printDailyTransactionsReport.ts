@@ -151,59 +151,7 @@ export function compileDailyTransactionsData(
     });
   });
 
-  // If no transactions found for today, fallback to mock/sample live items so the printed report is always useful and rich
-  if (items.length === 0) {
-    items.push(
-      {
-        id: 'sample-1',
-        time: '09:15 ص',
-        txNumber: 'TRX-1001',
-        type: 'فاتورة مبيعات',
-        paymentMethod: 'نقداً',
-        party: 'شركة الأمل للتوزيع',
-        income: 15000,
-        expense: 0,
-        description: 'تحصيل قيمة فاتورة INV-902',
-        rawDate: selectedDate,
-      },
-      {
-        id: 'sample-2',
-        time: '10:30 ص',
-        txNumber: 'TRX-1002',
-        type: 'سند صرف مصاريف',
-        paymentMethod: 'نقداً',
-        party: 'مصاريف ضيافة ونثريات',
-        income: 0,
-        expense: 1200,
-        description: 'شراء مستلزمات مكتبية وضيافة',
-        rawDate: selectedDate,
-      },
-      {
-        id: 'sample-3',
-        time: '12:00 م',
-        txNumber: 'TRX-1003',
-        type: 'سند قبض عميل',
-        paymentMethod: 'تحويل بنكي',
-        party: 'محلات النور والهدى',
-        income: 27500,
-        expense: 0,
-        description: 'دفعة تحت الحساب (بنك مصر)',
-        rawDate: selectedDate,
-      },
-      {
-        id: 'sample-4',
-        time: '02:45 م',
-        txNumber: 'TRX-1004',
-        type: 'فاتورة مشتريات',
-        paymentMethod: 'شيك',
-        party: 'شركة الأهرام للتجارة',
-        income: 0,
-        expense: 10000,
-        description: 'سداد جزء من قيمة توريد بضاعة',
-        rawDate: selectedDate,
-      }
-    );
-  }
+  // Calculate totals from real transactions only
 
   // Calculate totals
   const totalIncome = items.reduce((sum, item) => sum + (item.income || 0), 0);

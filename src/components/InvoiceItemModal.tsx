@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { X, Plus, Percent, DollarSign, Calculator, Check, Search, Package, Sparkles } from 'lucide-react';
+import { X, Plus, Percent, DollarSign, Calculator, Check, Search, Package, Sparkles, ChevronDown, Tag } from 'lucide-react';
 import { InvoiceItem, Item } from '../types';
 
 interface InvoiceItemModalProps {
@@ -52,7 +52,11 @@ export const InvoiceItemModal: React.FC<InvoiceItemModalProps> = ({
       setPrice(initialItem.price !== undefined ? String(initialItem.price) : '');
       setCostPrice(initialItem.costPrice);
 
-      setDiscountType(initialItem.discountType || (initialItem.discount && initialItem.discount > 0 ? 'fixed' : 'percent'));
+      const mappedDiscType: 'percent' | 'fixed' =
+        initialItem.discType === 'val' || initialItem.discountType === 'fixed'
+          ? 'fixed'
+          : 'percent';
+      setDiscountType(mappedDiscType);
       setDiscountValue(
         initialItem.discountValue !== undefined && initialItem.discountValue > 0
           ? String(initialItem.discountValue)
@@ -61,7 +65,11 @@ export const InvoiceItemModal: React.FC<InvoiceItemModalProps> = ({
           : ''
       );
 
-      setTaxType(initialItem.taxType || (initialItem.tax && initialItem.tax > 0 ? 'percent' : 'percent'));
+      const mappedTaxType: 'percent' | 'fixed' =
+        initialItem.taxType === 'val' || initialItem.taxType === 'fixed'
+          ? 'fixed'
+          : 'percent';
+      setTaxType(mappedTaxType);
       setTaxValue(
         initialItem.taxValue !== undefined && initialItem.taxValue > 0
           ? String(initialItem.taxValue)
@@ -322,6 +330,39 @@ export const InvoiceItemModal: React.FC<InvoiceItemModalProps> = ({
               className="w-full h-11 px-3.5 bg-white border-2 border-slate-300 focus:border-blue-600 rounded-xl text-slate-900 text-sm font-semibold shadow-sm focus:outline-none transition-all placeholder:text-slate-400 placeholder:font-normal"
             />
           </div>
+
+          {/* Price Tier Selection Dropdown */}
+          {(() => {
+            const matched = catalogItems.find(
+              (i) => i.id === selectedItemId || (name && i.name.trim().toLowerCase() === name.trim().toLowerCase())
+            );
+            if (!matched) return null;
+            return (
+              <div className="bg-blue-50/70 p-3 rounded-xl border border-blue-200 space-y-1.5">
+                <label className="text-xs font-black text-blue-950 flex items-center gap-1.5">
+                  <Tag className="w-3.5 h-3.5 text-blue-700" />
+                  <span>تحديد نوع السعر (جملة / شراء / نقدي):</span>
+                </label>
+                <div className="relative">
+                  <select
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      if (val === 'cash') setPrice(String(matched.salePrice || 0));
+                      else if (val === 'wholesale') setPrice(String(matched.wholesalePrice || matched.salePrice || 0));
+                      else if (val === 'buy') setPrice(String(matched.purchasePrice || 0));
+                    }}
+                    className="w-full h-10 px-3 pl-9 bg-white border-2 border-blue-300 rounded-xl text-xs font-black text-slate-800 shadow-xs appearance-none cursor-pointer"
+                  >
+                    <option value="">-- اضغط لاختيار فئة السعر المناسبة للصنف --</option>
+                    <option value="cash">🟢 سعر بيع نقدي (قطاعي) — {Number(matched.salePrice || 0).toFixed(2)} ج.م</option>
+                    <option value="wholesale">🟡 سعر بيع جملة — {Number(matched.wholesalePrice || matched.salePrice || 0).toFixed(2)} ج.م</option>
+                    <option value="buy">🔴 سعر شراء / تكلفة — {Number(matched.purchasePrice || 0).toFixed(2)} ج.م</option>
+                  </select>
+                  <ChevronDown className="w-4 h-4 text-blue-700 absolute left-3 top-3 pointer-events-none" />
+                </div>
+              </div>
+            );
+          })()}
 
           {/* 3. Quantity & Price Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">

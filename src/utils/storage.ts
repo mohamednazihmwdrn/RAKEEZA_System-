@@ -399,17 +399,12 @@ export function loadAppData(companyId?: string): AppData {
         loaded.users = defaults.users;
       }
 
-      // Ensure all items have a companyId, and seed company 2 items if not present
+      // Ensure all items have a valid companyId without auto-seeding demo items
       if (loaded.items && loaded.items.length > 0) {
-        const hasCompany2 = loaded.items.some((it) => it.companyId === 'COMP-000002');
         loaded.items = loaded.items.map((it) => ({
           ...it,
           companyId: it.companyId || 'COMP-000001',
         }));
-        if (!hasCompany2) {
-          const company2Items = defaults.items.filter((it) => it.companyId === 'COMP-000002');
-          loaded.items.push(...company2Items);
-        }
       }
 
       return ensureProductPricesSynced(loaded);

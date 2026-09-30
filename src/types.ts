@@ -221,18 +221,25 @@ export interface Item {
 
 export interface InvoiceItem {
   itemId?: string;
-  name: string;
-  qty: number;
-  price: number;
+  code?: string; // كود الصنف
+  name: string; // اسم الصنف
+  qty: number; // الكمية
+  price: number; // السعر
   costPrice?: number;
-  total: number;
+  total: number; // الإجمالي
+  spec?: string; // البيان / تفاصيل المنتج (مختصر)
+  discVal?: number; // قيمة الخصم المدخلة
+  discType?: 'val' | 'percent'; // نوع الخصم: مبلغ ج.م أو نسبة %
+  actualDisc?: number; // قيمة الخصم الفعلية
+  taxVal?: number; // قيمة الضريبة المدخلة
+  taxType?: 'percent' | 'val' | 'fixed'; // نوع الضريبة: نسبة % أو مبلغ ج.م
+  actualTax?: number; // قيمة الضريبة الفعلية
   notes?: string; // البيان أو الملاحظة الخاصة بالصنف
   statement?: string; // بيان بديل
   discount?: number; // قيمة الخصم المحسوبة
   discountType?: 'percent' | 'fixed'; // نسبة مئوية % أو مبلغ ثابت
   discountValue?: number; // القيمة المدخلة للخصم
   tax?: number; // قيمة الضريبة المحسوبة
-  taxType?: 'percent' | 'fixed'; // نسبة مئوية % أو مبلغ ثابت
   taxValue?: number; // القيمة المدخلة للضريبة
   batchNumber?: string;
   serialNumber?: string;
@@ -270,6 +277,7 @@ export interface SaleInvoice {
   fees: number;
   total: number;
   paymentMethod: 'drawer' | 'vodafone' | 'instapay' | 'bank' | 'split';
+  paymentSplits?: { method: string; amount: number }[];
   type: 'nagdi' | 'ajel' | 'return_nagdi' | 'return_ajel';
   salesType?: 'cash' | 'wholesale'; // نوع البيع: نقدي أو جملة لتحديد التسعيرة المطبقة
   paidAmount: number;
@@ -318,7 +326,8 @@ export interface PurchaseInvoice {
   withholdingTax?: number;
   fees: number;
   total: number;
-  paymentMethod: 'drawer' | 'vodafone' | 'instapay' | 'bank';
+  paymentMethod: 'drawer' | 'vodafone' | 'instapay' | 'bank' | 'split';
+  paymentSplits?: { method: string; amount: number }[];
   type: 'nagdi' | 'ajel' | 'return_nagdi' | 'return_ajel';
   paidAmount?: number;
   remainingAmount?: number;

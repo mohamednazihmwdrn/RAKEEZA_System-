@@ -67,8 +67,8 @@ export function compileCashBalancesData(appData: AppData): {
   cashData.push({
     location: 'الخزينة الرئيسية',
     amounts: {
-      'نقدي (Cash)': cash.drawer || 30000,
-      'شيكات بالخزينة': chequesTotal > 0 ? chequesTotal : 15000,
+      'نقدي (Cash)': cash.drawer || 0,
+      'شيكات بالخزينة': chequesTotal || 0,
     },
   });
 
@@ -76,25 +76,25 @@ export function compileCashBalancesData(appData: AppData): {
   cashData.push({
     location: 'خزينة نقطة البيع (POS)',
     amounts: {
-      'نقدي (Cash)': posCash > 0 ? posCash : 10000,
-      'فيزا (POS)': posVisa > 0 ? posVisa : 12000,
-      'فودافون كاش': posVodafone > 0 ? posVodafone : (cash.vodafone || 5000),
+      'نقدي (Cash)': posCash || 0,
+      'فيزا (POS)': posVisa || 0,
+      'فودافون كاش': posVodafone || cash.vodafone || 0,
     },
   });
 
-  // 3. بنك مصر (جاري) أو الحسابات البنكية
+  // 3. الحسابات البنكية
   if (primaryBank) {
     cashData.push({
       location: `${primaryBank.name} (${primaryBank.accountNumber || 'جاري'})`,
       amounts: {
-        'تحويل بنكي': primaryBank.balance || cash.bank || 50000,
+        'تحويل بنكي': primaryBank.balance || cash.bank || 0,
       },
     });
-  } else {
+  } else if (cash.bank) {
     cashData.push({
-      location: 'بنك مصر (حساب جاري)',
+      location: 'الحساب البنكي',
       amounts: {
-        'تحويل بنكي': cash.bank || 50000,
+        'تحويل بنكي': cash.bank || 0,
       },
     });
   }
@@ -102,7 +102,7 @@ export function compileCashBalancesData(appData: AppData): {
   // Other banks if any
   otherBanks.forEach((b) => {
     cashData.push({
-      location: `${b.name} (${b.accountNumber})`,
+      location: `${b.name} (${b.accountNumber || 'جاري'})`,
       amounts: {
         'تحويل بنكي': b.balance || 0,
       },
@@ -113,22 +113,9 @@ export function compileCashBalancesData(appData: AppData): {
   cashData.push({
     location: 'محفظة إنستا باي',
     amounts: {
-      'تحويل لحظي (InstaPay)': cash.instapay || posInstapay || 8500,
+      'تحويل لحظي (InstaPay)': cash.instapay || posInstapay || 0,
     },
   });
-
-  // 5. الفروع إن وجدت
-  if (appData.branches && appData.branches.length > 1) {
-    appData.branches.slice(1).forEach((branch) => {
-      cashData.push({
-        location: `خزينة فرع ${branch.name}`,
-        amounts: {
-          'نقدي (Cash)': 15000,
-          'فيزا (POS)': 4500,
-        },
-      });
-    });
-  }
 
   return {
     company,

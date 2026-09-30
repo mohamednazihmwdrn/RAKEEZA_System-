@@ -18,6 +18,9 @@ import {
   activateLicenseCloud,
   authenticateOrRegisterWithGmail,
   verifyOwnerSecret,
+  authenticateOwnerCredentials,
+  validateOwnerSession,
+  invalidateOwnerSession,
   requestEmailVerification,
   verifyEmailOtpAndRegister,
   registerDeviceAndCompany,
@@ -156,27 +159,30 @@ async function startServer() {
   };
 
   const requireOwner = (req: express.Request, res: express.Response, next: express.NextFunction) => {
-    const ownerSecret = (req.headers['x-owner-secret'] as string) || '';
-    if (
-      ownerSecret === '123456' ||
-      ownerSecret === 'rakeeza' ||
-      ownerSecret === 'owner' ||
-      ownerSecret === 'admin'
-    ) {
-      return next();
+    // 🛡️ Strict Server-Side Owner Authorization Gate
+    const ownerToken =
+      (req.headers['x-owner-token'] as string) ||
+      (req.headers['x-owner-authorization'] as string) ||
+      (req.headers.authorization?.startsWith('Bearer ') ? req.headers.authorization.substring(7) : '') ||
+      (req.query.ownerToken as string) ||
+      (req.query.token as string);
+
+    if (!ownerToken) {
+      return res.status(401).json({
+        success: false,
+        error: 'غير مصرح: تتطلب هذه العملية جلسة مالك نظام معتمدة ونشطة.',
+      });
     }
 
-    const authHeader = req.headers.authorization || '';
-    const token = authHeader.startsWith('Bearer ') ? authHeader.substring(7) : (req.query.token as string);
-    if (token) {
-      const verification = validateSession(token);
-      if (verification.valid && verification.session && verification.session.role === 'owner') {
-        (req as any).auth = verification;
-        return next();
-      }
+    const verification = validateOwnerSession(ownerToken);
+    if (!verification.valid || !verification.session || verification.session.role !== 'owner') {
+      return res.status(403).json({
+        success: false,
+        error: 'مرفوض: ليس لديك صلاحية مالك المنظومة (Owner Access Required).',
+      });
     }
 
-    // Allow owner requests with graceful pass-through for Owner Dashboard
+    (req as any).ownerAuth = verification;
     next();
   };
 
@@ -250,6 +256,54 @@ async function startServer() {
     }
 
     res.json(result);
+  });
+
+  // ----------------------------------------------------
+  // 👑 Dedicated Secure Owner Authentication Routes
+  // ----------------------------------------------------
+  app.post(['/api/owner/auth/login', '/api/auth/owner-login'], (req, res) => {
+    const { username, password } = req.body || {};
+    const clientIp = (req.headers['x-forwarded-for'] as string)?.split(',')[0] || req.ip || 'global';
+    const result = authenticateOwnerCredentials(username, password, clientIp);
+
+    if (!result.success) {
+      return res.status(401).json(result);
+    }
+
+    res.json(result);
+  });
+
+  app.get(['/api/owner/auth/session', '/api/auth/owner-session'], (req, res) => {
+    const token =
+      (req.headers['x-owner-token'] as string) ||
+      (req.headers['x-owner-authorization'] as string) ||
+      (req.headers.authorization?.startsWith('Bearer ') ? req.headers.authorization.substring(7) : '') ||
+      (req.query.token as string);
+
+    if (!token) {
+      return res.status(401).json({ valid: false, error: 'لا يوجد رمز مصادقة مالك' });
+    }
+
+    const result = validateOwnerSession(token);
+    if (!result.valid) {
+      return res.status(401).json(result);
+    }
+
+    res.json(result);
+  });
+
+  app.post(['/api/owner/auth/logout', '/api/auth/owner-logout'], (req, res) => {
+    const token =
+      (req.headers['x-owner-token'] as string) ||
+      (req.headers['x-owner-authorization'] as string) ||
+      (req.headers.authorization?.startsWith('Bearer ') ? req.headers.authorization.substring(7) : '') ||
+      req.body?.token;
+
+    if (token) {
+      invalidateOwnerSession(token);
+    }
+
+    res.json({ success: true, message: 'تم إنهاء جلسة مالك المنظومة بنجاح.' });
   });
 
   // 📱 Register Device & New Company (First-time binding)

@@ -657,5 +657,178 @@ textarea,
   animation: slideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
+/* =========================================================================
+   🎯 ULTRA HIGH CONTRAST & RAZOR-SHARP TEXT RENDERING ENFORCEMENT
+   Fixes blurriness, washed-out text, faint borders, and transparent rows.
+   Guarantees Cairo / Tajawal font, pure white rows, pitch-black text & numbers.
+   ========================================================================= */
+
+/* 1. Universal Font & Hardware-Acceleration Anti-Blur Settings */
+html, body, #root, button, input, select, textarea, table, th, td, p, span, div, label {
+  font-family: 'Cairo', 'Tajawal', 'Segoe UI', Tahoma, system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased !important;
+  -moz-osx-font-smoothing: grayscale !important;
+  text-rendering: optimizeLegibility !important;
+}
+
+/* Eliminate backdrop-filter blur entirely which causes GPU raster blurriness and faint text */
+.backdrop-blur-xs,
+.backdrop-blur-sm,
+.backdrop-blur-md,
+.backdrop-blur,
+.backdrop-blur-lg,
+.backdrop-blur-xl {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+/* 2. Modals & Overlays: Solid Dark Backdrop & Crisp Pure-White Card Container */
+.fixed.inset-0 {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  background-color: rgba(0, 0, 0, 0.75) !important;
+}
+
+.fixed.inset-0 > div,
+div[role="dialog"] {
+  background-color: #ffffff !important;
+  opacity: 1 !important;
+  border-color: #64748b !important;
+}
+
+/* Modal Headers */
+.fixed.inset-0 h2,
+.fixed.inset-0 h3,
+.fixed.inset-0 h4,
+div[role="dialog"] h2,
+div[role="dialog"] h3,
+div[role="dialog"] h4 {
+  color: #000000 !important;
+  font-weight: 900 !important;
+}
+
+/* 3. Razor-Sharp Labels and Headings */
+label {
+  color: #000000 !important;
+  font-weight: 700 !important;
+  letter-spacing: normal !important;
+}
+
+/* 4. High Contrast Form Inputs & Selects */
+input, select, textarea {
+  color: #000000 !important;
+  font-weight: 600 !important;
+  background-color: #ffffff !important;
+  border-color: #94a3b8 !important;
+  opacity: 1 !important;
+}
+
+input:focus, select:focus, textarea:focus {
+  border-color: #1d4ed8 !important;
+  outline: 2px solid #2563eb !important;
+  background-color: #ffffff !important;
+}
+
+input::placeholder, textarea::placeholder {
+  color: #64748b !important;
+  opacity: 1 !important;
+  font-weight: 600 !important;
+}
+
+/* 5. Complete Table Overhaul - Pure White Rows, Crisp Borders, Dark Header */
+table {
+  border-collapse: collapse !important;
+  background-color: #ffffff !important;
+  width: 100% !important;
+  border: 1px solid #cbd5e1 !important;
+}
+
+/* Table Headers: Deep Solid Color with Bright White Bold Text */
+table thead tr,
+thead tr {
+  background-color: #0f172a !important;
+  color: #ffffff !important;
+}
+
+table thead th,
+thead th {
+  background-color: #0f172a !important;
+  color: #ffffff !important;
+  font-weight: 800 !important;
+  border: 1px solid #334155 !important;
+  padding: 8px 10px !important;
+  text-align: center;
+  font-size: 0.8rem !important;
+}
+
+/* Table Rows: 100% Pure White Background - Zero Transparency / No Blurriness */
+table tbody tr,
+tbody tr {
+  background-color: #ffffff !important;
+  opacity: 1 !important;
+  border-bottom: 1px solid #cbd5e1 !important;
+}
+
+table tbody tr:hover,
+tbody tr:hover {
+  background-color: #f1f5f9 !important;
+}
+
+/* Explicit Crisp Grid Borders Between Columns & Rows */
+table th, table td {
+  border: 1px solid #cbd5e1 !important;
+}
+
+/* Ensure all text & numbers inside tables are Pitch Black and Bold (font-weight: 600+) */
+table tbody td,
+tbody td {
+  color: #000000 !important;
+  font-weight: 700 !important;
+  opacity: 1 !important;
+}
+
+/* Numbers, Codes, Amounts and Monospace Values */
+table tbody td span.font-mono,
+table tbody td strong,
+.font-mono {
+  color: #000000 !important;
+  font-weight: 800 !important;
+}
+
+/* Ensure code badges in tables are clear and crisp */
+table tbody td span.bg-slate-100,
+table tbody td span.bg-slate-200 {
+  background-color: #f1f5f9 !important;
+  color: #000000 !important;
+  border: 1px solid #94a3b8 !important;
+  font-weight: 800 !important;
+}
+
+/* 6. Mobile Card Views in Invoices, Catalog & Lists */
+@media (max-width: 768px) {
+  .bg-white.rounded-xl,
+  .bg-white.rounded-2xl {
+    background-color: #ffffff !important;
+    opacity: 1 !important;
+    border: 1.5px solid #cbd5e1 !important;
+  }
+
+  .bg-white.rounded-xl *,
+  .bg-white.rounded-2xl * {
+    -webkit-font-smoothing: antialiased !important;
+  }
+}
+
+/* High contrast overrides for subtle Tailwind gray text classes inside invoices & tables */
+tbody td .text-slate-400,
+tbody td .text-slate-500,
+tbody td .text-gray-400,
+tbody td .text-gray-500,
+tbody td .text-gray-600 {
+  color: #0f172a !important;
+  font-weight: 700 !important;
+}
+
+
 
 
