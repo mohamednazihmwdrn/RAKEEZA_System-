@@ -20,6 +20,7 @@ import {
   Tag,
   Receipt,
   Calculator,
+  AlertTriangle,
 } from 'lucide-react';
 import { Item } from '../types';
 
@@ -76,7 +77,7 @@ export const PAYMENT_METHODS = [
 interface UnifiedInvoiceItemSystemProps {
   // Mode & context
   mode?: 'sale' | 'purchase' | 'return_sale' | 'return_purchase';
-  pricingType?: 'cash' | 'wholesale';
+  pricingType?: 'cash' | 'wholesale' | 'buy';
   catalogItems?: Item[];
 
   // Invoice Items
@@ -350,7 +351,7 @@ export const UnifiedInvoiceItemSystem: React.FC<UnifiedInvoiceItemSystemProps> =
       // Determine default price based on invoice mode
       let defaultP = item.cashPrice;
       let initialTier: 'cash' | 'wholesale' | 'buy' | 'custom' = 'cash';
-      if (mode === 'purchase' || mode === 'return_purchase') {
+      if (mode === 'purchase' || mode === 'return_purchase' || pricingType === 'buy') {
         defaultP = item.buyPrice;
         initialTier = 'buy';
       } else if (pricingType === 'wholesale') {
@@ -590,16 +591,16 @@ export const UnifiedInvoiceItemSystem: React.FC<UnifiedInvoiceItemSystemProps> =
             <div className="hidden md:block overflow-x-auto max-h-[320px] border border-slate-300 rounded-lg">
               <table className="w-full border-collapse text-xs text-center border border-slate-300">
                 <thead>
-                  <tr className="bg-[#0f172a] text-white font-black sticky top-0 border-b-2 border-slate-900 z-10">
-                    <th className="py-3 px-2 text-center w-14 border border-slate-700 font-black text-white">كود</th>
-                    <th className="py-3 px-3 text-right border border-slate-700 font-black text-white">الصنف</th>
-                    <th className="py-3 px-2 text-center w-16 border border-slate-700 font-black text-white">الكمية</th>
-                    <th className="py-3 px-2 text-center w-24 border border-slate-700 font-black text-white">السعر</th>
-                    <th className="py-3 px-2 text-center w-20 border border-slate-700 font-black text-white">الخصم</th>
-                    <th className="py-3 px-2 text-center w-20 border border-slate-700 font-black text-white">الضريبة</th>
-                    <th className="py-3 px-3 text-right border border-slate-700 font-black text-white">البيان / التفاصيل</th>
-                    <th className="py-3 px-3 text-center w-24 border border-slate-700 font-black text-white">الإجمالي</th>
-                    <th className="py-3 px-2 text-center w-20 border border-slate-700 font-black text-white">إجراء</th>
+                  <tr className="bg-slate-100 text-slate-900 font-black sticky top-0 border-b-2 border-slate-300 z-10">
+                    <th className="py-3 px-2 text-center w-14 border border-slate-300 font-black text-black">كود</th>
+                    <th className="py-3 px-3 text-right border border-slate-300 font-black text-black">الصنف</th>
+                    <th className="py-3 px-2 text-center w-16 border border-slate-300 font-black text-black">الكمية</th>
+                    <th className="py-3 px-2 text-center w-24 border border-slate-300 font-black text-black">السعر</th>
+                    <th className="py-3 px-2 text-center w-20 border border-slate-300 font-black text-black">الخصم</th>
+                    <th className="py-3 px-2 text-center w-20 border border-slate-300 font-black text-black">الضريبة</th>
+                    <th className="py-3 px-3 text-right border border-slate-300 font-black text-black">البيان / التفاصيل</th>
+                    <th className="py-3 px-3 text-center w-24 border border-slate-300 font-black text-black">الإجمالي</th>
+                    <th className="py-3 px-2 text-center w-20 border border-slate-300 font-black text-black">إجراء</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200 bg-white">
@@ -999,16 +1000,16 @@ export const UnifiedInvoiceItemSystem: React.FC<UnifiedInvoiceItemSystemProps> =
             className="bg-white border-2 border-slate-700 rounded-xl w-[98vw] h-[94vh] max-w-7xl flex flex-col overflow-hidden shadow-2xl"
             dir="rtl"
           >
-            {/* Header */}
-            <div className="bg-slate-900 text-white px-4 py-3 flex items-center justify-between border-b-2 border-slate-700 shrink-0">
+            {/* Header (تصميم فاتح عالي التباين) */}
+            <div className="bg-slate-100 text-slate-900 px-4 py-3 flex items-center justify-between border-b-2 border-slate-300 shrink-0">
               <div className="flex items-center gap-2">
-                <Layers className="w-5 h-5 text-amber-400" />
-                <span className="font-black text-sm sm:text-base text-white">بالمجموعات - اختيار صنف للفاتورة</span>
+                <Layers className="w-5 h-5 text-blue-700" />
+                <span className="font-black text-sm sm:text-base text-black">بالمجموعات - اختيار صنف للفاتورة</span>
               </div>
               <button
                 type="button"
                 onClick={closeLookupModal}
-                className="w-8 h-8 rounded-lg bg-slate-800 hover:bg-red-600 text-white flex items-center justify-center text-lg font-black transition cursor-pointer"
+                className="w-8 h-8 rounded-lg bg-slate-200 hover:bg-red-600 text-slate-800 hover:text-white flex items-center justify-center text-lg font-black transition cursor-pointer"
               >
                 ✕
               </button>
@@ -1053,12 +1054,12 @@ export const UnifiedInvoiceItemSystem: React.FC<UnifiedInvoiceItemSystemProps> =
 
               {/* Desktop Category Sidebar */}
               <div className="hidden md:flex w-64 bg-white rounded-lg border-2 border-slate-300 flex-col shrink-0 overflow-hidden shadow-xs">
-                <div className="bg-slate-900 text-white px-3 py-2.5 font-black text-xs border-b border-slate-700 flex items-center justify-between">
+                <div className="bg-slate-100 text-slate-900 px-3 py-2.5 font-black text-xs border-b border-slate-300 flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <FolderTree className="w-4 h-4 text-amber-400" />
+                    <FolderTree className="w-4 h-4 text-amber-600" />
                     <span>المجموعات التصنيفية:</span>
                   </div>
-                  <span className="text-[10px] bg-slate-800 text-slate-200 px-2 py-0.5 rounded-md font-mono">
+                  <span className="text-[10px] bg-slate-200 text-slate-800 px-2 py-0.5 rounded-md font-mono font-bold">
                     {categoriesList.length} مجموعات
                   </span>
                 </div>
@@ -1184,13 +1185,13 @@ export const UnifiedInvoiceItemSystem: React.FC<UnifiedInvoiceItemSystemProps> =
                       {/* Desktop Lookup Table */}
                       <table className="hidden md:table w-full border-collapse text-xs text-center border border-slate-300">
                         <thead>
-                          <tr className="bg-slate-900 text-white font-black sticky top-0 border-b-2 border-slate-950 z-10">
-                            <th className="py-2.5 px-3 w-24 text-white font-black border border-slate-700">كود</th>
-                            <th className="py-2.5 px-4 text-right text-white font-black border border-slate-700">اسم الصنف / المجموعة</th>
-                            <th className="py-2.5 px-3 w-28 text-white font-black border border-slate-700">الرصيد المتاح</th>
-                            <th className="py-2.5 px-3 w-32 text-white font-black border border-slate-700">سعر البيع النقدي</th>
-                            <th className="py-2.5 px-3 w-32 text-white font-black border border-slate-700">سعر البيع الجملة</th>
-                            <th className="py-2.5 px-3 w-28 text-white font-black border border-slate-700">سعر الشراء</th>
+                          <tr className="bg-slate-100 text-slate-900 font-black sticky top-0 border-b-2 border-slate-300 z-10">
+                            <th className="py-2.5 px-3 w-24 text-black font-black border border-slate-300">كود</th>
+                            <th className="py-2.5 px-4 text-right text-black font-black border border-slate-300">اسم الصنف / المجموعة</th>
+                            <th className="py-2.5 px-3 w-28 text-black font-black border border-slate-300">الرصيد المتاح</th>
+                            <th className="py-2.5 px-3 w-32 text-black font-black border border-slate-300">سعر البيع النقدي</th>
+                            <th className="py-2.5 px-3 w-32 text-black font-black border border-slate-300">سعر البيع الجملة</th>
+                            <th className="py-2.5 px-3 w-28 text-black font-black border border-slate-300">سعر الشراء</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-300 bg-white">
@@ -1334,11 +1335,35 @@ export const UnifiedInvoiceItemSystem: React.FC<UnifiedInvoiceItemSystemProps> =
                   </div>
                   <div className="flex items-center gap-2 sm:flex-col sm:items-end bg-white px-3 py-1.5 rounded-lg border border-slate-200">
                     <span className="text-[11px] font-bold text-slate-600">الرصيد المتاح بالمخزن:</span>
-                    <span className="font-mono font-black text-sm sm:text-base text-emerald-800">
-                      {tempSelectedItem.stock.toFixed(2)} قطعة
+                    <span
+                      className={`font-mono font-black text-sm sm:text-base px-2 py-0.5 rounded-md ${
+                        tempSelectedItem.stock < 0
+                          ? 'text-rose-950 bg-rose-100 border border-rose-300'
+                          : tempSelectedItem.stock === 0
+                          ? 'text-amber-900 bg-amber-50 border border-amber-300'
+                          : 'text-emerald-800 bg-emerald-50 border border-emerald-200'
+                      }`}
+                    >
+                      {tempSelectedItem.stock < 0 ? `⚠️ رصيد سالب: ${tempSelectedItem.stock.toFixed(2)}` : `${tempSelectedItem.stock.toFixed(2)} قطعة`}
                     </span>
                   </div>
                 </div>
+
+                {/* Visual Alert Banner for Negative Sale */}
+                {modalQty > tempSelectedItem.stock && (mode === 'sale' || mode === 'return_sale') && (
+                  <div className="bg-rose-50 border-2 border-rose-300 p-2.5 rounded-xl flex items-center justify-between text-xs text-rose-950 font-bold animate-in fade-in duration-150 shadow-xs">
+                    <div className="flex items-center gap-2">
+                      <AlertTriangle className="w-5 h-5 text-rose-700 shrink-0" />
+                      <div>
+                        <span className="font-black text-rose-950 block">⚠️ تنبيه رصيد المخزون: الكمية المطلوبة ({modalQty}) تتجاوز الرصيد المتاح ({tempSelectedItem.stock.toFixed(2)})</span>
+                        <span className="text-[11px] text-rose-800 font-semibold">متاح ومفعل البيع بالسالب تلقائياً - الرصيد المتوقع بعد الحفظ: {(tempSelectedItem.stock - modalQty).toFixed(2)}</span>
+                      </div>
+                    </div>
+                    <span className="bg-rose-700 text-white text-[11px] font-black px-2.5 py-1 rounded-lg shrink-0 shadow-xs">
+                      بيع بالسالب مسموح
+                    </span>
+                  </div>
+                )}
 
                 {/* 1. Price Tier Dropdown Selector (قائمة منسدلة لاختيار إذا كان الصنف جملة أو شراء أو نقدي) */}
                 <div className="bg-blue-50/70 p-3 rounded-xl border-2 border-blue-200 space-y-2">

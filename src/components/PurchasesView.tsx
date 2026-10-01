@@ -25,6 +25,9 @@ import { openUnifiedPrintWindow } from '../utils/printUnified';
 import { TableActionButtons } from './TableActionButtons';
 import { InvoiceItemModal } from './InvoiceItemModal';
 import { UnifiedInvoiceItemSystem, InvoiceItemUnified, PaymentRow } from './UnifiedInvoiceItemSystem';
+import { postPurchaseInvoice } from '../utils/posting';
+import { calculateSupplierBalance } from '../utils/accounting';
+import { RakeezaInvoiceWorkspace } from './RakeezaInvoiceWorkspace';
 
 interface PurchasesViewProps {
   appData: AppData;
@@ -37,7 +40,7 @@ export const PurchasesView: React.FC<PurchasesViewProps> = ({ appData, onUpdateD
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedBranchFilter, setSelectedBranchFilter] = useState<string>('all');
   const [selectedBranchId, setSelectedBranchId] = useState<string>(appData.activeBranchId || appData.branches?.[0]?.id || 'main');
-  const [activeModal, setActiveModal] = useState<'create' | 'view' | 'pay' | null>(null);
+  const [activeModal, setActiveModal] = useState<'create' | 'edit' | 'view' | 'pay' | null>(null);
   const [modalType, setModalType] = useState<'nagdi' | 'ajel' | 'return_nagdi' | 'return_ajel'>('nagdi');
   const [selectedInvoice, setSelectedInvoice] = useState<PurchaseInvoice | null>(null);
   const [editingInvoiceId, setEditingInvoiceId] = useState<number | null>(null);
@@ -252,7 +255,7 @@ export const PurchasesView: React.FC<PurchasesViewProps> = ({ appData, onUpdateD
     setShowSupplierDropdown(false);
     setShowPhoneDropdown(false);
     setShowItemDropdown(false);
-    setActiveModal('create');
+    setActiveModal('edit');
   };
 
   const handleOpenAddItemModal = () => {
@@ -515,140 +518,7 @@ export const PurchasesView: React.FC<PurchasesViewProps> = ({ appData, onUpdateD
       paymentSplits: paymentSplits.length > 0 ? paymentSplits : undefined,
     };
 
-    const updatedData = { ...appData };
-
-    // If editing, revert old invoice items stock first
-    if (isEditing) {
-      const oldInv = updatedData.purchaseInvoices.find((i) => i.id === editingInvoiceId);
-      if (oldInv) {
-        oldInv.items?.forEach((itm) => {
-          const sItm = updatedData.items.find((i) => i.name === itm.name);
-          if (sItm) {
-            const wasReturn = oldInv.type.startsWith('return_');
-            sItm.quantity = wasReturn ? (sItm.quantity || 0) + itm.qty : (sItm.quantity || 0) - itm.qty;
-          }
-        });
-      }
-      updatedData.purchaseInvoices = updatedData.purchaseInvoices.map((i) => (i.id === editingInvoiceId ? newInvoice : i));
-    } else {
-      updatedData.nextPurchaseNumber += 1;
-      updatedData.purchaseInvoices = [newInvoice, ...updatedData.purchaseInvoices];
-    }
-
-    // Update Stock & Purchase Prices
-    finalItemsToSave.forEach((item) => {
-      const stockItem = updatedData.items.find((i) => i.name === item.name);
-      if (stockItem) {
-        stockItem.quantity = isReturn ? (stockItem.quantity || 0) - item.qty : (stockItem.quantity || 0) + item.qty;
-        if (!isReturn) stockItem.purchasePrice = item.price;
-        if (!stockItem.movements) stockItem.movements = [];
-        stockItem.movements.push({
-          date: date,
-          type: isReturn ? 'return_purchase' : 'purchase',
-          qty: isReturn ? -item.qty : item.qty,
-          price: item.price,
-          total: isReturn ? -item.total : item.total,
-          note: isReturn
-            ? `مرتجع شراء (${modalType === 'return_nagdi' ? 'نقدي' : 'آجل'}) للمورد ${supplierName}`
-            : `شراء (${modalType === 'nagdi' ? 'نقدي' : 'آجل'}) من المورد ${supplierName}`,
-        });
-      } else {
-        updatedData.items.push({
-          id: 'i' + Date.now(),
-          name: item.name,
-          quantity: isReturn ? -item.qty : item.qty,
-          purchasePrice: item.price,
-          salePrice: item.price * 1.2 || 0,
-          movements: [
-            {
-              date: date,
-              type: isReturn ? 'return_purchase' : 'purchase',
-              qty: isReturn ? -item.qty : item.qty,
-              price: item.price,
-              total: isReturn ? -item.total : item.total,
-              note: isReturn
-                ? `مرتجع شراء (${modalType === 'return_nagdi' ? 'نقدي' : 'آجل'}) للمورد ${supplierName}`
-                : `شراء (${modalType === 'nagdi' ? 'نقدي' : 'آجل'}) من المورد ${supplierName}`,
-            },
-          ],
-        });
-      }
-    });
-
-    // Cashbox & Supplier Balance Handling
-    if (modalType === 'nagdi') {
-      // 1. Cash Purchase: Deduct full amount from selected method/cashbox, 0 supplier debt
-      updatedData.cashBox[paymentMethod] = (updatedData.cashBox[paymentMethod] || 0) - total;
-      updatedData.cashTransactions.push({
-        id: updatedData.nextCashId++,
-        date: date,
-        type: 'pay',
-        method: paymentMethod,
-        amount: total,
-        note: `فاتورة شراء نقدي #${newInvoice.id} - المورد: ${supplierName}`,
-        supplierName: supplierName,
-        invoiceId: newInvoice.id,
-      });
-    } else if (modalType === 'ajel') {
-      // 2. Credit Purchase: If downpayment made, deduct from cashbox; remaining goes to supplier debt
-      if (effectivePaid > 0) {
-        updatedData.cashBox[paymentMethod] = (updatedData.cashBox[paymentMethod] || 0) - effectivePaid;
-        updatedData.cashTransactions.push({
-          id: updatedData.nextCashId++,
-          date: date,
-          type: 'pay',
-          method: paymentMethod,
-          amount: effectivePaid,
-          note: `دفعة مسددة مع فاتورة شراء آجل #${newInvoice.id} (${getMethodLabel(paymentMethod)}) - المورد: ${supplierName}`,
-          supplierName: supplierName,
-          invoiceId: newInvoice.id,
-        });
-      }
-      const supp = updatedData.suppliers.find((s) => s.name === supplierName);
-      if (supp) {
-        supp.balance = (supp.balance || 0) + effectiveRemaining;
-      } else {
-        updatedData.suppliers.push({
-          id: 's' + Date.now(),
-          name: supplierName,
-          phone: phone,
-          balance: effectiveRemaining,
-          transactions: [],
-        });
-      }
-    } else if (modalType === 'return_nagdi') {
-      // 3. Cash Purchase Return: Receive full refund into cashbox / selected method, 0 supplier debt impact
-      updatedData.cashBox[paymentMethod] = (updatedData.cashBox[paymentMethod] || 0) + total;
-      updatedData.cashTransactions.push({
-        id: updatedData.nextCashId++,
-        date: date,
-        type: 'receive',
-        method: paymentMethod,
-        amount: total,
-        note: `مرتجع شراء نقدي (استرداد فوري من المورد) #${newInvoice.id} - المورد: ${supplierName}`,
-        supplierName: supplierName,
-        invoiceId: newInvoice.id,
-      });
-    } else if (modalType === 'return_ajel') {
-      // 4. Credit Purchase Return: If cash received from supplier, add to cashbox; remaining deducted from supplier debt
-      if (effectivePaid > 0) {
-        updatedData.cashBox[paymentMethod] = (updatedData.cashBox[paymentMethod] || 0) + effectivePaid;
-        updatedData.cashTransactions.push({
-          id: updatedData.nextCashId++,
-          date: date,
-          type: 'receive',
-          method: paymentMethod,
-          amount: effectivePaid,
-          note: `استرداد نقدي من مرتجع مشتريات آجل #${newInvoice.id} - المورد: ${supplierName}`,
-          supplierName: supplierName,
-          invoiceId: newInvoice.id,
-        });
-      }
-      const supp = updatedData.suppliers.find((s) => s.name === supplierName);
-      if (supp) {
-        supp.balance = (supp.balance || 0) - effectiveRemaining;
-      }
-    }
+    const updatedData = postPurchaseInvoice(appData, newInvoice, isEditing, editingInvoiceId || undefined);
 
     onUpdateData(updatedData, {
       action: isEditing
@@ -711,8 +581,9 @@ export const PurchasesView: React.FC<PurchasesViewProps> = ({ appData, onUpdateD
         }
       }
 
-      // Remove related cash transaction
+      // Remove related cash transaction and journal entry
       updatedData.cashTransactions = (updatedData.cashTransactions || []).filter((tx) => tx.invoiceId !== id);
+      updatedData.journalEntries = (updatedData.journalEntries || []).filter((je) => je.reference !== `PUR-INV-${id}`);
     }
 
     if (!updatedData.deletedRecords) updatedData.deletedRecords = {};
@@ -1253,324 +1124,22 @@ export const PurchasesView: React.FC<PurchasesViewProps> = ({ appData, onUpdateD
         </table>
       </div>
 
-      {/* Modal for Purchase Invoice Creation */}
-      <Modal
-        isOpen={activeModal === 'create'}
-        title={getTitleForModal()}
-        onClose={() => setActiveModal(null)}
-        maxWidth="max-w-6xl"
-        footer={
-          <div className="flex flex-col sm:flex-row gap-2 w-full">
-            <button
-              type="button"
-              onClick={handleSaveInvoice}
-              className="min-h-[42px] bg-emerald-700 hover:bg-emerald-800 active:bg-emerald-900 text-white px-6 py-2.5 rounded-lg font-semibold text-xs sm:text-sm cursor-pointer transition shadow-xs flex items-center justify-center gap-2 flex-1 sm:flex-initial"
-            >
-              <Save className="w-4 h-4" />
-              <span>حفظ فاتورة المشتريات وتحديث المخزون</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveModal(null)}
-              className="min-h-[42px] bg-slate-200 hover:bg-slate-300 active:bg-slate-400 text-slate-800 px-5 py-2.5 rounded-lg font-semibold text-xs sm:text-sm cursor-pointer transition flex items-center justify-center gap-1.5 flex-1 sm:flex-initial text-center"
-            >
-              <X className="w-4 h-4" />
-              <span>إلغاء</span>
-            </button>
-          </div>
-        }
-      >
-        <div className="space-y-4 text-xs md:text-sm">
-          {/* Quick Top Bar with Save Button */}
-          <div className="flex justify-between items-center bg-emerald-50/80 border border-emerald-200 p-2.5 rounded-xl">
-            <span className="text-emerald-900 font-bold text-xs flex items-center gap-1.5">
-              <span>📌</span> {getTitleForModal()}
-            </span>
-            <button
-              type="button"
-              onClick={handleSaveInvoice}
-              className="bg-[#2e7d32] hover:bg-[#1b5e20] active:bg-[#124116] text-white px-4 py-1.5 rounded-lg font-bold text-xs cursor-pointer transition shadow-xs flex items-center gap-1"
-            >
-              <span>💾</span> حفظ الفاتورة الآن
-            </button>
-          </div>
-
-          {/* Header Controls */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
-            {appData.branches && appData.branches.length > 1 && (
-              <div>
-                <label className="block font-bold mb-1 text-indigo-950 flex items-center gap-1">
-                  <span>🏢</span> الفرع المستلم
-                </label>
-                <select
-                  value={selectedBranchId}
-                  onChange={(e) => setSelectedBranchId(e.target.value)}
-                  className="w-full p-2 border-2 border-indigo-200 bg-indigo-50/40 rounded-xl focus:border-[#1a237e] focus:outline-none text-xs md:text-sm font-bold"
-                >
-                  {appData.branches.map((b) => (
-                    <option key={b.id} value={b.id}>
-                      {b.name} {b.isMain ? '(الرئيسي)' : ''}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
-            <div className="relative">
-              <label className="block font-black mb-1 text-black">المورد / الشركة</label>
-              <input
-                type="text"
-                placeholder="ابحث باسم المورد أو هاتفه..."
-                value={supplierName}
-                onFocus={() => setShowSupplierDropdown(true)}
-                onBlur={() => setTimeout(() => setShowSupplierDropdown(false), 200)}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  setSupplierName(val);
-                  setShowSupplierDropdown(true);
-                  const matched = appData.suppliers.find(
-                    (s) => s.name === val || (s.phone && s.phone === val)
-                  );
-                  if (matched) {
-                    setSupplierName(matched.name);
-                    setPhone(matched.phone || '');
-                  }
-                }}
-                className="w-full p-2.5 bg-white border-2 border-slate-400 rounded-xl focus:border-blue-700 focus:outline-none text-xs md:text-sm font-bold text-black placeholder:text-slate-500"
-              />
-              {showSupplierDropdown && (
-                <div className="absolute top-full right-0 left-0 z-50 bg-white border-2 border-slate-400 rounded-xl shadow-2xl max-h-52 overflow-y-auto mt-1 divide-y divide-slate-200">
-                  {filteredSuppliersForName.length === 0 ? (
-                    <div className="p-3 text-xs text-black font-bold text-center">
-                      مورد جديد: <strong className="text-blue-900">"{supplierName}"</strong> (سيتم تسجيله بالاسم والرقم عند الحفظ)
-                    </div>
-                  ) : (
-                    filteredSuppliersForName.map((s) => (
-                      <div
-                        key={s.id}
-                        onMouseDown={(e) => {
-                          e.preventDefault();
-                          setSupplierName(s.name);
-                          setPhone(s.phone || '');
-                          setShowSupplierDropdown(false);
-                          if (s.representatives && s.representatives.length > 0) {
-                            const primary = s.representatives.find((r) => r.isPrimary) || s.representatives[0];
-                            setSupplierRepId(primary.id);
-                            setSupplierRepName(primary.name);
-                            setSupplierRepPhone(primary.phone);
-                          }
-                        }}
-                        className="p-2.5 hover:bg-slate-100 cursor-pointer flex justify-between items-center text-xs transition border-b border-slate-100"
-                      >
-                        <div>
-                          <span className="font-black text-black block text-sm">🏢 {s.name}</span>
-                          <span className="text-slate-800 font-bold text-xs">📞 {s.phone || 'بدون رقم مسجل'}</span>
-                        </div>
-                        {s.balance !== undefined && (
-                          <span className={`text-xs font-black px-2 py-0.5 rounded-full border ${s.balance > 0 ? 'bg-red-50 text-red-900 border-red-300' : 'bg-emerald-50 text-emerald-900 border-emerald-300'}`}>
-                            الرصيد: {s.balance.toFixed(2)} ج.م
-                          </span>
-                        )}
-                      </div>
-                    ))
-                  )}
-                </div>
-              )}
-            </div>
-
-            <div className="relative">
-              <label className="block font-black mb-1 text-black">الهاتف</label>
-              <input
-                type="text"
-                placeholder="رقم الهاتف..."
-                value={phone}
-                onFocus={() => setShowPhoneDropdown(true)}
-                onBlur={() => setTimeout(() => setShowPhoneDropdown(false), 200)}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  setPhone(val);
-                  setShowPhoneDropdown(true);
-                  const matched = appData.suppliers.find(
-                    (s) => (s.phone && s.phone === val) || s.name === val
-                  );
-                  if (matched) {
-                    setSupplierName(matched.name);
-                    setPhone(matched.phone || val);
-                  }
-                }}
-                className="w-full p-2.5 bg-white border-2 border-slate-400 rounded-xl focus:border-blue-700 focus:outline-none text-xs md:text-sm font-bold text-black placeholder:text-slate-500"
-              />
-              {showPhoneDropdown && (
-                <div className="absolute top-full right-0 left-0 z-50 bg-white border-2 border-slate-400 rounded-xl shadow-2xl max-h-52 overflow-y-auto mt-1 divide-y divide-slate-200">
-                  {filteredSuppliersForPhone.length === 0 ? (
-                    <div className="p-3 text-xs text-black font-bold text-center">
-                      رقم جديد: <strong className="text-blue-900">"{phone}"</strong>
-                    </div>
-                  ) : (
-                    filteredSuppliersForPhone.map((s) => (
-                      <div
-                        key={s.id}
-                        onMouseDown={(e) => {
-                          e.preventDefault();
-                          setSupplierName(s.name);
-                          setPhone(s.phone || '');
-                          setShowPhoneDropdown(false);
-                          if (s.representatives && s.representatives.length > 0) {
-                            const primary = s.representatives.find((r) => r.isPrimary) || s.representatives[0];
-                            setSupplierRepId(primary.id);
-                            setSupplierRepName(primary.name);
-                            setSupplierRepPhone(primary.phone);
-                          }
-                        }}
-                        className="p-2.5 hover:bg-slate-100 cursor-pointer flex justify-between items-center text-xs transition border-b border-slate-100"
-                      >
-                        <div>
-                          <span className="font-black text-black block text-sm">📞 {s.phone || 'بدون رقم'}</span>
-                          <span className="text-slate-800 font-bold text-xs">🏢 {s.name}</span>
-                        </div>
-                      </div>
-                    ))
-                  )}
-                </div>
-              )}
-            </div>
-
-            <div>
-              <label className="block font-bold mb-1 text-gray-700">التاريخ</label>
-              <input
-                type="date"
-                value={date}
-                onChange={(e) => setDate(e.target.value)}
-                className="w-full p-2 border-2 border-gray-200 rounded-xl focus:border-[#1a237e] focus:outline-none text-xs md:text-sm"
-              />
-            </div>
-          </div>
-
-          {/* Supplier Representative / Delegate Section */}
-          <div className="bg-indigo-50/70 p-3 rounded-xl border border-indigo-200 space-y-2">
-            <div className="flex flex-wrap items-center justify-between gap-1.5">
-              <label className="font-bold text-indigo-950 text-xs flex items-center gap-1.5">
-                <span>👥</span> مندوب التوريد / جهة الاتصال بالمورد <span className="text-gray-500 font-normal">(يظهر بالفاتورة المطبوعة)</span>
-              </label>
-              {(() => {
-                const currentSupp = appData.suppliers.find(
-                  (s) => s.name.trim().toLowerCase() === supplierName.trim().toLowerCase()
-                );
-                if (currentSupp?.representatives && currentSupp.representatives.length > 0) {
-                  return (
-                    <select
-                      value={supplierRepId}
-                      onChange={(e) => {
-                        const repId = e.target.value;
-                        setSupplierRepId(repId);
-                        const rep = currentSupp.representatives?.find((r) => r.id === repId);
-                        if (rep) {
-                          setSupplierRepName(rep.name);
-                          setSupplierRepPhone(rep.phone);
-                        } else if (!repId) {
-                          setSupplierRepName('');
-                          setSupplierRepPhone('');
-                        }
-                      }}
-                      className="bg-white border border-indigo-300 rounded-lg text-xs font-bold text-indigo-900 px-2 py-1 focus:outline-none"
-                    >
-                      <option value="">-- اختيار من مناديب المورد ({currentSupp.representatives.length}) --</option>
-                      {currentSupp.representatives.map((r) => (
-                        <option key={r.id} value={r.id}>
-                          👤 {r.name} ({r.phone}) {r.jobTitle ? `- ${r.jobTitle}` : ''}
-                        </option>
-                      ))}
-                    </select>
-                  );
-                }
-                return null;
-              })()}
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-              <div>
-                <input
-                  type="text"
-                  placeholder="اسم مندوب المورد (مثال: محمد علي)..."
-                  value={supplierRepName}
-                  onChange={(e) => setSupplierRepName(e.target.value)}
-                  className="w-full p-2 bg-white border border-indigo-200 rounded-lg focus:border-indigo-600 focus:outline-none text-xs font-medium"
-                />
-              </div>
-              <div>
-                <input
-                  type="text"
-                  placeholder="رقم هاتف مندوب المورد (مثال: 01012345678)..."
-                  value={supplierRepPhone}
-                  onChange={(e) => setSupplierRepPhone(e.target.value)}
-                  className="w-full p-2 bg-white border border-indigo-200 rounded-lg focus:border-indigo-600 focus:outline-none text-xs font-mono"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Sales / Supply Rep and Notes Row */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-indigo-50/60 p-3 rounded-xl border border-indigo-100">
-            <div>
-              <label className="block font-bold mb-1 text-gray-700 flex items-center gap-1">
-                <span>👔</span> مندوب المبيعات / التوريد <span className="text-gray-400 font-normal">(اختياري)</span>
-              </label>
-              <input
-                type="text"
-                placeholder="اسم المندوب أو مسؤول التوريد..."
-                list="salesRepsListPurchases"
-                value={salesRep}
-                onChange={(e) => setSalesRep(e.target.value)}
-                className="w-full p-2 border-2 border-gray-200 rounded-xl focus:border-[#1a237e] focus:outline-none bg-white text-xs md:text-sm"
-              />
-              <datalist id="salesRepsListPurchases">
-                {(appData.salesReps || []).map((r) => (
-                  <option key={r.id} value={r.name} />
-                ))}
-              </datalist>
-            </div>
-            <div>
-              <label className="block font-bold mb-1 text-gray-700 flex items-center gap-1">
-                <span>📝</span> ملاحظات إضافية <span className="text-gray-400 font-normal">(اختياري)</span>
-              </label>
-              <input
-                type="text"
-                placeholder="أي ملاحظات أو بيانات إضافية للمورد أو العملية..."
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                className="w-full p-2 border-2 border-gray-200 rounded-xl focus:border-[#1a237e] focus:outline-none bg-white text-xs md:text-sm"
-              />
-            </div>
-          </div>
-
-          <hr className="border-gray-200" />
-
-          {/* 📦 نظام تسجيل وإدارة الأصناف الموحد للفاتورة (متجاوب مع الهواتف وشاشات اللمس) */}
-          <div className="bg-slate-50/70 p-1 sm:p-2 rounded-2xl border border-slate-200 shadow-xs">
-            <UnifiedInvoiceItemSystem
-              mode="purchase"
-              items={unifiedItems}
-              onChangeItems={setUnifiedItems}
-              catalogItems={appData.items}
-              pricingType="cash"
-              globalInvDisc={globalInvDisc}
-              onChangeGlobalInvDisc={setGlobalInvDisc}
-              invDiscType={invDiscType}
-              onChangeInvDiscType={setInvDiscType}
-              globalInvTax={globalInvTax}
-              onChangeGlobalInvTax={setGlobalInvTax}
-              invTaxType={invTaxType}
-              onChangeInvTaxType={setInvTaxType}
-              extraIncomeName={extraIncomeName}
-              onChangeExtraIncomeName={setExtraIncomeName}
-              extraIncomeVal={extraIncomeVal}
-              onChangeExtraIncomeVal={setExtraIncomeVal}
-              paymentRows={paymentRows}
-              onChangePaymentRows={setPaymentRows}
-              hidePrintActions={true}
-              onSaveInvoice={handleSaveInvoice}
-            />
-          </div>
-        </div>
-      </Modal>
+      {/* 🏛️ واجهة تسجيل فواتير المشتريات والتوريدات المعتمدة - ركيزة (مطابقة كلياً للتصميم الأصلي بالصورة) */}
+      {(activeModal === 'create' || activeModal === 'edit') && (
+        <RakeezaInvoiceWorkspace
+          isOpen={true}
+          onClose={() => {
+            setActiveModal(null);
+            setEditingInvoiceId(null);
+          }}
+          mode="purchase"
+          invoiceType={modalType}
+          editingInvoice={editingInvoiceId !== null ? appData.purchaseInvoices.find((i) => i.id === editingInvoiceId) || null : null}
+          appData={appData}
+          onUpdateData={onUpdateData}
+          showToast={showToast}
+        />
+      )}
 
       {/* 📇 كارت الصنف Modal (اسم الصنف، البيان/الملاحظة، العدد، السعر، الخصم والضريبة بالنسبة أو الثابت) */}
       <InvoiceItemModal

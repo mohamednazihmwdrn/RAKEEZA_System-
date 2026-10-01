@@ -268,15 +268,15 @@ export const ItemsView: React.FC<ItemsViewProps> = ({
                     <div className="flex items-center justify-between border-b border-slate-100 pb-2">
                       <span className="text-[#1a237e] font-black text-sm">📦 {item.name}</span>
                       <span
-                        className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold ${
+                        className={`px-2.5 py-0.5 rounded-full text-xs font-black font-mono shadow-xs ${
                           item.quantity < 0
-                            ? 'bg-rose-100 text-rose-800'
+                            ? 'bg-rose-100 text-rose-950 border-2 border-rose-400'
                             : item.quantity === 0
-                            ? 'bg-amber-100 text-amber-800'
-                            : 'bg-emerald-100 text-emerald-800'
+                            ? 'bg-amber-100 text-amber-900 border border-amber-300'
+                            : 'bg-emerald-100 text-emerald-900 border border-emerald-300'
                         }`}
                       >
-                        الكمية: {item.quantity}
+                        {item.quantity < 0 ? `⚠️ رصيد سالب: ${item.quantity}` : `الكمية: ${item.quantity}`}
                       </span>
                     </div>
 
@@ -349,12 +349,18 @@ export const ItemsView: React.FC<ItemsViewProps> = ({
                       <tr key={item.id} className="hover:bg-slate-50">
                         <td className="p-3 font-bold text-[#1a237e]">{item.name}</td>
                         <td className="p-3 text-gray-500">{item.description || '-'}</td>
-                        <td
-                          className={`p-3 font-bold ${
-                            item.quantity < 0 ? 'text-[#c62828]' : item.quantity === 0 ? 'text-[#f57f17]' : ''
-                          }`}
-                        >
-                          {item.quantity}
+                        <td className="p-3">
+                          {item.quantity < 0 ? (
+                            <span className="inline-flex items-center gap-1 font-mono font-black text-rose-950 bg-rose-100 border-2 border-rose-400 rounded-lg px-2.5 py-1 text-xs shadow-xs">
+                              ⚠️ رصيد سالب: {item.quantity}
+                            </span>
+                          ) : item.quantity === 0 ? (
+                            <span className="font-mono font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
+                              0 (نفد الرصيد)
+                            </span>
+                          ) : (
+                            <span className="font-mono font-bold text-slate-900">{item.quantity}</span>
+                          )}
                         </td>
                         <td className="p-3">{item.purchasePrice.toFixed(2)}</td>
                         <td className="p-3 font-semibold">{item.salePrice.toFixed(2)}</td>
