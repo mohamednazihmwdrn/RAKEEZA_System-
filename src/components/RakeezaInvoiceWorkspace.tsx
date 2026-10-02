@@ -1,23 +1,4 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import {
-  Boxes,
-  SlidersHorizontal,
-  Plus,
-  Minus,
-  Trash2,
-  Edit,
-  Printer,
-  Save,
-  X,
-  Check,
-  Search,
-  Calendar,
-  Clock,
-  Building2,
-  DollarSign,
-  AlertTriangle,
-  FolderTree,
-} from 'lucide-react';
 import { AppData, SaleInvoice, PurchaseInvoice, InvoiceItem, Customer, Supplier } from '../types';
 import { calculateCustomerBalance, calculateSupplierBalance } from '../utils/accounting';
 import { postSaleInvoice, postPurchaseInvoice } from '../utils/posting';
@@ -40,28 +21,834 @@ export interface WorkspaceItemRow {
   spec: string;
   qty: number;
   price: number;
-  discVal: number;
-  discType: 'val' | 'percent';
-  taxVal: number;
-  taxType: 'val' | 'percent';
   total: number;
   itemId?: string;
   costPrice?: number;
 }
 
-export interface SplitPaymentRow {
+export interface WorkspacePayRow {
   id: string;
   method: string;
   amount: number;
 }
 
-export const PAYMENT_METHODS = [
-  'نقدي / كاش (الدرج)',
-  'انستاباي Instapay',
-  'فودافون كاش Vodafone Cash',
-  'فيزا / كارت Visa',
-  'حساب بنكي',
-];
+const EXACT_RAW_CSS = `
+:root {
+    --primary: #1e293b;
+    --secondary: #2563eb;
+    --accent: #16a34a;
+    --danger: #dc2626;
+    --warning: #d97706;
+    --bg: #e2e8f0;
+    --border: #cbd5e1;
+    --light: #f8fafc;
+}
+
+.rakeeza-root * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    font-family: "Segoe UI", Tahoma, Arial, sans-serif;
+}
+
+.rakeeza-overlay {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background-color: rgba(15, 23, 42, 0.7);
+    padding: 4px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 2000;
+}
+
+.app-container {
+    width: 100%;
+    max-width: 480px;
+    background: #fff;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    max-height: 98vh;
+    position: relative;
+    overflow: hidden;
+}
+
+.header-title {
+    background: var(--primary);
+    color: #fff;
+    padding: 5px 8px;
+    font-size: 10.5px;
+    font-weight: bold;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+#liveTime {
+    font-size: 9px;
+}
+
+/* شريط التنقل العلوي للتبويبات */
+.portal-nav {
+    display: flex;
+    background: #f1f5f9;
+    border-bottom: 1px solid var(--border);
+    overflow-x: auto;
+    flex-shrink: 0;
+    white-space: nowrap;
+    scrollbar-width: none;
+}
+
+.portal-nav::-webkit-scrollbar {
+    display: none;
+}
+
+.nav-tab {
+    padding: 6px 8px;
+    font-size: 8px;
+    font-weight: bold;
+    color: #475569;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s ease;
+}
+
+.nav-tab i {
+    font-size: 11px;
+}
+
+.nav-tab.active {
+    color: var(--secondary);
+    background: #fff;
+    border-bottom-color: var(--secondary);
+}
+
+.main-viewport {
+    flex: 1;
+    position: relative;
+    overflow-y: auto;
+    background: #f8fafc;
+    display: flex;
+    flex-direction: column;
+    padding: 4px;
+}
+
+.tab-content {
+    display: none;
+    flex-direction: column;
+    gap: 4px;
+    height: 100%;
+}
+
+.tab-content.active {
+    display: flex;
+}
+
+/* تنسيقات شاشة الفواتير والمخزون المدمجة */
+.invoice-card {
+    background: #ffffff;
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 3px;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 2px;
+    flex-shrink: 0;
+}
+
+.field-inline {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    min-width: 0;
+    position: relative;
+}
+
+label {
+    font-size: 8px;
+    font-weight: bold;
+    color: #475569;
+}
+
+input, select {
+    padding: 2px 4px;
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    font-size: 9px;
+    outline: none;
+    background: #fff;
+    width: 100%;
+    height: 22px;
+}
+
+.span-2 { grid-column: span 2; }
+.span-3 { grid-column: span 3; }
+
+.autocomplete-dropdown {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    left: 0;
+    background: #fff;
+    border: 1px solid var(--secondary);
+    border-radius: 3px;
+    max-height: 110px;
+    overflow-y: auto;
+    z-index: 9999;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+    margin-top: 2px;
+}
+
+.autocomplete-item {
+    padding: 5px 6px;
+    font-size: 9px;
+    cursor: pointer;
+    border-bottom: 1px solid #f1f5f9;
+    color: #1e293b;
+}
+
+.autocomplete-item:hover {
+    background: #eff6ff;
+    color: var(--secondary);
+    font-weight: bold;
+}
+
+.top-actions-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 3px;
+    flex-shrink: 0;
+}
+
+.btn-action-top {
+    width: 100%;
+    padding: 5px;
+    background: var(--secondary);
+    color: white;
+    border: none;
+    border-radius: 3px;
+    font-size: 9.5px;
+    font-weight: bold;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+}
+
+.btn-action-alt {
+    background: #475569;
+}
+
+.table-responsive {
+    width: 100%;
+    flex: 1;
+    overflow-y: auto;
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    background: #fff;
+}
+
+.rakeeza-root table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 8.5px;
+    text-align: center;
+}
+
+.rakeeza-root th, .rakeeza-root td {
+    padding: 2px 2px;
+    border: 1px solid var(--border);
+    vertical-align: middle;
+}
+
+.rakeeza-root th {
+    background: #f1f5f9;
+    color: var(--primary);
+    font-weight: bold;
+    position: sticky;
+    top: 0;
+    z-index: 2;
+}
+
+.invoice-item-actions {
+    display: inline-flex;
+    gap: 4px;
+    justify-content: center;
+}
+
+.invoice-item-actions i {
+    cursor: pointer;
+    font-size: 10px;
+    padding: 2px;
+}
+
+.bottom-fixed-area {
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    background: #fff;
+    padding: 4px;
+    border-top: 1px solid var(--border);
+}
+
+.summary-bar {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 2px;
+    background: #ffffff;
+    color: #1e293b;
+    padding: 4px;
+    border-radius: 3px;
+    border: 1px solid var(--border);
+    text-align: center;
+}
+
+.summary-item {
+    font-size: 8px;
+    background: #f8fafc;
+    border: 1px solid var(--border);
+    color: #475569;
+    padding: 3px 2px;
+    border-radius: 2px;
+}
+
+.summary-item span {
+    font-weight: bold;
+    color: #0f172a;
+    display: block;
+    font-size: 9px;
+}
+
+.summary-net {
+    grid-column: span 3;
+    background: #f1f5f9 !important;
+    border: 1px solid #cbd5e1 !important;
+    color: #0f172a !important;
+    font-size: 9.5px !important;
+}
+
+.summary-net span { color: #0f172a !important; font-size: 11px !important; font-weight: bold !important; }
+
+.btn-action-bar {
+    display: flex;
+    gap: 3px;
+}
+
+.btn-action {
+    flex: 1;
+    padding: 5px;
+    border: none;
+    border-radius: 3px;
+    font-weight: bold;
+    font-size: 8.5px;
+    color: white;
+    cursor: pointer;
+    text-align: center;
+}
+
+/* النوافذ المنبثقة (Modals) */
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.65);
+    z-index: 2500;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 6px;
+}
+
+.modal-box {
+    background: #fff;
+    width: 100%;
+    max-width: 400px;
+    border-radius: 8px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    border: 1px solid var(--border);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+}
+
+.modal-header {
+    background: var(--secondary);
+    color: white;
+    padding: 6px 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 10.5px;
+    font-weight: bold;
+}
+
+.modal-body {
+    padding: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.big-toggle-group {
+    display: flex;
+    border: 2px solid var(--secondary);
+    border-radius: 4px;
+    overflow: hidden;
+    height: 24px;
+    width: 110px;
+}
+
+.big-toggle-btn {
+    flex: 1;
+    font-size: 9.5px;
+    font-weight: bold;
+    cursor: pointer;
+    border: none;
+    background: #fff;
+    color: var(--secondary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.big-toggle-btn.active {
+    background: var(--secondary);
+    color: white;
+}
+
+.edit-card-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 4px;
+}
+
+.lookup-modal-box {
+    background: #e5e7eb;
+    width: 98vw;
+    height: 94vh;
+    border-radius: 6px;
+    display: flex;
+    flex-direction: column;
+    border: 2px solid #64748b;
+    overflow: hidden;
+}
+
+.lookup-layout {
+    display: flex;
+    flex: 1;
+    padding: 4px;
+    gap: 4px;
+    overflow: hidden;
+}
+
+.categories-panel {
+    width: 85px;
+    background: #f8fafc;
+    border: 1px solid #94a3b8;
+    border-radius: 4px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    flex-shrink: 0;
+}
+
+.categories-header {
+    background: #f1f5f9;
+    padding: 4px 2px;
+    font-size: 8px;
+    font-weight: bold;
+    border-bottom: 1px solid #cbd5e1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+}
+
+.categories-list {
+    flex: 1;
+    overflow-y: auto;
+}
+
+.category-item {
+    padding: 6px 3px;
+    font-size: 8px;
+    font-weight: bold;
+    border-bottom: 1px solid #e2e8f0;
+    cursor: pointer;
+    text-align: center;
+    color: #1e293b;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.category-item.active {
+    background: #0284c7;
+    color: white;
+}
+
+.items-panel {
+    flex: 1;
+    background: #f8fafc;
+    border: 1px solid #94a3b8;
+    border-radius: 4px;
+    display: flex;
+    flex-direction: column;
+    padding: 4px;
+    gap: 3px;
+    overflow: hidden;
+}
+
+.search-top-bar {
+    background: #fff;
+    padding: 3px;
+    border: 1px solid #cbd5e1;
+    border-radius: 3px;
+    display: flex;
+    gap: 3px;
+    align-items: center;
+}
+
+.lookup-cards-container {
+    flex: 1;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 2px;
+}
+
+.item-card-box {
+    background: #fff;
+    border: 1px solid #cbd5e1;
+    border-radius: 4px;
+    padding: 5px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    cursor: pointer;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}
+
+.item-card-box:hover {
+    border-color: var(--secondary);
+    background: #f8fafc;
+}
+
+.item-card-box.low-stock {
+    border-color: var(--danger);
+    background: #fef2f2;
+}
+
+.item-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-weight: bold;
+    font-size: 9.5px;
+    color: var(--primary);
+    border-bottom: 1px solid #f1f5f9;
+    padding-bottom: 2px;
+}
+
+.item-card-body {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 2px;
+    font-size: 8px;
+    text-align: center;
+    padding-top: 1px;
+}
+
+.item-card-info {
+    background: #f8fafc;
+    padding: 2px 1px;
+    border-radius: 2px;
+    border: 1px solid #e2e8f0;
+}
+
+.item-card-box.low-stock .item-card-info {
+    background: #fff5f5;
+    border-color: #fca5a5;
+}
+
+.item-card-info span {
+    display: block;
+    font-size: 6px;
+    color: #64748b;
+}
+
+.item-card-info strong {
+    font-size: 8px;
+}
+
+.system-footer {
+    flex-shrink: 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #fff;
+    padding: 4px 8px;
+    border-top: 1px solid var(--border);
+    font-size: 8px;
+    color: #64748b;
+}
+
+/* 📱💻 تحسينات التجاوب والمرونة للشاشات الأكبر (التابلت والكمبيوتر) دون التأثير إطلاقاً على الهاتف */
+.app-container.maximized {
+    width: 99vw !important;
+    max-width: 99vw !important;
+    height: 98vh !important;
+    max-height: 98vh !important;
+    border-radius: 6px !important;
+}
+
+@media (min-width: 641px) {
+    .rakeeza-overlay {
+        padding: 8px;
+    }
+    .app-container {
+        max-width: 760px;
+        height: 95vh;
+        max-height: 95vh;
+        border-radius: 8px;
+    }
+    .header-title {
+        font-size: 11.5px;
+        padding: 6px 10px;
+    }
+    .portal-nav {
+        padding: 0 4px;
+    }
+    .nav-tab {
+        font-size: 9.5px;
+        padding: 7px 10px;
+    }
+}
+
+@media (min-width: 768px) {
+    .app-container {
+        max-width: 920px;
+        height: 94vh;
+        max-height: 94vh;
+    }
+    .header-title {
+        font-size: 12px;
+        padding: 7px 12px;
+    }
+    .portal-nav {
+        gap: 2px;
+    }
+    .nav-tab {
+        flex-direction: row;
+        gap: 5px;
+        font-size: 10px;
+        padding: 7px 12px;
+    }
+    .nav-tab i {
+        font-size: 12px;
+    }
+    .main-viewport {
+        padding: 6px 8px;
+        gap: 6px;
+    }
+    .invoice-card {
+        grid-template-columns: repeat(6, minmax(0, 1fr));
+        gap: 6px;
+        padding: 6px 8px;
+        border-radius: 5px;
+    }
+    .invoice-card .span-2 {
+        grid-column: span 3;
+    }
+    .invoice-card .span-3 {
+        grid-column: span 6;
+    }
+    label {
+        font-size: 9.5px;
+    }
+    input, select {
+        height: 26px;
+        font-size: 10.5px;
+        padding: 3px 6px;
+    }
+    #custLimitDisplay {
+        font-size: 9.5px !important;
+        padding: 5px 8px !important;
+    }
+    .pricing-box {
+        padding: 5px 8px !important;
+    }
+    .pricing-box label {
+        font-size: 9.5px !important;
+    }
+    .price-type-btn {
+        font-size: 9.5px !important;
+        padding: 4px 6px !important;
+    }
+    .top-actions-grid {
+        gap: 6px;
+    }
+    .btn-action-top {
+        padding: 7px !important;
+        font-size: 10.5px !important;
+    }
+    .rakeeza-root table {
+        font-size: 10px;
+    }
+    .rakeeza-root th, .rakeeza-root td {
+        padding: 5px 6px;
+    }
+    .invoice-item-actions i {
+        font-size: 12px;
+        padding: 2px 4px;
+    }
+    .summary-bar {
+        grid-template-columns: repeat(7, minmax(0, 1fr));
+        gap: 4px;
+        padding: 6px;
+        border-radius: 5px;
+    }
+    .summary-item {
+        font-size: 9px;
+        padding: 4px 2px;
+    }
+    .summary-item span {
+        font-size: 10.5px;
+    }
+    .summary-net {
+        grid-column: span 1 !important;
+        font-size: 9.5px !important;
+    }
+    .summary-net span {
+        font-size: 11.5px !important;
+    }
+    .btn-action-bar {
+        gap: 6px;
+    }
+    .btn-action {
+        padding: 7px !important;
+        font-size: 10.5px !important;
+    }
+    .lookup-modal-box {
+        max-width: 1050px;
+        height: 88vh;
+    }
+    .categories-panel {
+        width: 140px;
+    }
+    .category-item {
+        font-size: 10px;
+        padding: 8px 4px;
+    }
+    .lookup-cards-container {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+        gap: 6px;
+        padding: 4px;
+    }
+    .item-card-header {
+        font-size: 11px;
+    }
+    .item-card-body {
+        font-size: 9px;
+    }
+    .item-card-info strong {
+        font-size: 9.5px;
+    }
+}
+
+@media (min-width: 1025px) {
+    .app-container {
+        max-width: 1280px;
+        height: 92vh;
+        max-height: 92vh;
+    }
+    .header-title {
+        font-size: 13px;
+        padding: 8px 14px;
+    }
+    .nav-tab {
+        font-size: 11px;
+        padding: 8px 16px;
+        gap: 7px;
+    }
+    .nav-tab i {
+        font-size: 13px;
+    }
+    .main-viewport {
+        padding: 8px 12px;
+        gap: 8px;
+    }
+    .invoice-card {
+        padding: 8px 12px;
+        gap: 8px;
+    }
+    label {
+        font-size: 10.5px;
+    }
+    input, select {
+        height: 28px;
+        font-size: 11px;
+        padding: 4px 8px;
+    }
+    #custLimitDisplay {
+        font-size: 10.5px !important;
+        padding: 6px 12px !important;
+    }
+    .rakeeza-root table {
+        font-size: 11px;
+    }
+    .rakeeza-root th, .rakeeza-root td {
+        padding: 7px 8px;
+    }
+    .summary-bar {
+        gap: 6px;
+        padding: 8px;
+    }
+    .summary-item {
+        font-size: 10px;
+        padding: 5px 3px;
+    }
+    .summary-item span {
+        font-size: 12px;
+    }
+    .summary-net {
+        font-size: 10.5px !important;
+    }
+    .summary-net span {
+        font-size: 13px !important;
+    }
+    .btn-action-bar {
+        gap: 8px;
+    }
+    .btn-action {
+        padding: 9px !important;
+        font-size: 11.5px !important;
+    }
+    .lookup-modal-box {
+        max-width: 1200px;
+    }
+    .categories-panel {
+        width: 160px;
+    }
+}
+`;
 
 export const RakeezaInvoiceWorkspace: React.FC<RakeezaInvoiceWorkspaceProps> = ({
   isOpen,
@@ -76,6 +863,23 @@ export const RakeezaInvoiceWorkspace: React.FC<RakeezaInvoiceWorkspaceProps> = (
   const isSale = mode === 'sale';
   const isReturn = invoiceType.startsWith('return_');
   const isEditing = !!editingInvoice;
+
+  // Window Maximize Toggle for large displays
+  const [isMaximized, setIsMaximized] = useState(false);
+
+  // Active Tab
+  const [activeTab, setActiveTab] = useState<'invoice' | 'customers' | 'suppliers' | 'receipts' | 'payments' | 'inventory' | 'pnl' | 'backup'>('invoice');
+
+  // Live Time
+  const [liveTimeStr, setLiveTimeStr] = useState('');
+  useEffect(() => {
+    const update = () => {
+      setLiveTimeStr(new Date().toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' }));
+    };
+    update();
+    const interval = setInterval(update, 1000);
+    return () => clearInterval(interval);
+  }, []);
 
   // Invoice Meta
   const invNumber = editingInvoice
@@ -93,18 +897,18 @@ export const RakeezaInvoiceWorkspace: React.FC<RakeezaInvoiceWorkspaceProps> = (
   );
 
   // Party State
+  const [partyCode, setPartyCode] = useState<string>('1');
   const [partyName, setPartyName] = useState<string>(
     isSale ? (editingInvoice as SaleInvoice)?.customerName || '' : (editingInvoice as PurchaseInvoice)?.supplierName || ''
   );
   const [partyPhone, setPartyPhone] = useState<string>(editingInvoice?.phone || '');
-  const [partyCode, setPartyCode] = useState<string>('1');
-  const [statement, setStatement] = useState<string>(editingInvoice?.notes || '');
+  const [jobSite, setJobSite] = useState<string>(editingInvoice?.notes || '');
 
-  const [showPartyDropdown, setShowPartyDropdown] = useState(false);
-  const [showPhoneDropdown, setShowPhoneDropdown] = useState(false);
+  const [showCustomersDropdownList, setShowCustomersDropdownList] = useState(false);
+  const [showPhoneDropdownList, setShowPhoneDropdownList] = useState(false);
 
   // Pricing Mode: 'cash' | 'wholesale' | 'buy'
-  const [pricingType, setPricingType] = useState<'cash' | 'wholesale' | 'buy'>(
+  const [currentInvoicePriceType, setCurrentInvoicePriceType] = useState<'cash' | 'wholesale' | 'buy'>(
     isSale
       ? (editingInvoice as any)?.salesType === 'wholesale'
         ? 'wholesale'
@@ -112,8 +916,8 @@ export const RakeezaInvoiceWorkspace: React.FC<RakeezaInvoiceWorkspaceProps> = (
       : 'buy'
   );
 
-  // Items State
-  const [items, setItems] = useState<WorkspaceItemRow[]>(() => {
+  // Invoice Items
+  const [currentInvoiceItems, setCurrentInvoiceItems] = useState<WorkspaceItemRow[]>(() => {
     if (editingInvoice?.items && editingInvoice.items.length > 0) {
       return editingInvoice.items.map((itm) => ({
         code: itm.code || `ITM-${itm.itemId || '001'}`,
@@ -121,11 +925,7 @@ export const RakeezaInvoiceWorkspace: React.FC<RakeezaInvoiceWorkspaceProps> = (
         spec: itm.spec || itm.notes || '',
         qty: itm.qty || 1,
         price: itm.price || 0,
-        discVal: itm.discVal ?? itm.discountValue ?? (itm.discount || 0),
-        discType: (itm.discType as any) === 'percent' || itm.discountType === 'percent' ? 'percent' : 'val',
-        taxVal: itm.taxVal ?? itm.taxValue ?? (itm.tax || 0),
-        taxType: (itm.taxType as any) === 'percent' || itm.taxType === 'percent' ? 'percent' : 'val',
-        total: itm.total || 0,
+        total: (itm.qty || 1) * (itm.price || 0),
         itemId: itm.itemId,
         costPrice: itm.costPrice,
       }));
@@ -133,73 +933,107 @@ export const RakeezaInvoiceWorkspace: React.FC<RakeezaInvoiceWorkspaceProps> = (
     return [];
   });
 
-  // Global Discount & Tax & Extra Revenue
-  const [globalInvDisc, setGlobalInvDisc] = useState<number>(editingInvoice?.discountValue || 0);
-  const [invDiscType, setInvDiscType] = useState<'val' | 'percent'>(
-    editingInvoice?.discountType === 'percent' ? 'percent' : 'val'
+  // Global Options State (Modal)
+  const [isOptionsModalOpen, setIsOptionsModalOpen] = useState(false);
+  const [invDiscType, setInvDiscType] = useState<'val' | 'percent'>('val');
+  const [globalInvDisc, setGlobalInvDisc] = useState<string>(
+    editingInvoice?.discountValue ? String(editingInvoice.discountValue) : ''
   );
-  const [globalInvTax, setGlobalInvTax] = useState<number>(editingInvoice?.taxValue || 0);
-  const [invTaxType, setInvTaxType] = useState<'percent' | 'val'>(
-    editingInvoice?.taxType === 'percent' ? 'percent' : 'val'
+  const [invTaxType, setInvTaxType] = useState<'val' | 'percent'>('percent');
+  const [globalInvTax, setGlobalInvTax] = useState<string>(
+    editingInvoice?.taxValue ? String(editingInvoice.taxValue) : ''
   );
-  const [extraRevenueName, setExtraRevenueName] = useState<string>(
+  const [extraIncomeName, setExtraIncomeName] = useState<string>(
     editingInvoice?.extraRevenueName || ''
   );
-  const [extraRevenueVal, setExtraRevenueVal] = useState<number>(
-    editingInvoice?.extraRevenueAmount || 0
+  const [extraIncomeVal, setExtraIncomeVal] = useState<string>(
+    editingInvoice?.extraRevenueAmount ? String(editingInvoice.extraRevenueAmount) : ''
   );
 
-  // Payments
-  const [paymentRows, setPaymentRows] = useState<SplitPaymentRow[]>(() => {
+  // Split Payments
+  const [paymentRows, setPaymentRows] = useState<WorkspacePayRow[]>(() => {
     if (editingInvoice?.paymentSplits && editingInvoice.paymentSplits.length > 0) {
       return editingInvoice.paymentSplits.map((s, idx) => ({
         id: `split_${idx}`,
-        method: s.method || 'نقدي / كاش (الدرج)',
+        method: s.method || 'نقدي',
         amount: s.amount || 0,
       }));
     }
-    const defaultPaid = editingInvoice?.paidAmount ?? (invoiceType === 'nagdi' ? editingInvoice?.total || 0 : 0);
-    return [
-      {
-        id: 'pay_init',
-        method: 'نقدي / كاش (الدرج)',
-        amount: defaultPaid,
-      },
-    ];
+    return [];
   });
 
-  // Popups
-  const [isCatalogOpen, setIsCatalogOpen] = useState(false);
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [isItemEditModalOpen, setIsItemEditModalOpen] = useState(false);
-  const [editingItemIndex, setEditingItemIndex] = useState<number>(-1);
+  // Lookup Modal State
+  const [isLookupModalOpen, setIsLookupModalOpen] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [lookupSearch, setLookupSearch] = useState<string>('');
 
-  // Item Edit State
-  const [editItemObj, setEditItemObj] = useState<{
-    code: string;
-    name: string;
-    category?: string;
-    stock: number;
-    cashPrice: number;
-    wholesalePrice: number;
-    buyPrice: number;
-    id?: string;
-  } | null>(null);
+  // Modify Item Modal State
+  const [isModifyModalOpen, setIsModifyModalOpen] = useState(false);
+  const [modifyIndex, setModifyIndex] = useState<number>(-1);
+  const [modifyName, setModifyName] = useState<string>('');
+  const [modifyQty, setModifyQty] = useState<string>('1');
+  const [modifyPrice, setModifyPrice] = useState<string>('0');
+  const [modifySpec, setModifySpec] = useState<string>('');
 
-  const [editQty, setEditQty] = useState('1');
-  const [editPrice, setEditPrice] = useState('0');
-  const [editDiscVal, setEditDiscVal] = useState('0');
-  const [editDiscType, setEditDiscType] = useState<'val' | 'percent'>('val');
-  const [editTaxVal, setEditTaxVal] = useState('0');
-  const [editTaxType, setEditTaxType] = useState<'val' | 'percent'>('percent');
-  const [editSpec, setEditSpec] = useState('');
-  const [itemPriceTier, setItemPriceTier] = useState<'cash' | 'wholesale' | 'buy' | 'custom'>('cash');
+  // Edit Item / New Item Modal State
+  const [isEditItemModalOpen, setIsEditItemModalOpen] = useState(false);
+  const [newItemName, setNewItemName] = useState('');
+  const [newItemCode, setNewItemCode] = useState('');
+  const [newItemBuyPrice, setNewItemBuyPrice] = useState('');
+  const [newItemCategory, setNewItemCategory] = useState('عامة');
+  const [newItemCashPrice, setNewItemCashPrice] = useState('');
+  const [newItemWholesalePrice, setNewItemWholesalePrice] = useState('');
+  const [newItemStock, setNewItemStock] = useState('');
 
-  // Fast Catalog Search State
-  const [catalogSearch, setCatalogSearch] = useState('');
-  const [catalogCategory, setCatalogCategory] = useState('all');
+  // Tab Forms
+  const [quickCustName, setQuickCustName] = useState('');
+  const [quickCustPhone, setQuickCustPhone] = useState('');
+  const [quickCustType, setQuickCustType] = useState('cash');
+  const [quickCustVal, setQuickCustVal] = useState('0');
 
-  // Matched Customer / Supplier
+  const [quickSuppName, setQuickSuppName] = useState('');
+  const [quickSuppPhone, setQuickSuppPhone] = useState('');
+  const [quickSuppType, setQuickSuppType] = useState('forUs');
+  const [quickSuppVal, setQuickSuppVal] = useState('0');
+
+  const [recParty, setRecParty] = useState('');
+  const [recAmount, setRecAmount] = useState('');
+  const [recNotes, setRecNotes] = useState('');
+
+  const [payParty, setPayParty] = useState('');
+  const [payAmount, setPayAmount] = useState('');
+  const [payNotes, setPayNotes] = useState('');
+
+  // Items Database from appData
+  const itemsDatabase = useMemo(() => {
+    return appData.items.map((i) => ({
+      code: i.code || i.barcode || `1${i.id.substring(0, 4)}`,
+      name: i.name,
+      category: i.category || 'عامة',
+      stock: Number(i.quantity ?? 0),
+      buyPrice: Number(i.purchasePrice || i.costPrice || 0),
+      cashPrice: Number(i.salePrice || i.normalSellingPrice || i.price || 0),
+      wholesalePrice: Number(i.wholesalePrice || i.wholesaleSellingPrice || i.salePrice || 0),
+      id: i.id,
+    }));
+  }, [appData.items]);
+
+  // Categories List
+  const categoriesList = useMemo(() => {
+    const set = new Set<string>();
+    itemsDatabase.forEach((c) => {
+      if (c.category && c.category.trim()) set.add(c.category.trim());
+    });
+    if (set.size === 0) {
+      set.add('عامة');
+      set.add('بويات وأسقف');
+      set.add('أدوات صحية');
+      set.add('عدد وأدوات');
+    }
+    return Array.from(set);
+  }, [itemsDatabase]);
+
+  // Party Matched
   const matchedCustomer = useMemo(() => {
     if (!isSale) return null;
     return (
@@ -222,7 +1056,7 @@ export const RakeezaInvoiceWorkspace: React.FC<RakeezaInvoiceWorkspaceProps> = (
     );
   }, [isSale, partyName, partyPhone, appData.suppliers]);
 
-  // Update party code
+  // Update Party Code
   useEffect(() => {
     if (isSale && matchedCustomer) {
       setPartyCode(
@@ -241,289 +1075,297 @@ export const RakeezaInvoiceWorkspace: React.FC<RakeezaInvoiceWorkspaceProps> = (
     }
   }, [isSale, matchedCustomer, matchedSupplier]);
 
-  // Customer or Supplier Balance Calculation
-  const partyFinancials = useMemo(() => {
+  // Dynamic Balance Display
+  const partyAccountDisplay = useMemo(() => {
     if (isSale) {
-      if (!matchedCustomer) return { balance: 0, statusLabel: 'نقدي (عميل جديد)' };
-      const summary = calculateCustomerBalance(matchedCustomer, appData);
+      if (!matchedCustomer) {
+        return {
+          typeLabel: invoiceType === 'nagdi' ? 'نقدي' : 'آجل',
+          balanceVal: 0,
+        };
+      }
+      const sum = calculateCustomerBalance(matchedCustomer, appData);
       return {
-        balance: summary.balance,
-        statusLabel:
-          summary.balance > 0
-            ? `مدين (مستحق عليه ${summary.balance.toFixed(2)} ج.م)`
-            : summary.balance < 0
-            ? `دائن (له رصيد ${Math.abs(summary.balance).toFixed(2)} ج.م)`
-            : 'متزن (خالص 0.00)',
+        typeLabel: sum.balance > 0 ? 'آجل (عليه)' : sum.balance < 0 ? 'آجل (له)' : 'نقدي',
+        balanceVal: Math.abs(sum.balance),
       };
     } else {
-      if (!matchedSupplier) return { balance: 0, statusLabel: 'نقدي (مورد جديد)' };
-      const summary = calculateSupplierBalance(matchedSupplier, appData);
+      if (!matchedSupplier) {
+        return {
+          typeLabel: invoiceType === 'nagdi' ? 'نقدي' : 'آجل',
+          balanceVal: 0,
+        };
+      }
+      const sum = calculateSupplierBalance(matchedSupplier, appData);
       return {
-        balance: summary.balance,
-        statusLabel:
-          summary.balance > 0
-            ? `دائن (له مستحق ${summary.balance.toFixed(2)} ج.م)`
-            : summary.balance < 0
-            ? `مدين (عليه رصيد ${Math.abs(summary.balance).toFixed(2)} ج.م)`
-            : 'متزن (خالص 0.00)',
+        typeLabel: sum.balance > 0 ? 'آجل (له مستحق)' : sum.balance < 0 ? 'آجل (عليه)' : 'نقدي',
+        balanceVal: Math.abs(sum.balance),
       };
     }
-  }, [isSale, matchedCustomer, matchedSupplier, appData]);
+  }, [isSale, matchedCustomer, matchedSupplier, appData, invoiceType]);
 
-  // Filtered Party Lists for search
-  const filteredParties = useMemo(() => {
-    const list = isSale ? appData.customers : appData.suppliers;
-    if (!partyName.trim()) return list.slice(0, 10);
-    const q = partyName.trim().toLowerCase();
-    return list.filter(
-      (p) =>
-        (p.name || '').toLowerCase().includes(q) ||
-        (p.phone || '').includes(q)
-    );
-  }, [isSale, partyName, appData.customers, appData.suppliers]);
-
-  const filteredPartiesByPhone = useMemo(() => {
-    const list = isSale ? appData.customers : appData.suppliers;
-    if (!partyPhone.trim()) return list.slice(0, 10);
-    return list.filter((p) => (p.phone || '').includes(partyPhone.trim()));
-  }, [isSale, partyPhone, appData.customers, appData.suppliers]);
-
-  // Catalog items
-  const catalogList = useMemo(() => {
-    return appData.items.map((i) => ({
-      id: i.id,
-      code: i.code || i.barcode || `ITM-${i.id.substring(0, 5)}`,
-      name: i.name,
-      category: i.category || 'عام',
-      stock: Number(i.quantity ?? 0),
-      cashPrice: Number(i.salePrice || i.normalSellingPrice || i.price || 0),
-      wholesalePrice: Number(i.wholesalePrice || i.wholesaleSellingPrice || i.salePrice || 0),
-      buyPrice: Number(i.purchasePrice || i.costPrice || 0),
-    }));
-  }, [appData.items]);
-
-  const categories = useMemo(() => {
-    const set = new Set<string>();
-    catalogList.forEach((c) => {
-      if (c.category) set.add(c.category.trim());
-    });
-    return Array.from(set);
-  }, [catalogList]);
-
-  const filteredCatalogItems = useMemo(() => {
-    const q = catalogSearch.toLowerCase().trim();
-    return catalogList.filter((item) => {
-      if (catalogCategory !== 'all' && item.category !== catalogCategory) {
-        return false;
-      }
-      if (!q) return true;
-      return (
-        item.name.toLowerCase().includes(q) ||
-        item.code.toLowerCase().includes(q)
-      );
-    });
-  }, [catalogList, catalogCategory, catalogSearch]);
-
-  // Calculations
+  // -------------------------------------------------------------
+  // ⚡ Precise Calculations Engine with Instant Live Updates
+  // -------------------------------------------------------------
   const calculations = useMemo(() => {
     let totalQty = 0;
-    let itemsSubtotal = 0;
-    let totalItemDiscounts = 0;
-    let totalItemTaxes = 0;
+    let subTotal = 0;
 
-    items.forEach((itm) => {
-      totalQty += itm.qty;
-      const base = itm.price * itm.qty;
-      itemsSubtotal += base;
-
-      const lineDisc =
-        itm.discType === 'percent'
-          ? base * (itm.discVal / 100)
-          : itm.discVal * itm.qty;
-      totalItemDiscounts += lineDisc;
-
-      const afterDisc = base - lineDisc;
-      const lineTax =
-        itm.taxType === 'percent'
-          ? afterDisc * (itm.taxVal / 100)
-          : itm.taxVal * itm.qty;
-      totalItemTaxes += lineTax;
+    currentInvoiceItems.forEach((item) => {
+      const q = Number(item.qty) || 0;
+      const p = Number(item.price) || 0;
+      totalQty += q;
+      subTotal += q * p;
     });
 
-    const netItems = itemsSubtotal - totalItemDiscounts + totalItemTaxes;
+    const discInput = Math.max(0, parseFloat(globalInvDisc) || 0);
+    const rawDisc = invDiscType === 'percent' ? (subTotal * discInput) / 100 : discInput;
+    const disc = Math.min(subTotal, Math.max(0, rawDisc));
 
-    const globalDisc =
-      invDiscType === 'percent'
-        ? netItems * (globalInvDisc / 100)
-        : globalInvDisc;
-    const totalDiscount = totalItemDiscounts + globalDisc;
+    const taxInput = Math.max(0, parseFloat(globalInvTax) || 0);
+    const taxableBase = Math.max(0, subTotal - disc);
+    const rawTax = invTaxType === 'percent' ? (taxableBase * taxInput) / 100 : taxInput;
+    const tax = Math.max(0, rawTax);
 
-    const baseForGlobalTax = Math.max(0, netItems - globalDisc);
-    const globalTax =
-      invTaxType === 'percent'
-        ? baseForGlobalTax * (globalInvTax / 100)
-        : globalInvTax;
-    const totalTax = totalItemTaxes + globalTax;
+    const extra = Math.max(0, parseFloat(extraIncomeVal) || 0);
+    const net = Math.max(0, subTotal - disc + tax + extra);
 
-    const netFinal = Math.max(
-      0,
-      itemsSubtotal - totalDiscount + totalTax + (extraRevenueVal || 0)
-    );
+    let paid = 0;
+    if (paymentRows.length === 0) {
+      paid = invoiceType === 'nagdi' ? net : 0;
+    } else {
+      paymentRows.forEach((p) => {
+        paid += Number(p.amount) || 0;
+      });
+    }
 
-    const paidTotal = paymentRows.reduce(
-      (sum, r) => sum + (Number(r.amount) || 0),
-      0
-    );
-    const remaining = Math.max(0, netFinal - paidTotal);
+    const remain = Math.max(0, net - paid);
 
     return {
       totalQty,
-      subtotal: itemsSubtotal,
-      totalDiscount,
-      totalTax,
-      extraRevenueVal,
-      netFinal,
-      paidTotal,
-      remaining,
+      subTotal,
+      disc,
+      tax,
+      extra,
+      net,
+      paid,
+      remain,
     };
   }, [
-    items,
+    currentInvoiceItems,
     globalInvDisc,
     invDiscType,
     globalInvTax,
     invTaxType,
-    extraRevenueVal,
+    extraIncomeVal,
     paymentRows,
+    invoiceType,
   ]);
 
-  // Automatically sync paid total if single payment row and cash type
-  useEffect(() => {
-    if (invoiceType === 'nagdi' && paymentRows.length === 1 && items.length > 0) {
-      if (paymentRows[0].amount === 0 || paymentRows[0].amount !== calculations.netFinal) {
-        setPaymentRows([
-          {
-            id: paymentRows[0].id,
-            method: paymentRows[0].method,
-            amount: calculations.netFinal,
-          },
-        ]);
-      }
-    }
-  }, [calculations.netFinal, invoiceType, items.length]);
+  // Select Customer/Supplier from Autocomplete
+  const selectParty = (party: Customer | Supplier) => {
+    setPartyCode(
+      party.id?.startsWith('c') || party.id?.startsWith('s')
+        ? party.id.slice(-4)
+        : party.id || '1'
+    );
+    setPartyName(party.name);
+    setPartyPhone(party.phone || '');
+    setShowCustomersDropdownList(false);
+    setShowPhoneDropdownList(false);
 
-  // Open Item Edit Modal
-  const openItemEdit = (
-    itemData: {
-      code: string;
-      name: string;
-      category?: string;
-      stock: number;
-      cashPrice: number;
-      wholesalePrice: number;
-      buyPrice: number;
-      id?: string;
-    },
-    index = -1
-  ) => {
-    setEditingItemIndex(index);
-    setEditItemObj(itemData);
-
-    if (index > -1 && items[index]) {
-      const cur = items[index];
-      setEditQty(String(cur.qty));
-      setEditPrice(String(cur.price));
-      setEditDiscVal(String(cur.discVal));
-      setEditDiscType(cur.discType);
-      setEditTaxVal(String(cur.taxVal));
-      setEditTaxType(cur.taxType);
-      setEditSpec(cur.spec);
-      if (Math.abs(cur.price - itemData.cashPrice) < 0.01) setItemPriceTier('cash');
-      else if (Math.abs(cur.price - itemData.wholesalePrice) < 0.01) setItemPriceTier('wholesale');
-      else if (Math.abs(cur.price - itemData.buyPrice) < 0.01) setItemPriceTier('buy');
-      else setItemPriceTier('custom');
-    } else {
-      let defaultP = itemData.cashPrice;
-      let initialTier: 'cash' | 'wholesale' | 'buy' | 'custom' = 'cash';
-      if (!isSale || pricingType === 'buy') {
-        defaultP = itemData.buyPrice;
-        initialTier = 'buy';
-      } else if (pricingType === 'wholesale') {
-        defaultP = itemData.wholesalePrice;
-        initialTier = 'wholesale';
-      }
-      setItemPriceTier(initialTier);
-      setEditPrice(String(defaultP));
-      setEditQty('1');
-      setEditDiscVal('0');
-      setEditDiscType('val');
-      setEditTaxVal('0');
-      setEditTaxType('percent');
-      setEditSpec('');
+    if (isSale && (party as Customer).priceTier === 'wholesale') {
+      handleSetInvoicePriceType('wholesale');
     }
-    setIsCatalogOpen(false);
-    setIsItemEditModalOpen(true);
   };
 
-  // Push Item from Modal to Table
-  const handleConfirmItem = () => {
-    if (!editItemObj) return;
-    const qty = parseFloat(editQty) || 1;
-    const price = parseFloat(editPrice) || 0;
-    const dVal = parseFloat(editDiscVal) || 0;
-    const tVal = parseFloat(editTaxVal) || 0;
+  // Change Pricing Mode (cash, wholesale, buy)
+  const handleSetInvoicePriceType = (type: 'cash' | 'wholesale' | 'buy') => {
+    setCurrentInvoicePriceType(type);
+    setCurrentInvoiceItems((prev) =>
+      prev.map((item) => {
+        const db = itemsDatabase.find((i) => i.code === item.code);
+        if (db) {
+          const newPrice =
+            type === 'wholesale'
+              ? db.wholesalePrice
+              : type === 'buy'
+              ? db.buyPrice
+              : db.cashPrice;
+          return {
+            ...item,
+            price: newPrice,
+            total: item.qty * newPrice,
+          };
+        }
+        return item;
+      })
+    );
+  };
 
-    const base = price * qty;
-    const lineDisc = editDiscType === 'percent' ? base * (dVal / 100) : dVal * qty;
-    const afterDisc = base - lineDisc;
-    const lineTax = editTaxType === 'percent' ? afterDisc * (tVal / 100) : tVal * qty;
-    const total = afterDisc + lineTax;
+  // Quick Add Item from Lookup Table
+  const quickAddItemToInvoiceAndReturn = (dbItem: typeof itemsDatabase[0]) => {
+    const price =
+      currentInvoicePriceType === 'wholesale'
+        ? dbItem.wholesalePrice
+        : currentInvoicePriceType === 'buy'
+        ? dbItem.buyPrice
+        : dbItem.cashPrice;
 
-    const rowObj: WorkspaceItemRow = {
-      code: editItemObj.code,
-      name: editItemObj.name,
-      spec: editSpec.trim(),
-      qty,
-      price,
-      discVal: dVal,
-      discType: editDiscType,
-      taxVal: tVal,
-      taxType: editTaxType,
-      total,
-      itemId: editItemObj.id,
-      costPrice: editItemObj.buyPrice,
+    setCurrentInvoiceItems((prev) => {
+      const existing = prev.find((i) => i.code === dbItem.code);
+      if (existing) {
+        return prev.map((i) =>
+          i.code === dbItem.code
+            ? { ...i, qty: i.qty + 1, total: (i.qty + 1) * i.price }
+            : i
+        );
+      } else {
+        return [
+          ...prev,
+          {
+            code: dbItem.code,
+            name: dbItem.name,
+            spec: '',
+            qty: 1,
+            price,
+            total: price,
+            itemId: dbItem.id,
+            costPrice: dbItem.buyPrice,
+          },
+        ];
+      }
+    });
+
+    setIsLookupModalOpen(false);
+  };
+
+  // Modify Item in Invoice
+  const openModifyInvoiceItem = (index: number) => {
+    const item = currentInvoiceItems[index];
+    if (!item) return;
+    setModifyIndex(index);
+    setModifyName(item.name);
+    setModifyQty(String(item.qty));
+    setModifyPrice(String(item.price));
+    setModifySpec(item.spec || '');
+    setIsModifyModalOpen(true);
+  };
+
+  const saveModifiedInvoiceItem = () => {
+    if (modifyIndex < 0 || modifyIndex >= currentInvoiceItems.length) return;
+    const q = parseFloat(modifyQty) || 1;
+    const p = parseFloat(modifyPrice) || 0;
+    const sp = modifySpec.trim();
+
+    setCurrentInvoiceItems((prev) =>
+      prev.map((itm, idx) =>
+        idx === modifyIndex
+          ? {
+              ...itm,
+              qty: q,
+              price: p,
+              spec: sp,
+              total: q * p,
+            }
+          : itm
+      )
+    );
+    setIsModifyModalOpen(false);
+  };
+
+  const removeItem = (index: number) => {
+    setCurrentInvoiceItems((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  // Add / Remove Payment Rows in Options Modal
+  const addPaymentRow = (defaultMethod = 'نقدي', amount = 0) => {
+    setPaymentRows((prev) => [
+      ...prev,
+      {
+        id: `pay_${Date.now()}_${Math.random().toString(36).substring(2, 5)}`,
+        method: defaultMethod,
+        amount,
+      },
+    ]);
+  };
+
+  const removePaymentRow = (id: string) => {
+    setPaymentRows((prev) => prev.filter((r) => r.id !== id));
+  };
+
+  // Save New Item to Database from Modal
+  const saveNewItemData = () => {
+    const name = newItemName.trim();
+    const code = newItemCode.trim() || `1${itemsDatabase.length + 101}`;
+    const category = newItemCategory || 'عامة';
+    const buyPrice = parseFloat(newItemBuyPrice) || 0;
+    const cashPrice = parseFloat(newItemCashPrice) || buyPrice * 1.15;
+    const wholesalePrice = parseFloat(newItemWholesalePrice) || cashPrice * 0.95;
+    const stock = parseFloat(newItemStock) || 0;
+
+    if (!name) {
+      alert('أدخل اسم الصنف');
+      return;
+    }
+
+    const newItemObj = {
+      id: `itm_${Date.now()}`,
+      code,
+      name,
+      category,
+      quantity: stock,
+      purchasePrice: buyPrice,
+      costPrice: buyPrice,
+      salePrice: cashPrice,
+      normalSellingPrice: cashPrice,
+      wholesalePrice,
+      wholesaleSellingPrice: wholesalePrice,
+      minQuantity: 5,
     };
 
-    const updated = [...items];
-    if (editingItemIndex > -1) {
-      updated[editingItemIndex] = rowObj;
-    } else {
-      updated.push(rowObj);
-    }
-    setItems(updated);
-    setIsItemEditModalOpen(false);
-    setEditItemObj(null);
+    const updatedData = {
+      ...appData,
+      items: [...appData.items, newItemObj],
+    };
+    onUpdateData(updatedData, {
+      action: 'add_item',
+      module: 'المخزن',
+      details: `إضافة صنف جديد: ${name} (${code})`,
+    });
+
+    setIsEditItemModalOpen(false);
+    setIsLookupModalOpen(false);
+
+    // Also insert into invoice
+    quickAddItemToInvoiceAndReturn({
+      code,
+      name,
+      category,
+      stock,
+      buyPrice,
+      cashPrice,
+      wholesalePrice,
+      id: newItemObj.id,
+    });
   };
 
-  const handleRemoveItem = (index: number) => {
-    const updated = [...items];
-    updated.splice(index, 1);
-    setItems(updated);
-  };
-
-  // Save & Post Invoice
-  const handleSaveInvoice = () => {
-    if (items.length === 0) {
-      showToast('يرجى إضافة صنف واحد على الأقل في الفاتورة', 'warning');
+  // -------------------------------------------------------------
+  // 💾 Save & Post Invoice
+  // -------------------------------------------------------------
+  const saveInvoice = () => {
+    if (currentInvoiceItems.length === 0) {
+      alert('الفاتورة فارغة! يرجى إدراج صنف واحد على الأقل.');
       return;
     }
     if (!partyName.trim()) {
-      showToast(`يرجى إدخال اسم ${isSale ? 'العميل' : 'المورد'}`, 'warning');
+      alert(`يرجى إدخال اسم ${isSale ? 'العميل' : 'المورد'}`);
       return;
     }
 
-    const { subtotal, totalDiscount, totalTax, netFinal, paidTotal, remaining, extraRevenueVal } = calculations;
+    const { subTotal, disc, tax, extra, net, paid, remain } = calculations;
 
-    const finalInvoiceItems: InvoiceItem[] = items.map((u) => ({
+    const finalInvoiceItems: InvoiceItem[] = currentInvoiceItems.map((u) => ({
       itemId: u.itemId,
       code: u.code,
       name: u.name,
@@ -533,18 +1375,18 @@ export const RakeezaInvoiceWorkspace: React.FC<RakeezaInvoiceWorkspaceProps> = (
       total: u.total,
       spec: u.spec,
       notes: u.spec,
-      discVal: u.discVal,
-      discType: u.discType,
-      taxVal: u.taxVal,
-      taxType: u.taxType,
-      discount: u.discVal,
-      discountType: u.discType === 'percent' ? 'percent' : 'fixed',
-      discountValue: u.discVal,
-      tax: u.taxVal,
-      taxValue: u.taxVal,
+      discVal: 0,
+      discType: 'val',
+      taxVal: 0,
+      taxType: 'fixed',
+      discount: 0,
+      discountType: 'fixed',
+      discountValue: 0,
+      tax: 0,
+      taxValue: 0,
     }));
 
-    const firstMethod = paymentRows[0]?.method || 'نقدي / كاش';
+    const firstMethod = paymentRows[0]?.method || 'نقدي';
     const primaryKey: 'drawer' | 'vodafone' | 'instapay' | 'bank' =
       firstMethod.includes('فودافون')
         ? 'vodafone'
@@ -567,26 +1409,27 @@ export const RakeezaInvoiceWorkspace: React.FC<RakeezaInvoiceWorkspaceProps> = (
         branchId: appData.activeBranchId || 'main',
         customerName: partyName.trim(),
         phone: partyPhone.trim(),
-        notes: statement.trim() || undefined,
+        notes: jobSite.trim() || undefined,
         date,
         time,
         items: finalInvoiceItems,
-        subtotal,
-        discount: totalDiscount,
+        subtotal: subTotal,
+        discount: disc,
         discountType: invDiscType === 'percent' ? 'percent' : 'fixed',
-        discountValue: globalInvDisc,
-        tax: totalTax,
+        discountValue: parseFloat(globalInvDisc) || 0,
+        tax,
         taxType: invTaxType === 'percent' ? 'percent' : 'fixed',
-        taxValue: globalInvTax,
-        extraRevenueAmount: extraRevenueVal > 0 ? extraRevenueVal : undefined,
+        taxValue: parseFloat(globalInvTax) || 0,
+        extraRevenueAmount: extra > 0 ? extra : undefined,
+        extraRevenueName: extraIncomeName.trim() || undefined,
         fees: 0,
-        total: netFinal,
+        total: net,
         paymentMethod: paymentRows.length > 1 ? 'split' : primaryKey,
         paymentSplits: paymentRows.map((r) => ({ method: r.method, amount: r.amount })),
         type: invoiceType,
-        salesType: pricingType === 'wholesale' ? 'wholesale' : 'cash',
-        paidAmount: paidTotal,
-        remainingAmount: remaining,
+        salesType: currentInvoicePriceType === 'wholesale' ? 'wholesale' : 'cash',
+        paidAmount: paid,
+        remainingAmount: remain,
         status: 'approved',
         createdAt: isEditing ? (editingInvoice?.createdAt || nowIso) : nowIso,
         updatedAt: nowIso,
@@ -599,7 +1442,7 @@ export const RakeezaInvoiceWorkspace: React.FC<RakeezaInvoiceWorkspaceProps> = (
       onUpdateData(updatedData, {
         action: isReturn ? 'return' : isEditing ? 'edit' : 'create',
         module: 'المبيعات',
-        details: `${isReturn ? 'مرتجع' : 'فاتورة'} مبيعات #${invNumber} بقيمة ${netFinal.toFixed(2)} ج.م للعميل "${partyName}"`,
+        details: `${isReturn ? 'مرتجع' : 'فاتورة'} مبيعات #${invNumber} بقيمة ${net.toFixed(2)} ج.م للعميل "${partyName}"`,
       });
       showToast(`تم حفظ ${isReturn ? 'مرتجع' : 'فاتورة'} مبيعات #${invNumber} بنجاح وترحيل الحسابات فورا`, 'success');
       onClose();
@@ -613,28 +1456,29 @@ export const RakeezaInvoiceWorkspace: React.FC<RakeezaInvoiceWorkspaceProps> = (
         branchId: appData.activeBranchId || 'main',
         supplierName: partyName.trim(),
         phone: partyPhone.trim(),
-        notes: statement.trim() || undefined,
+        notes: jobSite.trim() || undefined,
         date,
         time,
         items: finalInvoiceItems,
-        subtotal,
-        discount: totalDiscount,
+        subtotal: subTotal,
+        discount: disc,
         discountType: invDiscType === 'percent' ? 'percent' : 'fixed',
-        discountValue: globalInvDisc,
-        tax: totalTax,
+        discountValue: parseFloat(globalInvDisc) || 0,
+        tax,
         taxType: invTaxType === 'percent' ? 'percent' : 'fixed',
-        taxValue: globalInvTax,
-        extraRevenueAmount: extraRevenueVal > 0 ? extraRevenueVal : undefined,
+        taxValue: parseFloat(globalInvTax) || 0,
+        extraRevenueAmount: extra > 0 ? extra : undefined,
+        extraRevenueName: extraIncomeName.trim() || undefined,
         fees: 0,
-        total: netFinal,
+        total: net,
         paymentMethod: primaryKey,
         paymentSplits: paymentRows.map((r) => ({
           method: r.method.includes('فودافون') ? 'vodafone' : r.method.includes('انستاباي') ? 'instapay' : r.method.includes('بنك') ? 'bank' : 'drawer',
           amount: r.amount,
         })),
         type: invoiceType,
-        paidAmount: paidTotal,
-        remainingAmount: remaining,
+        paidAmount: paid,
+        remainingAmount: remain,
         status: 'approved',
         createdAt: isEditing ? (editingInvoice?.createdAt || nowIso) : nowIso,
         updatedAt: nowIso,
@@ -647,1062 +1491,1572 @@ export const RakeezaInvoiceWorkspace: React.FC<RakeezaInvoiceWorkspaceProps> = (
       onUpdateData(updatedData, {
         action: isReturn ? 'return' : isEditing ? 'edit' : 'create',
         module: 'المشتريات',
-        details: `${isReturn ? 'مرتجع' : 'فاتورة'} مشتريات #${invNumber} بقيمة ${netFinal.toFixed(2)} ج.م للمورد "${partyName}"`,
+        details: `${isReturn ? 'مرتجع' : 'فاتورة'} مشتريات #${invNumber} بقيمة ${net.toFixed(2)} ج.م للمورد "${partyName}"`,
       });
       showToast(`تم حفظ ${isReturn ? 'مرتجع' : 'فاتورة'} مشتريات #${invNumber} بنجاح وترحيل الحسابات فورا`, 'success');
       onClose();
     }
   };
 
-  const handlePrint = () => {
-    const dummyInv: any = {
-      id: invNumber,
-      customerName: partyName,
-      supplierName: partyName,
-      phone: partyPhone,
-      date,
-      time,
-      notes: statement,
-      items: items.map((i) => ({ ...i, notes: i.spec })),
-      subtotal: calculations.subtotal,
-      discount: calculations.totalDiscount,
-      tax: calculations.totalTax,
-      total: calculations.netFinal,
-      paidAmount: calculations.paidTotal,
-      remainingAmount: calculations.remaining,
-      type: invoiceType,
+  // Quick Customer Save
+  const saveQuickCustomer = () => {
+    const name = quickCustName.trim();
+    const phone = quickCustPhone.trim();
+    const type = quickCustType;
+    const val = parseFloat(quickCustVal) || 0;
+    if (!name) {
+      alert('أدخل اسم العميل');
+      return;
+    }
+    const newCust: Customer = {
+      id: `c_${Date.now()}`,
+      name,
+      phone,
+      balance: type === 'onUs' ? val : type === 'forUs' ? -val : 0,
     };
-    printInvoiceWindow(dummyInv, isSale, appData.settings);
+    const updated = { ...appData, customers: [...appData.customers, newCust] };
+    onUpdateData(updated, {
+      action: 'create_customer',
+      module: 'العملاء',
+      details: `إضافة عميل جديد: ${name}`,
+    });
+    setQuickCustName('');
+    setQuickCustPhone('');
+    setQuickCustVal('0');
+    alert('تم حفظ العميل بنجاح');
   };
+
+  // Quick Supplier Save
+  const saveQuickSupplier = () => {
+    const name = quickSuppName.trim();
+    const phone = quickSuppPhone.trim();
+    const val = parseFloat(quickSuppVal) || 0;
+    if (!name) {
+      alert('أدخل اسم المورد');
+      return;
+    }
+    const newSupp: Supplier = {
+      id: `s_${Date.now()}`,
+      name,
+      phone,
+      balance: quickSuppType === 'forUs' ? val : -val,
+    };
+    const updated = { ...appData, suppliers: [...appData.suppliers, newSupp] };
+    onUpdateData(updated, {
+      action: 'create_supplier',
+      module: 'الموردين',
+      details: `إضافة مورد جديد: ${name}`,
+    });
+    setQuickSuppName('');
+    setQuickSuppPhone('');
+    setQuickSuppVal('0');
+    alert('تم حفظ المورد بنجاح');
+  };
+
+  // Save Receipt
+  const saveReceipt = () => {
+    const party = recParty.trim();
+    const amount = parseFloat(recAmount) || 0;
+    const notes = recNotes.trim() || '-';
+    if (amount <= 0) {
+      alert('أدخل مبلغ صحيح');
+      return;
+    }
+    const newId = (appData.nextCashId || 1);
+    const updatedCashBox = {
+      ...appData.cashBox,
+      drawer: (appData.cashBox.drawer || 0) + amount,
+    };
+    const newTx = {
+      id: newId,
+      companyId: appData.companyId || 'COMP-000001',
+      branchId: appData.activeBranchId || 'main',
+      date: new Date().toISOString().split('T')[0],
+      type: 'receive' as const,
+      method: 'drawer' as const,
+      amount,
+      note: `سند قبض: ${party} - ${notes}`,
+      customerName: party,
+      status: 'approved' as const,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      createdBy: 'مدير النظام',
+      createdByUserCode: 1,
+    };
+    onUpdateData(
+      {
+        ...appData,
+        nextCashId: newId + 1,
+        cashBox: updatedCashBox,
+        cashTransactions: [...appData.cashTransactions, newTx],
+      },
+      {
+        action: 'receipt',
+        module: 'الخزينة',
+        details: `سند قبض بقيمة ${amount} ج.م من: ${party}`,
+      }
+    );
+    setRecParty('');
+    setRecAmount('');
+    setRecNotes('');
+    alert('تم حفظ سند القبض وإيداعه بالخزنة');
+  };
+
+  // Save Payment
+  const savePayment = () => {
+    const party = payParty.trim();
+    const amount = parseFloat(payAmount) || 0;
+    const notes = payNotes.trim() || '-';
+    if (amount <= 0) {
+      alert('أدخل مبلغ صحيح');
+      return;
+    }
+    const newId = (appData.nextCashId || 1);
+    const updatedCashBox = {
+      ...appData.cashBox,
+      drawer: (appData.cashBox.drawer || 0) - amount,
+    };
+    const newTx = {
+      id: newId,
+      companyId: appData.companyId || 'COMP-000001',
+      branchId: appData.activeBranchId || 'main',
+      date: new Date().toISOString().split('T')[0],
+      type: 'pay' as const,
+      method: 'drawer' as const,
+      amount,
+      note: `سند صرف: ${party} - ${notes}`,
+      customerName: party,
+      status: 'approved' as const,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      createdBy: 'مدير النظام',
+      createdByUserCode: 1,
+    };
+    onUpdateData(
+      {
+        ...appData,
+        nextCashId: newId + 1,
+        cashBox: updatedCashBox,
+        cashTransactions: [...appData.cashTransactions, newTx],
+      },
+      {
+        action: 'payment',
+        module: 'الخزينة',
+        details: `سند صرف بقيمة ${amount} ج.م إلى: ${party}`,
+      }
+    );
+    setPayParty('');
+    setPayAmount('');
+    setPayNotes('');
+    alert('تم حفظ سند الصرف وخصمه من الخزنة');
+  };
+
+  // PnL Summary
+  const pnlSummary = useMemo(() => {
+    let totalIn = 0;
+    let totalOut = 0;
+    (appData.cashTransactions || []).forEach((t) => {
+      const amt = Number(t.amount) || 0;
+      if (t.type === 'receive' || t.type === 'deposit') totalIn += amt;
+      else if (t.type === 'pay' || t.type === 'withdraw') totalOut += amt;
+    });
+    return {
+      totalIn,
+      totalOut,
+      net: totalIn - totalOut,
+    };
+  }, [appData.cashTransactions]);
+
+  // Receipts / Payments table lists
+  const receiptsList = useMemo(() => {
+    return (appData.cashTransactions || []).filter(
+      (t) => t.type === 'receive' || t.type === 'deposit'
+    );
+  }, [appData.cashTransactions]);
+
+  const paymentsList = useMemo(() => {
+    return (appData.cashTransactions || []).filter(
+      (t) => t.type === 'pay' || t.type === 'withdraw'
+    );
+  }, [appData.cashTransactions]);
 
   if (!isOpen) return null;
 
   return (
-    <div
-      className="fixed inset-0 z-50 overflow-y-auto bg-black/60 flex items-center justify-center p-0 sm:p-3 backdrop-blur-xs font-sans"
-      dir="rtl"
-    >
-      <div className="bg-white w-full max-w-5xl rounded-none sm:rounded-2xl shadow-2xl overflow-hidden flex flex-col border border-slate-300 min-h-screen sm:min-h-0 sm:max-h-[96vh]">
-        {/* ============================================================== */}
-        {/* 1. TOP TITLE BAR (نظام الفواتير والمخزون - ركيزة) */}
-        {/* ============================================================== */}
-        <div className="bg-[#1e293b] text-white px-4 py-2.5 flex items-center justify-between shadow-md shrink-0">
-          <div className="flex items-center gap-2">
-            <span className="font-mono text-xs sm:text-sm text-slate-300">
-              {time}
+    <div className="rakeeza-root">
+      <style dangerouslySetInnerHTML={{ __html: EXACT_RAW_CSS }} />
+
+      <div className="rakeeza-overlay">
+        <div className={`app-container ${isMaximized ? 'maximized' : ''}`} dir="rtl">
+          {/* Header Title */}
+          <div className="header-title">
+            <span>
+              <i className="fa-solid fa-cube"></i> RAKEEZA | ركيزة - النظام الموحد الشامل
             </span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span id="liveTime">{liveTimeStr}</span>
+              <button
+                type="button"
+                onClick={() => setIsMaximized((prev) => !prev)}
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  color: '#fff',
+                  cursor: 'pointer',
+                  fontSize: '11px',
+                  fontWeight: 'bold',
+                  padding: '0 4px',
+                }}
+                title={isMaximized ? 'تصغير الواجهة للحجم التلقائي' : 'تكبير الواجهة للشاشة الكاملة'}
+              >
+                <i className={`fa-solid ${isMaximized ? 'fa-compress' : 'fa-expand'}`}></i>
+              </button>
+              <button
+                onClick={onClose}
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  color: '#fff',
+                  cursor: 'pointer',
+                  fontSize: '13px',
+                  fontWeight: 'bold',
+                  padding: '0 4px',
+                }}
+                title="إغلاق"
+              >
+                ✕
+              </button>
+            </div>
           </div>
-          <div className="flex items-center gap-2">
-            <span className="text-sm sm:text-base font-black tracking-wide">
-              نظام الفواتير والمخزون - ركيزة
-            </span>
-            <Building2 className="w-5 h-5 text-amber-400" />
+
+          {/* شريط التنقل العلوي للتبويبات */}
+          <div className="portal-nav" id="portalNav">
             <button
-              onClick={onClose}
-              className="mr-3 text-slate-300 hover:text-white p-1 hover:bg-slate-700/60 rounded-lg transition"
-              title="إغلاق الفاتورة"
+              className={`nav-tab ${activeTab === 'invoice' ? 'active' : ''}`}
+              onClick={() => setActiveTab('invoice')}
             >
-              <X className="w-5 h-5" />
+              <i className="fa-solid fa-receipt"></i>الفواتير
+            </button>
+            <button
+              className={`nav-tab ${activeTab === 'customers' ? 'active' : ''}`}
+              onClick={() => setActiveTab('customers')}
+            >
+              <i className="fa-solid fa-user-tie"></i>العملاء
+            </button>
+            <button
+              className={`nav-tab ${activeTab === 'suppliers' ? 'active' : ''}`}
+              onClick={() => setActiveTab('suppliers')}
+            >
+              <i className="fa-solid fa-truck-field"></i>الموردين
+            </button>
+            <button
+              className={`nav-tab ${activeTab === 'receipts' ? 'active' : ''}`}
+              onClick={() => setActiveTab('receipts')}
+            >
+              <i className="fa-solid fa-file-invoice-dollar"></i>القبض
+            </button>
+            <button
+              className={`nav-tab ${activeTab === 'payments' ? 'active' : ''}`}
+              onClick={() => setActiveTab('payments')}
+            >
+              <i className="fa-solid fa-file-invoice"></i>الصرف
+            </button>
+            <button
+              className={`nav-tab ${activeTab === 'inventory' ? 'active' : ''}`}
+              onClick={() => setActiveTab('inventory')}
+            >
+              <i className="fa-solid fa-boxes-stacked"></i>المخزن
+            </button>
+            <button
+              className={`nav-tab ${activeTab === 'pnl' ? 'active' : ''}`}
+              onClick={() => setActiveTab('pnl')}
+            >
+              <i className="fa-solid fa-chart-line"></i>الأرباح
+            </button>
+            <button
+              className={`nav-tab ${activeTab === 'backup' ? 'active' : ''}`}
+              onClick={() => setActiveTab('backup')}
+            >
+              <i className="fa-solid fa-database"></i>النسخ
             </button>
           </div>
-        </div>
 
-        {/* Scrollable Main Body */}
-        <div className="p-3 sm:p-4 overflow-y-auto space-y-2.5 flex-1 text-xs sm:text-sm">
-          {/* ============================================================== */}
-          {/* 2. INVOICE META ROW (رقم الفاتورة | التاريخ | الوقت) */}
-          {/* ============================================================== */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-            {/* رقم الفاتورة */}
-            <div className="bg-slate-50 border border-slate-300 rounded-lg p-2 flex items-center justify-between">
-              <span className="text-slate-600 font-bold text-xs">رقم الفاتورة</span>
-              <span className="font-mono font-black text-sm sm:text-base text-slate-900">
-                {invNumber}
-              </span>
-            </div>
-
-            {/* التاريخ */}
-            <div className="bg-slate-50 border border-slate-300 rounded-lg p-2 flex items-center justify-between">
-              <span className="text-slate-600 font-bold text-xs">التاريخ</span>
-              <div className="flex items-center gap-1.5 font-mono font-bold text-slate-900">
-                <input
-                  type="date"
-                  value={date}
-                  onChange={(e) => setDate(e.target.value)}
-                  className="bg-transparent font-bold text-xs sm:text-sm text-slate-900 focus:outline-none cursor-pointer text-left"
-                />
-                <Calendar className="w-4 h-4 text-slate-500" />
-              </div>
-            </div>
-
-            {/* الوقت */}
-            <div className="bg-slate-50 border border-slate-300 rounded-lg p-2 flex items-center justify-between">
-              <span className="text-slate-600 font-bold text-xs">الوقت</span>
-              <div className="flex items-center gap-1.5 font-mono font-bold text-slate-900">
-                <span className="text-xs sm:text-sm">{time}</span>
-                <Clock className="w-4 h-4 text-slate-500" />
-              </div>
-            </div>
-          </div>
-
-          {/* ============================================================== */}
-          {/* 3. PARTY INFO ROW (كود العميل | اسم العميل (بحث) | رقم الهاتف) */}
-          {/* ============================================================== */}
-          <div className="grid grid-cols-1 sm:grid-cols-12 gap-2">
-            {/* كود العميل / المورد */}
-            <div className="sm:col-span-2 bg-slate-50 border border-slate-300 rounded-lg p-2 flex items-center justify-between">
-              <span className="text-slate-600 font-bold text-xs">
-                {isSale ? 'كود العميل' : 'كود المورد'}
-              </span>
-              <span className="font-mono font-black text-xs sm:text-sm text-blue-900">
-                {partyCode}
-              </span>
-            </div>
-
-            {/* اسم العميل / المورد */}
-            <div className="sm:col-span-6 relative">
-              <div className="border border-slate-300 rounded-lg p-1.5 bg-white flex flex-col justify-center">
-                <label className="text-[10px] text-slate-500 font-bold block mb-0.5">
-                  {isSale ? 'اسم العميل (بحث)' : 'اسم المورد (بحث)'}
-                </label>
-                <input
-                  type="text"
-                  placeholder="اكتب للبحث..."
-                  value={partyName}
-                  onFocus={() => setShowPartyDropdown(true)}
-                  onBlur={() => setTimeout(() => setShowPartyDropdown(false), 200)}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    setPartyName(val);
-                    setShowPartyDropdown(true);
-                    const matched = (isSale ? appData.customers : appData.suppliers).find(
-                      (p) => p.name.toLowerCase() === val.toLowerCase()
-                    );
-                    if (matched) {
-                      setPartyName(matched.name);
-                      setPartyPhone(matched.phone || '');
-                      if (isSale && (matched as Customer).priceTier === 'wholesale') {
-                        setPricingType('wholesale');
-                      }
-                    }
-                  }}
-                  className="w-full text-xs sm:text-sm font-bold text-slate-900 placeholder:text-slate-400 focus:outline-none bg-transparent"
-                />
-              </div>
-
-              {/* Suggestions Dropdown */}
-              {showPartyDropdown && (
-                <div className="absolute top-full right-0 left-0 z-50 bg-white border border-slate-300 rounded-lg shadow-xl max-h-48 overflow-y-auto mt-1 divide-y divide-slate-100">
-                  {filteredParties.length === 0 ? (
-                    <div className="p-2.5 text-xs text-slate-600 text-center">
-                      طرف جديد: <strong>"{partyName}"</strong> (سيتم تسجيله عند الحفظ)
+          <div className="main-viewport">
+            {/* 1. شاشة الفواتير والمخزون الأساسية */}
+            <div id="tab-invoice" className={`tab-content ${activeTab === 'invoice' ? 'active' : ''}`}>
+              <div className="invoice-card">
+                <div className="field-inline">
+                  <label>رقم الفاتورة</label>
+                  <input type="text" id="invNum" value={invNumber} readOnly />
+                </div>
+                <div className="field-inline">
+                  <label>التاريخ</label>
+                  <input
+                    type="date"
+                    id="invDate"
+                    value={date}
+                    onChange={(e) => setDate(e.target.value)}
+                  />
+                </div>
+                <div className="field-inline">
+                  <label>الوقت</label>
+                  <input
+                    type="time"
+                    id="invTime"
+                    value={time}
+                    onChange={(e) => setTime(e.target.value)}
+                  />
+                </div>
+                <div className="field-inline">
+                  <label>{isSale ? 'كود العميل' : 'كود المورد'}</label>
+                  <input
+                    type="text"
+                    id="custCode"
+                    value={partyCode}
+                    placeholder="الكود..."
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setPartyCode(val);
+                      const list = isSale ? appData.customers : appData.suppliers;
+                      const matched = list.find((p) => p.id === val || (p as any).code === val);
+                      if (matched) selectParty(matched);
+                    }}
+                  />
+                </div>
+                <div className="field-inline">
+                  <label>{isSale ? 'اسم العميل (بحث)' : 'اسم المورد (بحث)'}</label>
+                  <input
+                    type="text"
+                    id="custSearchInput"
+                    value={partyName}
+                    placeholder="اكتب للبحث..."
+                    onFocus={() => setShowCustomersDropdownList(true)}
+                    onChange={(e) => {
+                      setPartyName(e.target.value);
+                      setShowCustomersDropdownList(true);
+                    }}
+                  />
+                  {showCustomersDropdownList && (
+                    <div id="customersDropdownList" className="autocomplete-dropdown" style={{ display: 'block' }}>
+                      {(isSale ? appData.customers : appData.suppliers)
+                        .filter((p) =>
+                          !partyName.trim()
+                            ? true
+                            : (p.name || '').toLowerCase().includes(partyName.trim().toLowerCase()) ||
+                              (p.phone || '').includes(partyName.trim())
+                        )
+                        .slice(0, 8)
+                        .map((p) => (
+                          <div
+                            key={p.id}
+                            className="autocomplete-item"
+                            onMouseDown={(e) => {
+                              e.preventDefault();
+                              selectParty(p);
+                            }}
+                          >
+                            <strong>{p.id?.slice(-4) || '1'}</strong> - {p.name}{' '}
+                            <span style={{ color: '#64748b', fontSize: '7.5px' }}>({p.phone || 'بدون هاتف'})</span>
+                          </div>
+                        ))}
                     </div>
-                  ) : (
-                    filteredParties.map((p) => (
-                      <div
-                        key={p.id}
-                        onMouseDown={(e) => {
-                          e.preventDefault();
-                          setPartyName(p.name);
-                          setPartyPhone(p.phone || '');
-                          if (isSale && (p as Customer).priceTier === 'wholesale') {
-                            setPricingType('wholesale');
-                          }
-                          setShowPartyDropdown(false);
-                        }}
-                        className="p-2 hover:bg-slate-100 cursor-pointer flex justify-between items-center text-xs"
-                      >
-                        <span className="font-bold text-slate-900">👤 {p.name}</span>
-                        <span className="text-slate-500 font-mono text-[11px]">
-                          {p.phone || 'بدون هاتف'}
-                        </span>
-                      </div>
-                    ))
                   )}
                 </div>
-              )}
-            </div>
-
-            {/* رقم الهاتف */}
-            <div className="sm:col-span-4 relative">
-              <div className="border border-slate-300 rounded-lg p-1.5 bg-white flex flex-col justify-center">
-                <label className="text-[10px] text-slate-500 font-bold block mb-0.5">
-                  رقم الهاتف (بحث)
-                </label>
-                <input
-                  type="text"
-                  placeholder="ابحث برقم الهاتف..."
-                  value={partyPhone}
-                  onFocus={() => setShowPhoneDropdown(true)}
-                  onBlur={() => setTimeout(() => setShowPhoneDropdown(false), 200)}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    setPartyPhone(val);
-                    setShowPhoneDropdown(true);
-                    const matched = (isSale ? appData.customers : appData.suppliers).find(
-                      (p) => p.phone === val
-                    );
-                    if (matched) {
-                      setPartyName(matched.name);
-                      setPartyPhone(matched.phone || val);
-                    }
+                <div className="field-inline">
+                  <label>رقم الهاتف (بحث)</label>
+                  <input
+                    type="text"
+                    id="custPhone"
+                    value={partyPhone}
+                    placeholder="ابحث برقم الهاتف..."
+                    onFocus={() => setShowPhoneDropdownList(true)}
+                    onChange={(e) => {
+                      setPartyPhone(e.target.value);
+                      setShowPhoneDropdownList(true);
+                    }}
+                  />
+                  {showPhoneDropdownList && (
+                    <div id="phoneDropdownList" className="autocomplete-dropdown" style={{ display: 'block' }}>
+                      {(isSale ? appData.customers : appData.suppliers)
+                        .filter((p) =>
+                          !partyPhone.trim() ? true : (p.phone || '').includes(partyPhone.trim())
+                        )
+                        .slice(0, 8)
+                        .map((p) => (
+                          <div
+                            key={p.id}
+                            className="autocomplete-item"
+                            onMouseDown={(e) => {
+                              e.preventDefault();
+                              selectParty(p);
+                            }}
+                          >
+                            <strong>{p.phone}</strong> - {p.name}
+                          </div>
+                        ))}
+                    </div>
+                  )}
+                </div>
+                <div className="field-inline span-3">
+                  <label>البيان / جهة العمل</label>
+                  <input
+                    type="text"
+                    id="jobSite"
+                    value={jobSite}
+                    onChange={(e) => setJobSite(e.target.value)}
+                  />
+                </div>
+                <div
+                  id="custLimitDisplay"
+                  className="span-3"
+                  style={{
+                    fontSize: '8px',
+                    color: '#334155',
+                    fontWeight: 'bold',
+                    background: '#ffffff',
+                    border: '1px solid #e2e8f0',
+                    padding: '3px 6px',
+                    borderRadius: '3px',
+                    display: 'flex',
+                    justifyContent: 'space-between',
                   }}
-                  className="w-full text-xs sm:text-sm font-bold font-mono text-slate-900 placeholder:text-slate-400 focus:outline-none bg-transparent"
-                />
+                >
+                  <span>
+                    حالة الحساب:{' '}
+                    <strong id="lblCustAccountType" style={{ color: '#0f172a' }}>
+                      {partyAccountDisplay.typeLabel}
+                    </strong>
+                  </span>
+                  <span>
+                    المبلغ (له / عليه):{' '}
+                    <strong id="lblCustBalanceVal" style={{ color: '#0f172a' }}>
+                      {partyAccountDisplay.balanceVal.toFixed(2)}
+                    </strong>{' '}
+                    ج.م
+                  </span>
+                </div>
               </div>
 
-              {showPhoneDropdown && (
-                <div className="absolute top-full right-0 left-0 z-50 bg-white border border-slate-300 rounded-lg shadow-xl max-h-48 overflow-y-auto mt-1 divide-y divide-slate-100">
-                  {filteredPartiesByPhone.map((p) => (
-                    <div
-                      key={p.id}
-                      onMouseDown={(e) => {
-                        e.preventDefault();
-                        setPartyName(p.name);
-                        setPartyPhone(p.phone || '');
-                        setShowPhoneDropdown(false);
-                      }}
-                      className="p-2 hover:bg-slate-100 cursor-pointer flex justify-between items-center text-xs"
-                    >
-                      <span className="font-mono text-blue-900 font-bold">📞 {p.phone}</span>
-                      <span className="text-slate-700 font-bold">{p.name}</span>
-                    </div>
-                  ))}
+              {/* Pricing Box */}
+              <div
+                className="pricing-box"
+                style={{
+                  background: '#ffffff',
+                  border: '1px solid #cbd5e1',
+                  padding: '3px 5px',
+                  borderRadius: '3px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  flexShrink: 0,
+                }}
+              >
+                <label style={{ color: '#334155', fontSize: '8px' }}>نظام تسعير الفاتورة:</label>
+                <div style={{ display: 'flex', gap: '2px', flex: 1, marginRight: '4px' }}>
+                  <button
+                    type="button"
+                    className={`price-type-btn ${currentInvoicePriceType === 'cash' ? 'active' : ''}`}
+                    onClick={() => handleSetInvoicePriceType('cash')}
+                    style={{
+                      flex: 1,
+                      padding: '3px',
+                      background: currentInvoicePriceType === 'cash' ? '#2563eb' : '#fff',
+                      color: currentInvoicePriceType === 'cash' ? 'white' : '#334155',
+                      border: currentInvoicePriceType === 'cash' ? '1px solid #2563eb' : '1px solid #cbd5e1',
+                      borderRadius: '3px',
+                      fontWeight: 'bold',
+                      fontSize: '8px',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    سعر نقدي
+                  </button>
+                  <button
+                    type="button"
+                    className={`price-type-btn ${currentInvoicePriceType === 'wholesale' ? 'active' : ''}`}
+                    onClick={() => handleSetInvoicePriceType('wholesale')}
+                    style={{
+                      flex: 1,
+                      padding: '3px',
+                      background: currentInvoicePriceType === 'wholesale' ? '#2563eb' : '#fff',
+                      color: currentInvoicePriceType === 'wholesale' ? 'white' : '#334155',
+                      border: currentInvoicePriceType === 'wholesale' ? '1px solid #2563eb' : '1px solid #cbd5e1',
+                      borderRadius: '3px',
+                      fontWeight: 'bold',
+                      fontSize: '8px',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    سعر جملة
+                  </button>
+                  <button
+                    type="button"
+                    className={`price-type-btn ${currentInvoicePriceType === 'buy' ? 'active' : ''}`}
+                    onClick={() => handleSetInvoicePriceType('buy')}
+                    style={{
+                      flex: 1,
+                      padding: '3px',
+                      background: currentInvoicePriceType === 'buy' ? '#2563eb' : '#fff',
+                      color: currentInvoicePriceType === 'buy' ? 'white' : '#334155',
+                      border: currentInvoicePriceType === 'buy' ? '1px solid #2563eb' : '1px solid #cbd5e1',
+                      borderRadius: '3px',
+                      fontWeight: 'bold',
+                      fontSize: '8px',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    سعر شراء
+                  </button>
                 </div>
-              )}
-            </div>
-          </div>
+              </div>
 
-          {/* ============================================================== */}
-          {/* 4. STATEMENT / WORK ENTITY (البيان / جهة العمل) */}
-          {/* ============================================================== */}
-          <div className="border border-slate-300 rounded-lg p-1.5 bg-white flex flex-col justify-center">
-            <label className="text-[10px] text-slate-500 font-bold block mb-0.5">
-              البيان / جهة العمل
-            </label>
-            <input
-              type="text"
-              placeholder="اكتب البيان أو ملاحظات الفاتورة هنا..."
-              value={statement}
-              onChange={(e) => setStatement(e.target.value)}
-              className="w-full text-xs sm:text-sm font-bold text-slate-900 placeholder:text-slate-400 focus:outline-none bg-transparent"
-            />
-          </div>
+              {/* Action Buttons Top */}
+              <div className="top-actions-grid">
+                <button
+                  className="btn-action-top"
+                  onClick={() => setIsLookupModalOpen(true)}
+                  style={{ padding: '7px', fontSize: '10px' }}
+                >
+                  <i className="fa-solid fa-boxes-stacked"></i> دليل الأصناف (إضافة سريعة)
+                </button>
+                <button
+                  className="btn-action-top btn-action-alt"
+                  onClick={() => setIsOptionsModalOpen(true)}
+                  style={{ padding: '7px', fontSize: '10px' }}
+                >
+                  <i className="fa-solid fa-sliders"></i> الخصم، الضريبة والدفع
+                </button>
+              </div>
 
-          {/* ============================================================== */}
-          {/* 5. FINANCIAL STATUS BAR (حالة الحساب | المبلغ له / عليه) */}
-          {/* ============================================================== */}
-          <div className="bg-[#fffde7] border border-[#fff59d] rounded-lg px-3 py-1.5 flex items-center justify-between font-bold text-xs sm:text-sm text-slate-800">
-            <div>
-              <span className="text-blue-900 ml-1">حالة الحساب:</span>
-              <span className="text-slate-900 font-black">
-                {invoiceType === 'nagdi'
-                  ? 'نقدي'
-                  : invoiceType === 'ajel'
-                  ? 'آجل'
-                  : invoiceType === 'return_nagdi'
-                  ? 'مرتجع نقدي'
-                  : 'مرتجع آجل'}
-              </span>
-            </div>
-            <div>
-              <span className="ml-1 text-slate-700">المبلغ (له / عليه):</span>
-              <span
-                className={`font-mono font-black ${
-                  partyFinancials.balance > 0
-                    ? 'text-rose-700'
-                    : partyFinancials.balance < 0
-                    ? 'text-emerald-700'
-                    : 'text-amber-800'
-                }`}
-              >
-                {partyFinancials.balance.toFixed(2)} ج.م
-              </span>
-            </div>
-          </div>
-
-          {/* ============================================================== */}
-          {/* 6. PRICING MODE SYSTEM (نظام تسعير الفاتورة: سعر نقدي | سعر جملة | سعر شراء) */}
-          {/* ============================================================== */}
-          <div className="border border-slate-300 rounded-lg px-3 py-1.5 bg-slate-50 flex flex-wrap items-center justify-between gap-2">
-            <span className="text-slate-700 font-bold text-xs sm:text-sm">
-              نظام تسعير الفاتورة:
-            </span>
-            <div className="flex items-center gap-1.5">
-              <button
-                type="button"
-                onClick={() => setPricingType('cash')}
-                className={`px-3 py-1 text-xs font-bold rounded-md transition cursor-pointer ${
-                  pricingType === 'cash'
-                    ? 'bg-[#2e7d32] text-white shadow-xs'
-                    : 'bg-white border border-slate-300 text-slate-700 hover:bg-slate-100'
-                }`}
-              >
-                سعر نقدي
-              </button>
-              <button
-                type="button"
-                onClick={() => setPricingType('wholesale')}
-                className={`px-3 py-1 text-xs font-bold rounded-md transition cursor-pointer ${
-                  pricingType === 'wholesale'
-                    ? 'bg-[#2e7d32] text-white shadow-xs'
-                    : 'bg-white border border-slate-300 text-slate-700 hover:bg-slate-100'
-                }`}
-              >
-                سعر جملة
-              </button>
-              <button
-                type="button"
-                onClick={() => setPricingType('buy')}
-                className={`px-3 py-1 text-xs font-bold rounded-md transition cursor-pointer ${
-                  pricingType === 'buy'
-                    ? 'bg-[#2e7d32] text-white shadow-xs'
-                    : 'bg-white border border-slate-300 text-slate-700 hover:bg-slate-100'
-                }`}
-              >
-                سعر شراء
-              </button>
-            </div>
-          </div>
-
-          {/* ============================================================== */}
-          {/* 7. TWO MAIN ACTION BUTTONS (دليل الأصناف | الخصم والضريبة والدفع) */}
-          {/* ============================================================== */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-            {/* دليل الأصناف (إضافة سريعة) */}
-            <button
-              type="button"
-              onClick={() => setIsCatalogOpen(true)}
-              className="min-h-[44px] bg-[#1976d2] hover:bg-[#1565c0] active:scale-[0.99] text-white rounded-lg font-bold text-xs sm:text-sm shadow-xs transition flex items-center justify-center gap-2 cursor-pointer"
-            >
-              <Boxes className="w-4 h-4" />
-              <span>دليل الأصناف (إضافة سريعة)</span>
-            </button>
-
-            {/* الخصم، الضريبة والدفع */}
-            <button
-              type="button"
-              onClick={() => setIsSettingsOpen(true)}
-              className="min-h-[44px] bg-[#1a237e] hover:bg-[#0d47a1] active:scale-[0.99] text-white rounded-lg font-bold text-xs sm:text-sm shadow-xs transition flex items-center justify-center gap-2 cursor-pointer"
-            >
-              <SlidersHorizontal className="w-4 h-4" />
-              <span>الخصم، الضريبة والدفع</span>
-            </button>
-          </div>
-
-          {/* ============================================================== */}
-          {/* 8. ITEMS TABLE */}
-          {/* ============================================================== */}
-          <div className="border border-slate-300 rounded-lg overflow-x-auto min-h-[160px] bg-white">
-            <table className="w-full text-center border-collapse text-xs">
-              <thead>
-                <tr className="bg-slate-100 text-slate-800 font-bold border-b border-slate-300">
-                  <th className="py-2 px-2 border-l border-slate-300 w-10">م</th>
-                  <th className="py-2 px-3 border-l border-slate-300 text-right">الصنف</th>
-                  <th className="py-2 px-3 border-l border-slate-300 text-right">الوصف</th>
-                  <th className="py-2 px-2 border-l border-slate-300 w-16">الكمية</th>
-                  <th className="py-2 px-2 border-l border-slate-300 w-24">السعر</th>
-                  <th className="py-2 px-2 border-l border-slate-300 w-24">الإجمالي</th>
-                  <th className="py-2 px-2 w-20">إجراء</th>
-                </tr>
-              </thead>
-              <tbody>
-                {items.length === 0 ? (
-                  <tr>
-                    <td
-                      colSpan={7}
-                      className="py-12 px-4 text-center text-slate-400 font-bold text-xs sm:text-sm"
-                    >
-                      لم يتم إدراج أصناف بعد (اضغط من دليل الأصناف للبيع السريع)
-                    </td>
-                  </tr>
-                ) : (
-                  items.map((item, index) => {
-                    const catalogMatch = catalogList.find((c) => c.code === item.code) || {
-                      code: item.code,
-                      name: item.name,
-                      stock: 0,
-                      cashPrice: item.price,
-                      wholesalePrice: item.price,
-                      buyPrice: item.price,
-                    };
-
-                    return (
-                      <tr
-                        key={index}
-                        className="border-b border-slate-200 hover:bg-slate-50 transition"
-                      >
-                        <td className="py-2 px-2 border-l border-slate-300 font-mono text-slate-700">
-                          {index + 1}
-                        </td>
-                        <td className="py-2 px-3 border-l border-slate-300 text-right font-bold text-slate-900">
-                          <div>{item.name}</div>
-                          <span className="font-mono text-[10px] text-slate-400">
-                            {item.code}
-                          </span>
-                        </td>
-                        <td className="py-2 px-3 border-l border-slate-300 text-right text-slate-600 truncate max-w-[150px]">
-                          {item.spec || '-'}
-                        </td>
-                        <td className="py-2 px-2 border-l border-slate-300 font-mono font-bold text-slate-900">
-                          {item.qty}
-                        </td>
-                        <td className="py-2 px-2 border-l border-slate-300 font-mono font-bold text-slate-900">
-                          {item.price.toFixed(2)}
-                        </td>
-                        <td className="py-2 px-2 border-l border-slate-300 font-mono font-black text-slate-900">
-                          {item.total.toFixed(2)}
-                        </td>
-                        <td className="py-2 px-2">
-                          <div className="flex items-center justify-center gap-1">
-                            <button
-                              type="button"
-                              onClick={() => openItemEdit(catalogMatch, index)}
-                              className="p-1 text-blue-700 hover:bg-blue-50 rounded"
-                              title="تعديل الصنف"
-                            >
-                              <Edit className="w-3.5 h-3.5" />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleRemoveItem(index)}
-                              className="p-1 text-rose-700 hover:bg-rose-50 rounded"
-                              title="حذف الصنف"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
+              {/* Table */}
+              <div className="table-responsive">
+                <table>
+                  <thead>
+                    <tr>
+                      <th style={{ width: '5%' }}>م</th>
+                      <th style={{ width: '22%', textAlign: 'right' }}>الصنف</th>
+                      <th style={{ width: '18%', textAlign: 'right' }}>الوصف</th>
+                      <th style={{ width: '9%' }}>الكمية</th>
+                      <th style={{ width: '11%' }}>السعر</th>
+                      <th style={{ width: '15%' }}>الإجمالي</th>
+                      <th style={{ width: '20%' }}>إجراء</th>
+                    </tr>
+                  </thead>
+                  <tbody id="invoiceItemsTable">
+                    {currentInvoiceItems.length === 0 ? (
+                      <tr>
+                        <td colSpan={7} style={{ color: '#94a3b8', padding: '25px' }}>
+                          لم يتم إدراج أصناف بعد (اضغط من دليل الأصناف للإضافة)
                         </td>
                       </tr>
-                    );
-                  })
-                )}
-              </tbody>
-            </table>
-          </div>
-
-          {/* ============================================================== */}
-          {/* 9. SUMMARY & TOTALS CONTAINER (مربع الإجماليات + الصافي النهائي) */}
-          {/* ============================================================== */}
-          <div className="rounded-lg overflow-hidden shadow-xs border border-slate-300">
-            {/* Dark Navy Block (إجمالي الكميات | الخصومات | الضرائب | الإيراد | المدفوع | المتبقي) */}
-            <div className="bg-[#1a237e] text-white p-3 space-y-2">
-              <div className="grid grid-cols-3 text-center text-xs font-bold divide-x divide-x-reverse divide-blue-800">
-                <div>
-                  <div className="text-slate-300 text-[11px] mb-0.5">إجمالي الكميات:</div>
-                  <div className="font-mono text-sm sm:text-base font-black">
-                    {calculations.totalQty.toFixed(2)}
-                  </div>
-                </div>
-                <div>
-                  <div className="text-slate-300 text-[11px] mb-0.5">الخصومات:</div>
-                  <div className="font-mono text-sm sm:text-base font-black text-amber-300">
-                    {calculations.totalDiscount.toFixed(2)}
-                  </div>
-                </div>
-                <div>
-                  <div className="text-slate-300 text-[11px] mb-0.5">الضرائب:</div>
-                  <div className="font-mono text-sm sm:text-base font-black">
-                    {calculations.totalTax.toFixed(2)}
-                  </div>
-                </div>
+                    ) : (
+                      currentInvoiceItems.map((item, index) => (
+                        <tr key={index}>
+                          <td>{index + 1}</td>
+                          <td style={{ textAlign: 'right' }}>{item.name}</td>
+                          <td style={{ textAlign: 'right', color: '#64748b' }}>{item.spec || '-'}</td>
+                          <td>{item.qty}</td>
+                          <td>{item.price.toFixed(2)}</td>
+                          <td>{item.total.toFixed(2)}</td>
+                          <td>
+                            <span className="invoice-item-actions">
+                              <i
+                                className="fa-solid fa-pen-to-square"
+                                style={{ color: 'var(--secondary)' }}
+                                onClick={() => openModifyInvoiceItem(index)}
+                              ></i>
+                              <i
+                                className="fa-solid fa-trash"
+                                style={{ color: 'var(--danger)' }}
+                                onClick={() => removeItem(index)}
+                              ></i>
+                            </span>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
               </div>
 
-              <hr className="border-blue-900/60" />
+              {/* Bottom Fixed Area */}
+              <div className="bottom-fixed-area">
+                <div className="summary-bar">
+                  <div className="summary-item">
+                    الإجمالي: <span id="lblSubTotal">{calculations.subTotal.toFixed(2)}</span>
+                  </div>
+                  <div className="summary-item">
+                    إجمالي الخصم: <span id="lblDiscTotal">{calculations.disc.toFixed(2)}</span>
+                  </div>
+                  <div className="summary-item">
+                    إجمالي الضريبة: <span id="lblTaxTotal">{calculations.tax.toFixed(2)}</span>
+                  </div>
+                  <div className="summary-item">
+                    إجمالي الكمية: <span id="lblItemsTotal">{calculations.totalQty}</span>
+                  </div>
+                  <div className="summary-item">
+                    المدفوع: <span id="lblPaidTotal">{calculations.paid.toFixed(2)}</span>
+                  </div>
+                  <div className="summary-item">
+                    المتبقي: <span id="lblRemainTotal">{calculations.remain.toFixed(2)}</span>
+                  </div>
+                  <div className="summary-item summary-net">
+                    الصافي النهائي: <span id="lblNetTotal">{calculations.net.toFixed(2)}</span>
+                  </div>
+                </div>
 
-              <div className="grid grid-cols-3 text-center text-xs font-bold divide-x divide-x-reverse divide-blue-800">
-                <div>
-                  <div className="text-slate-300 text-[11px] mb-0.5">
-                    {isSale ? 'الإيراد:' : 'المصروف:'}
-                  </div>
-                  <div className="font-mono text-sm sm:text-base font-black">
-                    {calculations.extraRevenueVal.toFixed(2)}
-                  </div>
-                </div>
-                <div>
-                  <div className="text-slate-300 text-[11px] mb-0.5">المدفوع:</div>
-                  <div className="font-mono text-sm sm:text-base font-black text-emerald-300">
-                    {calculations.paidTotal.toFixed(2)}
-                  </div>
-                </div>
-                <div>
-                  <div className="text-slate-300 text-[11px] mb-0.5">المتبقي:</div>
-                  <div className="font-mono text-sm sm:text-base font-black text-rose-300">
-                    {calculations.remaining.toFixed(2)}
-                  </div>
+                <div className="btn-action-bar">
+                  <button
+                    className="btn-action"
+                    style={{ background: 'var(--accent)', padding: '7px', fontSize: '9.5px' }}
+                    onClick={saveInvoice}
+                  >
+                    <i className="fa-solid fa-save"></i> حفظ وترحيل الحسابات
+                  </button>
+                  <button
+                    className="btn-action"
+                    style={{ background: 'var(--secondary)', padding: '7px', fontSize: '9.5px' }}
+                    onClick={() => {
+                      const dummyInv: any = {
+                        id: invNumber,
+                        customerName: partyName,
+                        supplierName: partyName,
+                        phone: partyPhone,
+                        date,
+                        time,
+                        notes: jobSite,
+                        items: currentInvoiceItems.map((i) => ({ ...i, notes: i.spec })),
+                        subtotal: calculations.subTotal,
+                        discount: calculations.disc,
+                        tax: calculations.tax,
+                        total: calculations.net,
+                        paidAmount: calculations.paid,
+                        remainingAmount: calculations.remain,
+                        type: invoiceType,
+                      };
+                      printInvoiceWindow(dummyInv, isSale, appData.settings);
+                    }}
+                  >
+                    <i className="fa-solid fa-print"></i> طباعة
+                  </button>
                 </div>
               </div>
             </div>
 
-            {/* Bright Green Block (الصافي النهائي) */}
-            <div className="bg-[#2e7d32] text-white p-2.5 text-center flex flex-col items-center justify-center">
-              <span className="text-xs font-bold text-emerald-100">الصافي النهائي:</span>
-              <span className="font-mono text-xl sm:text-2xl font-black tracking-wide">
-                {calculations.netFinal.toFixed(2)}
-              </span>
+            {/* 2. العملاء */}
+            <div id="tab-customers" className={`tab-content ${activeTab === 'customers' ? 'active' : ''}`}>
+              <div className="invoice-card" style={{ gridTemplateColumns: 'repeat(2, minmax(0, 1fr))' }}>
+                <div className="field-inline span-2">
+                  <label>اسم العميل</label>
+                  <input
+                    type="text"
+                    id="quickCustName"
+                    placeholder="اسم العميل..."
+                    value={quickCustName}
+                    onChange={(e) => setQuickCustName(e.target.value)}
+                  />
+                </div>
+                <div className="field-inline">
+                  <label>الهاتف</label>
+                  <input
+                    type="text"
+                    id="quickCustPhone"
+                    placeholder="الهاتف..."
+                    value={quickCustPhone}
+                    onChange={(e) => setQuickCustPhone(e.target.value)}
+                  />
+                </div>
+                <div className="field-inline">
+                  <label>الحساب</label>
+                  <select
+                    id="quickCustType"
+                    value={quickCustType}
+                    onChange={(e) => setQuickCustType(e.target.value)}
+                  >
+                    <option value="cash">نقدي</option>
+                    <option value="onUs">عليه مديونية (لنا)</option>
+                    <option value="forUs">له رصيد (علينا)</option>
+                  </select>
+                </div>
+                <div className="field-inline span-2">
+                  <label>قيمة الرصيد الافتتاحي</label>
+                  <input
+                    type="number"
+                    id="quickCustVal"
+                    value={quickCustVal}
+                    step="any"
+                    onChange={(e) => setQuickCustVal(e.target.value)}
+                  />
+                </div>
+              </div>
+              <button className="btn-action-top" onClick={saveQuickCustomer}>
+                حفظ العميل الجديد
+              </button>
+              <div className="table-responsive">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>م</th>
+                      <th>الاسم</th>
+                      <th>الهاتف</th>
+                      <th>النوع</th>
+                      <th>القيمة</th>
+                    </tr>
+                  </thead>
+                  <tbody id="customersTableBody">
+                    {appData.customers.length === 0 ? (
+                      <tr>
+                        <td colSpan={5} style={{ color: '#94a3b8', padding: '15px' }}>
+                          لا توجد بيانات عملاء...
+                        </td>
+                      </tr>
+                    ) : (
+                      appData.customers.map((c, i) => (
+                        <tr key={c.id}>
+                          <td>{i + 1}</td>
+                          <td>{c.name}</td>
+                          <td>{c.phone || '-'}</td>
+                          <td>{(c.balance || 0) > 0 ? 'عليه مديونية' : (c.balance || 0) < 0 ? 'له رصيد' : 'نقدي'}</td>
+                          <td>{Math.abs(c.balance || 0).toFixed(2)}</td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* 3. الموردين */}
+            <div id="tab-suppliers" className={`tab-content ${activeTab === 'suppliers' ? 'active' : ''}`}>
+              <div className="invoice-card" style={{ gridTemplateColumns: 'repeat(2, minmax(0, 1fr))' }}>
+                <div className="field-inline span-2">
+                  <label>اسم المورد</label>
+                  <input
+                    type="text"
+                    id="quickSuppName"
+                    placeholder="اسم المورد..."
+                    value={quickSuppName}
+                    onChange={(e) => setQuickSuppName(e.target.value)}
+                  />
+                </div>
+                <div className="field-inline">
+                  <label>الهاتف</label>
+                  <input
+                    type="text"
+                    id="quickSuppPhone"
+                    placeholder="الهاتف..."
+                    value={quickSuppPhone}
+                    onChange={(e) => setQuickSuppPhone(e.target.value)}
+                  />
+                </div>
+                <div className="field-inline">
+                  <label>الحساب</label>
+                  <select
+                    id="quickSuppType"
+                    value={quickSuppType}
+                    onChange={(e) => setQuickSuppType(e.target.value)}
+                  >
+                    <option value="forUs">له مستحقات (علينا)</option>
+                    <option value="onUs">مديونية لدينا (لنا)</option>
+                  </select>
+                </div>
+                <div className="field-inline span-2">
+                  <label>قيمة الرصيد الافتتاحي</label>
+                  <input
+                    type="number"
+                    id="quickSuppVal"
+                    value={quickSuppVal}
+                    step="any"
+                    onChange={(e) => setQuickSuppVal(e.target.value)}
+                  />
+                </div>
+              </div>
+              <button className="btn-action-top" style={{ background: 'var(--accent)' }} onClick={saveQuickSupplier}>
+                حفظ المورد الجديد
+              </button>
+              <div className="table-responsive">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>م</th>
+                      <th>الاسم</th>
+                      <th>الهاتف</th>
+                      <th>القيمة</th>
+                    </tr>
+                  </thead>
+                  <tbody id="suppliersTableBody">
+                    {appData.suppliers.length === 0 ? (
+                      <tr>
+                        <td colSpan={4} style={{ color: '#94a3b8', padding: '15px' }}>
+                          لا توجد بيانات موردين...
+                        </td>
+                      </tr>
+                    ) : (
+                      appData.suppliers.map((s, i) => (
+                        <tr key={s.id}>
+                          <td>{i + 1}</td>
+                          <td>{s.name}</td>
+                          <td>{s.phone || '-'}</td>
+                          <td>{Math.abs(s.balance || 0).toFixed(2)}</td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* 4. سندات القبض */}
+            <div id="tab-receipts" className={`tab-content ${activeTab === 'receipts' ? 'active' : ''}`}>
+              <div className="invoice-card" style={{ gridTemplateColumns: 'repeat(2, minmax(0, 1fr))' }}>
+                <div className="field-inline span-2">
+                  <label>اسم الدافع (العميل)</label>
+                  <input
+                    type="text"
+                    id="recParty"
+                    placeholder="اسم العميل..."
+                    value={recParty}
+                    onChange={(e) => setRecParty(e.target.value)}
+                  />
+                </div>
+                <div className="field-inline">
+                  <label>المبلغ (ج.م)</label>
+                  <input
+                    type="number"
+                    id="recAmount"
+                    placeholder="0.00"
+                    step="any"
+                    value={recAmount}
+                    onChange={(e) => setRecAmount(e.target.value)}
+                  />
+                </div>
+                <div className="field-inline span-2">
+                  <label>البيان</label>
+                  <input
+                    type="text"
+                    id="recNotes"
+                    placeholder="سبب التحصيل..."
+                    value={recNotes}
+                    onChange={(e) => setRecNotes(e.target.value)}
+                  />
+                </div>
+              </div>
+              <button className="btn-action-top" style={{ background: 'var(--accent)' }} onClick={saveReceipt}>
+                حفظ سند القبض وإيداعه بالخزنة
+              </button>
+              <div className="table-responsive">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>م</th>
+                      <th>الطرف</th>
+                      <th>المبلغ</th>
+                      <th>البيان</th>
+                    </tr>
+                  </thead>
+                  <tbody id="receiptsTableBody">
+                    {receiptsList.length === 0 ? (
+                      <tr>
+                        <td colSpan={4} style={{ color: '#94a3b8', padding: '15px' }}>
+                          لا توجد سندات قبض مسجلة...
+                        </td>
+                      </tr>
+                    ) : (
+                      receiptsList.map((r, i) => (
+                        <tr key={r.id}>
+                          <td>{i + 1}</td>
+                          <td>{r.customerName || '-'}</td>
+                          <td>{Number(r.amount).toFixed(2)}</td>
+                          <td>{r.note || '-'}</td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* 5. سندات الصرف */}
+            <div id="tab-payments" className={`tab-content ${activeTab === 'payments' ? 'active' : ''}`}>
+              <div className="invoice-card" style={{ gridTemplateColumns: 'repeat(2, minmax(0, 1fr))' }}>
+                <div className="field-inline span-2">
+                  <label>المستفيد / الجهة</label>
+                  <input
+                    type="text"
+                    id="payParty"
+                    placeholder="الجهة المستفيدة..."
+                    value={payParty}
+                    onChange={(e) => setPayParty(e.target.value)}
+                  />
+                </div>
+                <div className="field-inline">
+                  <label>المبلغ (ج.م)</label>
+                  <input
+                    type="number"
+                    id="payAmount"
+                    placeholder="0.00"
+                    step="any"
+                    value={payAmount}
+                    onChange={(e) => setPayAmount(e.target.value)}
+                  />
+                </div>
+                <div className="field-inline span-2">
+                  <label>البيان</label>
+                  <input
+                    type="text"
+                    id="payNotes"
+                    placeholder="سبب الصرف..."
+                    value={payNotes}
+                    onChange={(e) => setPayNotes(e.target.value)}
+                  />
+                </div>
+              </div>
+              <button className="btn-action-top" style={{ background: 'var(--danger)' }} onClick={savePayment}>
+                حفظ سند الصرف وخصمه من الخزنة
+              </button>
+              <div className="table-responsive">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>م</th>
+                      <th>الجهة</th>
+                      <th>المبلغ</th>
+                      <th>البيان</th>
+                    </tr>
+                  </thead>
+                  <tbody id="paymentsTableBody">
+                    {paymentsList.length === 0 ? (
+                      <tr>
+                        <td colSpan={4} style={{ color: '#94a3b8', padding: '15px' }}>
+                          لا توجد سندات صرف مسجلة...
+                        </td>
+                      </tr>
+                    ) : (
+                      paymentsList.map((p, i) => (
+                        <tr key={p.id}>
+                          <td>{i + 1}</td>
+                          <td>{p.customerName || '-'}</td>
+                          <td>{Number(p.amount).toFixed(2)}</td>
+                          <td>{p.note || '-'}</td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* 6. المخزن */}
+            <div id="tab-inventory" className={`tab-content ${activeTab === 'inventory' ? 'active' : ''}`}>
+              <div className="table-responsive" style={{ height: '100%' }}>
+                <table>
+                  <thead>
+                    <tr>
+                      <th>الكود</th>
+                      <th>الصنف</th>
+                      <th>المجموعة</th>
+                      <th>المتاح</th>
+                      <th>البيع</th>
+                    </tr>
+                  </thead>
+                  <tbody id="inventoryTableBody">
+                    {itemsDatabase.length === 0 ? (
+                      <tr>
+                        <td colSpan={5} style={{ color: '#94a3b8', padding: '15px' }}>
+                          المخزن فارغ...
+                        </td>
+                      </tr>
+                    ) : (
+                      itemsDatabase.map((item) => (
+                        <tr key={item.code}>
+                          <td>{item.code}</td>
+                          <td>{item.name}</td>
+                          <td>{item.category || '-'}</td>
+                          <td>
+                            <b>{item.stock}</b>
+                          </td>
+                          <td>{item.cashPrice.toFixed(2)}</td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* 7. الأرباح والخسائر */}
+            <div id="tab-pnl" className={`tab-content ${activeTab === 'pnl' ? 'active' : ''}`}>
+              <div className="summary-bar" style={{ gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', padding: '8px' }}>
+                <div className="summary-item" style={{ gridColumn: 'span 2', fontSize: '11px' }}>
+                  صافي السيولة / الأرباح:{' '}
+                  <span id="pnlNetProfit" style={{ fontSize: '14px', color: '#facc15' }}>
+                    {pnlSummary.net.toFixed(2)} ج.م
+                  </span>
+                </div>
+                <div className="summary-item">
+                  إجمالي المقبوضات: <span id="pnlTotalIn">{pnlSummary.totalIn.toFixed(2)} ج.م</span>
+                </div>
+                <div className="summary-item">
+                  إجمالي المدفوعات: <span id="pnlTotalOut">{pnlSummary.totalOut.toFixed(2)} ج.م</span>
+                </div>
+              </div>
+            </div>
+
+            {/* 8. النسخ الاحتياطي */}
+            <div id="tab-backup" className={`tab-content ${activeTab === 'backup' ? 'active' : ''}`} style={{ justifyContent: 'center', alignItems: 'center' }}>
+              <div
+                style={{
+                  background: '#fff',
+                  border: '1px solid var(--border)',
+                  padding: '12px',
+                  borderRadius: '6px',
+                  width: '100%',
+                  textAlign: 'center',
+                }}
+              >
+                <h3 style={{ fontSize: '10px', marginBottom: '6px', color: 'var(--primary)' }}>
+                  حفظ واستعادة بيانات النظام
+                </h3>
+                <button
+                  className="btn-action-top"
+                  style={{ background: 'var(--accent)', marginBottom: '6px' }}
+                  onClick={() => {
+                    const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(appData, null, 2));
+                    const dl = document.createElement('a');
+                    dl.setAttribute('href', dataStr);
+                    dl.setAttribute('download', `rakeeza_backup_${Date.now()}.json`);
+                    dl.click();
+                  }}
+                >
+                  <i className="fa-solid fa-download"></i> تصدير النسخة الاحتياطية
+                </button>
+              </div>
             </div>
           </div>
 
-          {/* ============================================================== */}
-          {/* 10. BOTTOM ACTION BUTTONS (حفظ وترحيل الحسابات | طباعة) */}
-          {/* ============================================================== */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
-            {/* حفظ وترحيل الحسابات */}
-            <button
-              type="button"
-              onClick={handleSaveInvoice}
-              className="min-h-[46px] bg-[#2e7d32] hover:bg-[#1b5e20] active:scale-[0.99] text-white rounded-lg font-bold text-sm shadow-md transition flex items-center justify-center gap-2 cursor-pointer"
-            >
-              <Save className="w-5 h-5" />
-              <span>حفظ وترحيل الحسابات</span>
-            </button>
-
-            {/* طباعة */}
-            <button
-              type="button"
-              onClick={handlePrint}
-              className="min-h-[46px] bg-[#1976d2] hover:bg-[#1565c0] active:scale-[0.99] text-white rounded-lg font-bold text-sm shadow-md transition flex items-center justify-center gap-2 cursor-pointer"
-            >
-              <Printer className="w-5 h-5" />
-              <span>طباعة</span>
-            </button>
+          <div className="system-footer">
+            <span>مؤسسة الأخوة / المخازن والحسابات</span>
+            <span>RAKEEZA ERP &copy; 2026</span>
           </div>
         </div>
       </div>
 
-      {/* ============================================================== */}
-      {/* MODAL 1: دليل الأصناف (إضافة سريعة) */}
-      {/* ============================================================== */}
-      {isCatalogOpen && (
-        <div className="fixed inset-0 z-60 bg-black/70 flex items-center justify-center p-2 sm:p-4 backdrop-blur-xs">
-          <div className="bg-white rounded-2xl w-full max-w-3xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh] border border-slate-300">
-            <div className="bg-[#1976d2] text-white px-4 py-3 flex items-center justify-between">
-              <div className="flex items-center gap-2 font-bold text-sm sm:text-base">
-                <Boxes className="w-5 h-5" />
-                <span>دليل الأصناف والمخزون (إضافة سريعة)</span>
-              </div>
-              <button
-                onClick={() => setIsCatalogOpen(false)}
-                className="text-white hover:bg-white/20 p-1 rounded-lg"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <div className="p-3 border-b border-slate-200 bg-slate-50 space-y-2">
-              {/* Search input */}
-              <div className="relative">
-                <input
-                  type="text"
-                  placeholder="ابحث باسم الصنف أو الباركود أو الكود..."
-                  value={catalogSearch}
-                  onChange={(e) => setCatalogSearch(e.target.value)}
-                  className="w-full pl-3 pr-9 py-2 bg-white border border-slate-300 rounded-lg text-xs sm:text-sm font-bold focus:outline-none focus:border-blue-600"
-                />
-                <Search className="w-4 h-4 text-slate-400 absolute right-3 top-2.5" />
-              </div>
-
-              {/* Categories */}
-              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs">
-                <button
-                  type="button"
-                  onClick={() => setCatalogCategory('all')}
-                  className={`px-3 py-1 rounded-md font-bold whitespace-nowrap cursor-pointer ${
-                    catalogCategory === 'all'
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-white border border-slate-300 text-slate-700'
-                  }`}
-                >
-                  جميع التصنيفات ({catalogList.length})
-                </button>
-                {categories.map((cat) => (
-                  <button
-                    key={cat}
-                    type="button"
-                    onClick={() => setCatalogCategory(cat)}
-                    className={`px-3 py-1 rounded-md font-bold whitespace-nowrap cursor-pointer ${
-                      catalogCategory === cat
-                        ? 'bg-blue-600 text-white'
-                        : 'bg-white border border-slate-300 text-slate-700'
-                    }`}
-                  >
-                    {cat}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Catalog Items Grid / List */}
-            <div className="p-3 overflow-y-auto flex-1 divide-y divide-slate-100">
-              {filteredCatalogItems.length === 0 ? (
-                <div className="text-center py-10 text-slate-400 text-sm">
-                  لا توجد أصناف مطابقة للبحث
-                </div>
-              ) : (
-                filteredCatalogItems.map((itm) => (
-                  <div
-                    key={itm.code}
-                    onClick={() => openItemEdit(itm)}
-                    className="py-2.5 px-3 hover:bg-blue-50/70 transition flex items-center justify-between cursor-pointer rounded-lg group"
-                  >
-                    <div>
-                      <div className="font-bold text-slate-900 text-xs sm:text-sm group-hover:text-blue-700">
-                        {itm.name}
-                      </div>
-                      <div className="flex items-center gap-2 mt-0.5 font-mono text-[11px] text-slate-500">
-                        <span>كود: {itm.code}</span>
-                        <span>•</span>
-                        <span>تصنيف: {itm.category}</span>
-                      </div>
-                    </div>
-
-                    <div className="text-left flex items-center gap-3">
-                      <div>
-                        <div className="font-mono font-bold text-xs sm:text-sm text-slate-900">
-                          {isSale
-                            ? pricingType === 'wholesale'
-                              ? `${itm.wholesalePrice.toFixed(2)} ج.م (جملة)`
-                              : `${itm.cashPrice.toFixed(2)} ج.م (نقدي)`
-                            : `${itm.buyPrice.toFixed(2)} ج.م (شراء)`}
-                        </div>
-                        <div className="text-[11px] font-mono mt-0.5">
-                          {itm.stock < 0 ? (
-                            <span className="text-rose-950 bg-rose-100 px-1.5 py-0.5 rounded border border-rose-300 font-black">
-                              رصيد سالب: {itm.stock}
-                            </span>
-                          ) : (
-                            <span className="text-slate-600">رصيد: {itm.stock}</span>
-                          )}
-                        </div>
-                      </div>
-                      <button
-                        type="button"
-                        className="w-8 h-8 rounded-lg bg-blue-100 group-hover:bg-blue-600 group-hover:text-white text-blue-800 flex items-center justify-center transition"
-                      >
-                        <Plus className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ============================================================== */}
-      {/* MODAL 2: تعديل الصنف (الكمية، السعر، الخصم، الضريبة، البيان) */}
-      {/* ============================================================== */}
-      {isItemEditModalOpen && editItemObj && (
-        <div className="fixed inset-0 z-70 bg-black/75 flex items-center justify-center p-3 backdrop-blur-xs">
-          <div className="bg-white rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl border border-slate-300">
-            <div className="bg-[#1e293b] text-white px-4 py-3 flex items-center justify-between">
-              <span className="font-bold text-sm">
-                📦 ضبط الصنف: {editItemObj.name}
+      {/* نافذة الخيارات والمدفوعات */}
+      {isOptionsModalOpen && (
+        <div className="modal-overlay" id="optionsModal" style={{ display: 'flex' }}>
+          <div className="modal-box">
+            <div className="modal-header">
+              <span>
+                <i className="fa-solid fa-sliders"></i> خصومات، ضرائب، إيرادات ودفع
               </span>
-              <button
-                onClick={() => setIsItemEditModalOpen(false)}
-                className="text-white hover:bg-slate-700 p-1 rounded-lg"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <div className="p-4 space-y-3.5 text-xs sm:text-sm">
-              {/* Negative Stock Alert Banner */}
-              {isSale && editItemObj.stock < parseFloat(editQty || '0') && (
-                <div className="bg-rose-50 border-2 border-rose-400 p-2.5 rounded-xl text-rose-950 flex items-center gap-2">
-                  <AlertTriangle className="w-5 h-5 text-rose-700 shrink-0" />
-                  <div className="text-[11px] font-bold">
-                    ⚠️ الرصيد المتوفر بالمخزن ({editItemObj.stock}) أقل من الكمية المطلوبة. سيتم البيع بالسالب.
-                  </div>
-                </div>
-              )}
-
-              {/* Price Tier Switcher */}
-              <div>
-                <label className="block text-slate-700 font-bold mb-1">
-                  فئة السعر:
-                </label>
-                <div className="grid grid-cols-3 gap-1.5 font-bold text-xs">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setItemPriceTier('cash');
-                      setEditPrice(String(editItemObj.cashPrice));
-                    }}
-                    className={`py-1.5 px-2 rounded-lg border text-center transition cursor-pointer ${
-                      itemPriceTier === 'cash'
-                        ? 'bg-blue-600 text-white border-blue-600'
-                        : 'bg-slate-50 border-slate-300 text-slate-700'
-                    }`}
-                  >
-                    نقدي ({editItemObj.cashPrice})
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setItemPriceTier('wholesale');
-                      setEditPrice(String(editItemObj.wholesalePrice));
-                    }}
-                    className={`py-1.5 px-2 rounded-lg border text-center transition cursor-pointer ${
-                      itemPriceTier === 'wholesale'
-                        ? 'bg-amber-600 text-white border-amber-600'
-                        : 'bg-slate-50 border-slate-300 text-slate-700'
-                    }`}
-                  >
-                    جملة ({editItemObj.wholesalePrice})
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setItemPriceTier('buy');
-                      setEditPrice(String(editItemObj.buyPrice));
-                    }}
-                    className={`py-1.5 px-2 rounded-lg border text-center transition cursor-pointer ${
-                      itemPriceTier === 'buy'
-                        ? 'bg-emerald-600 text-white border-emerald-600'
-                        : 'bg-slate-50 border-slate-300 text-slate-700'
-                    }`}
-                  >
-                    شراء ({editItemObj.buyPrice})
-                  </button>
-                </div>
-              </div>
-
-              {/* Price & Quantity Grid */}
-              <div className="grid grid-cols-2 gap-3">
-                {/* السعر */}
-                <div>
-                  <label className="block text-slate-700 font-bold mb-1">السعر (ج.م):</label>
-                  <input
-                    type="number"
-                    step="any"
-                    value={editPrice}
-                    onChange={(e) => {
-                      setEditPrice(e.target.value);
-                      setItemPriceTier('custom');
-                    }}
-                    className="w-full p-2 border-2 border-slate-300 rounded-lg font-mono font-bold text-slate-900 focus:outline-none focus:border-blue-600 text-left"
-                  />
-                </div>
-
-                {/* الكمية */}
-                <div>
-                  <label className="block text-slate-700 font-bold mb-1">الكمية:</label>
-                  <div className="flex items-center">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const cur = parseFloat(editQty) || 0;
-                        setEditQty(String(cur + 1));
-                      }}
-                      className="w-8 h-9 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded-r-lg flex items-center justify-center font-bold text-slate-800"
-                    >
-                      <Plus className="w-3.5 h-3.5" />
-                    </button>
-                    <input
-                      type="number"
-                      step="any"
-                      value={editQty}
-                      onChange={(e) => setEditQty(e.target.value)}
-                      className="w-full h-9 border-y border-slate-300 font-mono font-black text-center text-slate-900 focus:outline-none"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const cur = parseFloat(editQty) || 0;
-                        if (cur > 1) setEditQty(String(cur - 1));
-                      }}
-                      className="w-8 h-9 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded-l-lg flex items-center justify-center font-bold text-slate-800"
-                    >
-                      <Minus className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              {/* Discount & Tax on Line */}
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <label className="text-slate-700 font-bold">الخصم:</label>
-                    <button
-                      type="button"
-                      onClick={() => setEditDiscType(editDiscType === 'percent' ? 'val' : 'percent')}
-                      className="text-[10px] text-blue-800 font-bold underline"
-                    >
-                      {editDiscType === 'percent' ? 'نسبة مئوية %' : 'مبلغ ثابت ج'}
-                    </button>
-                  </div>
-                  <input
-                    type="number"
-                    step="any"
-                    value={editDiscVal}
-                    onChange={(e) => setEditDiscVal(e.target.value)}
-                    className="w-full p-2 border border-slate-300 rounded-lg font-mono font-bold text-left"
-                  />
-                </div>
-
-                <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <label className="text-slate-700 font-bold">الضريبة:</label>
-                    <button
-                      type="button"
-                      onClick={() => setEditTaxType(editTaxType === 'percent' ? 'val' : 'percent')}
-                      className="text-[10px] text-blue-800 font-bold underline"
-                    >
-                      {editTaxType === 'percent' ? 'نسبة مئوية %' : 'مبلغ ثابت ج'}
-                    </button>
-                  </div>
-                  <input
-                    type="number"
-                    step="any"
-                    value={editTaxVal}
-                    onChange={(e) => setEditTaxVal(e.target.value)}
-                    className="w-full p-2 border border-slate-300 rounded-lg font-mono font-bold text-left"
-                  />
-                </div>
-              </div>
-
-              {/* Specification / Description */}
-              <div>
-                <label className="block text-slate-700 font-bold mb-1">
-                  البيان / الوصف (يظهر بالفاتورة):
-                </label>
-                <input
-                  type="text"
-                  placeholder="ملاحظات أو مواصفات للصنف..."
-                  value={editSpec}
-                  onChange={(e) => setEditSpec(e.target.value)}
-                  className="w-full p-2 border border-slate-300 rounded-lg font-bold text-slate-900"
-                />
-              </div>
-
-              {/* Total preview */}
-              <div className="bg-slate-100 p-2.5 rounded-xl border border-slate-200 flex items-center justify-between font-bold">
-                <span className="text-slate-700">إجمالي هذا الصنف:</span>
-                <span className="font-mono text-base text-blue-900 font-black">
-                  {(() => {
-                    const q = parseFloat(editQty) || 0;
-                    const p = parseFloat(editPrice) || 0;
-                    const dv = parseFloat(editDiscVal) || 0;
-                    const tv = parseFloat(editTaxVal) || 0;
-                    const base = q * p;
-                    const disc = editDiscType === 'percent' ? base * (dv / 100) : dv * q;
-                    const aft = base - disc;
-                    const tax = editTaxType === 'percent' ? aft * (tv / 100) : tv * q;
-                    return (aft + tax).toFixed(2);
-                  })()}{' '}
-                  ج.م
-                </span>
-              </div>
-
-              {/* Action Buttons */}
-              <div className="flex gap-2 pt-1">
-                <button
-                  type="button"
-                  onClick={handleConfirmItem}
-                  className="flex-1 py-2.5 bg-blue-700 hover:bg-blue-800 text-white rounded-lg font-bold text-sm cursor-pointer"
-                >
-                  ✓ تأكيد وإدراج بالفاتورة
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setIsItemEditModalOpen(false)}
-                  className="py-2.5 px-4 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg font-bold text-sm cursor-pointer"
-                >
-                  إلغاء
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ============================================================== */}
-      {/* MODAL 3: الخصم، الضريبة والدفع */}
-      {/* ============================================================== */}
-      {isSettingsOpen && (
-        <div className="fixed inset-0 z-70 bg-black/75 flex items-center justify-center p-3 backdrop-blur-xs">
-          <div className="bg-white rounded-2xl w-full max-w-xl overflow-hidden shadow-2xl border border-slate-300">
-            <div className="bg-[#1a237e] text-white px-4 py-3 flex items-center justify-between">
-              <span className="font-bold text-sm sm:text-base flex items-center gap-2">
-                <SlidersHorizontal className="w-4 h-4" />
-                <span>إعدادات الخصم، الضريبة، وطرق الدفع</span>
+              <span style={{ cursor: 'pointer', fontSize: '18px' }} onClick={() => setIsOptionsModalOpen(false)}>
+                &times;
               </span>
-              <button
-                onClick={() => setIsSettingsOpen(false)}
-                className="text-white hover:bg-blue-900 p-1 rounded-lg"
-              >
-                <X className="w-4 h-4" />
-              </button>
             </div>
-
-            <div className="p-4 space-y-4 text-xs sm:text-sm max-h-[80vh] overflow-y-auto">
-              {/* الخصم الكلي للفاتورة */}
-              <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 space-y-2">
-                <div className="flex items-center justify-between">
-                  <label className="font-bold text-slate-800">خصم الفاتورة الإجمالي:</label>
-                  <div className="flex items-center gap-1 bg-white p-0.5 rounded border border-slate-300 text-xs">
+            <div className="modal-body">
+              <div className="field-inline" style={{ gap: '3px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <label style={{ fontSize: '9px' }}>خصم الفاتورة الكلية</label>
+                  <div className="big-toggle-group">
                     <button
                       type="button"
+                      className={`big-toggle-btn ${invDiscType === 'val' ? 'active' : ''}`}
+                      id="invDiscTypeVal"
                       onClick={() => setInvDiscType('val')}
-                      className={`px-2 py-0.5 rounded ${invDiscType === 'val' ? 'bg-blue-700 text-white' : 'text-slate-700'}`}
                     >
-                      مبلغ ثابت
+                      ج.م
                     </button>
                     <button
                       type="button"
+                      className={`big-toggle-btn ${invDiscType === 'percent' ? 'active' : ''}`}
+                      id="invDiscTypePercent"
                       onClick={() => setInvDiscType('percent')}
-                      className={`px-2 py-0.5 rounded ${invDiscType === 'percent' ? 'bg-blue-700 text-white' : 'text-slate-700'}`}
                     >
-                      نسبة مئوية %
+                      %
                     </button>
                   </div>
                 </div>
                 <input
                   type="number"
-                  step="any"
+                  id="globalInvDisc"
                   value={globalInvDisc}
-                  onChange={(e) => setGlobalInvDisc(parseFloat(e.target.value) || 0)}
-                  className="w-full p-2 bg-white border border-slate-300 rounded-lg font-mono font-bold text-left"
+                  placeholder="أدخل قيمة أو نسبة الخصم..."
+                  onChange={(e) => setGlobalInvDisc(e.target.value)}
+                  style={{ height: '26px', fontSize: '10px' }}
                 />
               </div>
 
-              {/* الضريبة الكلية للفاتورة */}
-              <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 space-y-2">
-                <div className="flex items-center justify-between">
-                  <label className="font-bold text-slate-800">ضريبة الفاتورة العامة:</label>
-                  <div className="flex items-center gap-1 bg-white p-0.5 rounded border border-slate-300 text-xs">
+              <div className="field-inline" style={{ gap: '3px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <label style={{ fontSize: '9px' }}>ضريبة الفاتورة الكلية</label>
+                  <div className="big-toggle-group">
                     <button
                       type="button"
-                      onClick={() => setInvTaxType('val')}
-                      className={`px-2 py-0.5 rounded ${invTaxType === 'val' ? 'bg-blue-700 text-white' : 'text-slate-700'}`}
+                      className={`big-toggle-btn ${invTaxType === 'percent' ? 'active' : ''}`}
+                      id="invTaxTypePercent"
+                      onClick={() => setInvTaxType('percent')}
                     >
-                      مبلغ ثابت
+                      %
                     </button>
                     <button
                       type="button"
-                      onClick={() => setInvTaxType('percent')}
-                      className={`px-2 py-0.5 rounded ${invTaxType === 'percent' ? 'bg-blue-700 text-white' : 'text-slate-700'}`}
+                      className={`big-toggle-btn ${invTaxType === 'val' ? 'active' : ''}`}
+                      id="invTaxTypeVal"
+                      onClick={() => setInvTaxType('val')}
                     >
-                      نسبة مئوية %
+                      ج.م
                     </button>
                   </div>
                 </div>
                 <input
                   type="number"
-                  step="any"
+                  id="globalInvTax"
                   value={globalInvTax}
-                  onChange={(e) => setGlobalInvTax(parseFloat(e.target.value) || 0)}
-                  className="w-full p-2 bg-white border border-slate-300 rounded-lg font-mono font-bold text-left"
+                  placeholder="أدخل قيمة أو نسبة الضريبة..."
+                  onChange={(e) => setGlobalInvTax(e.target.value)}
+                  style={{ height: '26px', fontSize: '10px' }}
                 />
               </div>
 
-              {/* خدمات / مصاريف إضافية */}
-              <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 space-y-2">
-                <label className="font-bold text-slate-800 block">خدمة / شحن / إيراد إضافي:</label>
-                <div className="grid grid-cols-2 gap-2">
+              <div className="edit-card-grid">
+                <div className="field-inline">
+                  <label style={{ fontSize: '9px' }}>اسم الإيراد</label>
                   <input
                     type="text"
-                    placeholder="بيان الخدمة أو الشحن..."
-                    value={extraRevenueName}
-                    onChange={(e) => setExtraRevenueName(e.target.value)}
-                    className="p-2 bg-white border border-slate-300 rounded-lg font-bold"
+                    id="extraIncomeName"
+                    value={extraIncomeName}
+                    onChange={(e) => setExtraIncomeName(e.target.value)}
+                    style={{ height: '25px', fontSize: '9.5px' }}
                   />
+                </div>
+                <div className="field-inline">
+                  <label style={{ fontSize: '9px' }}>مبلغ الإيراد</label>
                   <input
                     type="number"
-                    step="any"
-                    placeholder="القيمة..."
-                    value={extraRevenueVal || ''}
-                    onChange={(e) => setExtraRevenueVal(parseFloat(e.target.value) || 0)}
-                    className="p-2 bg-white border border-slate-300 rounded-lg font-mono font-bold text-left"
+                    id="extraIncomeVal"
+                    value={extraIncomeVal}
+                    onChange={(e) => setExtraIncomeVal(e.target.value)}
+                    style={{ height: '25px', fontSize: '9.5px' }}
                   />
                 </div>
               </div>
 
-              {/* طرق الدفع المتعددة */}
-              <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 space-y-2.5">
-                <div className="flex items-center justify-between">
-                  <label className="font-bold text-slate-800">طرق الدفع والتسديد:</label>
+              <div className="field-inline">
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <label style={{ fontSize: '9px' }}>طرق الدفع المتعددة</label>
                   <button
                     type="button"
-                    onClick={() => {
-                      setPaymentRows([
-                        ...paymentRows,
-                        {
-                          id: `pay_${Date.now()}`,
-                          method: 'نقدي / كاش (الدرج)',
-                          amount: 0,
-                        },
-                      ]);
+                    style={{
+                      padding: '2px 6px',
+                      fontSize: '8.5px',
+                      background: 'var(--accent)',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '3px',
+                      cursor: 'pointer',
                     }}
-                    className="text-xs text-blue-700 font-bold flex items-center gap-1 hover:underline cursor-pointer"
+                    onClick={() => addPaymentRow('نقدي', 0)}
                   >
-                    <Plus className="w-3.5 h-3.5" />
-                    <span>إضافة طريقة دفع أخرى</span>
+                    + إضافة دفع
                   </button>
                 </div>
-
-                <div className="space-y-2">
-                  {paymentRows.map((row, rIdx) => (
-                    <div key={row.id} className="flex items-center gap-2">
+                <div
+                  id="paymentRowsContainer"
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '4px',
+                    maxHeight: '100px',
+                    overflowY: 'auto',
+                    marginTop: '2px',
+                  }}
+                >
+                  {paymentRows.map((r, rIdx) => (
+                    <div key={r.id} className="pay-row" style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
                       <select
-                        value={row.method}
+                        className="pay-method"
+                        value={r.method}
                         onChange={(e) => {
-                          const updated = [...paymentRows];
-                          updated[rIdx].method = e.target.value;
-                          setPaymentRows(updated);
+                          const val = e.target.value;
+                          setPaymentRows((prev) =>
+                            prev.map((row, i) => (i === rIdx ? { ...row, method: val } : row))
+                          );
                         }}
-                        className="flex-1 p-2 bg-white border border-slate-300 rounded-lg font-bold text-xs"
+                        style={{ height: '24px', width: '90px', fontSize: '9.5px' }}
                       >
-                        {PAYMENT_METHODS.map((m) => (
-                          <option key={m} value={m}>
-                            {m}
-                          </option>
-                        ))}
+                        <option value="نقدي">نقدي</option>
+                        <option value="انستاباي">انستاباي</option>
+                        <option value="فودافون كاش">فودافون كاش</option>
+                        <option value="حساب بنكي">حساب بنكي</option>
                       </select>
                       <input
                         type="number"
+                        className="pay-amount"
+                        value={r.amount || ''}
                         step="any"
                         placeholder="المبلغ..."
-                        value={row.amount || ''}
                         onChange={(e) => {
-                          const updated = [...paymentRows];
-                          updated[rIdx].amount = parseFloat(e.target.value) || 0;
-                          setPaymentRows(updated);
+                          const val = parseFloat(e.target.value) || 0;
+                          setPaymentRows((prev) =>
+                            prev.map((row, i) => (i === rIdx ? { ...row, amount: val } : row))
+                          );
                         }}
-                        className="w-32 p-2 bg-white border border-slate-300 rounded-lg font-mono font-bold text-left"
+                        style={{ height: '24px', flex: 1, fontSize: '9.5px' }}
                       />
-                      {paymentRows.length > 1 && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const updated = paymentRows.filter((_, i) => i !== rIdx);
-                            setPaymentRows(updated);
-                          }}
-                          className="p-2 text-rose-600 hover:bg-rose-50 rounded"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      )}
+                      <i
+                        className="fa-solid fa-circle-xmark"
+                        style={{ color: 'var(--danger)', cursor: 'pointer' }}
+                        onClick={() => removePaymentRow(r.id)}
+                      ></i>
                     </div>
                   ))}
                 </div>
+              </div>
 
-                <div className="flex items-center justify-between text-xs pt-1 text-slate-600 font-bold">
-                  <span>إجمالي المدفوع: {calculations.paidTotal.toFixed(2)} ج.م</span>
-                  <span>المتبقي: {calculations.remaining.toFixed(2)} ج.م</span>
+              {/* معاينة الحسابات المباشرة لحظياً */}
+              <div
+                style={{
+                  background: '#f8fafc',
+                  border: '1px solid #cbd5e1',
+                  borderRadius: '4px',
+                  padding: '5px 8px',
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
+                  textAlign: 'center',
+                  gap: '4px',
+                  marginTop: '4px',
+                }}
+              >
+                <div>
+                  <span style={{ fontSize: '7.5px', color: '#64748b', display: 'block' }}>الإجمالي</span>
+                  <strong style={{ fontSize: '9.5px', color: '#0f172a' }}>{calculations.subTotal.toFixed(2)}</strong>
+                </div>
+                <div>
+                  <span style={{ fontSize: '7.5px', color: '#64748b', display: 'block' }}>الخصم</span>
+                  <strong style={{ fontSize: '9.5px', color: '#0f172a' }}>{calculations.disc.toFixed(2)}</strong>
+                </div>
+                <div>
+                  <span style={{ fontSize: '7.5px', color: '#64748b', display: 'block' }}>الضريبة</span>
+                  <strong style={{ fontSize: '9.5px', color: '#0f172a' }}>{calculations.tax.toFixed(2)}</strong>
+                </div>
+                <div>
+                  <span style={{ fontSize: '7.5px', color: '#64748b', display: 'block' }}>الصافي</span>
+                  <strong style={{ fontSize: '9.5px', color: '#0f172a', fontWeight: 'bold' }}>{calculations.net.toFixed(2)}</strong>
                 </div>
               </div>
 
               <button
                 type="button"
-                onClick={() => setIsSettingsOpen(false)}
-                className="w-full py-2.5 bg-blue-700 hover:bg-blue-800 text-white rounded-lg font-bold text-sm cursor-pointer"
+                className="btn-action-top"
+                style={{ background: 'var(--accent)', marginTop: '6px', padding: '7px', fontSize: '10px' }}
+                onClick={() => setIsOptionsModalOpen(false)}
               >
-                تطبيق الإعدادات
+                <i className="fa-solid fa-check"></i> تم وحفظ الخيارات
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* دليل الأصناف */}
+      {isLookupModalOpen && (
+        <div className="modal-overlay" id="lookupModal" style={{ display: 'flex' }}>
+          <div className="lookup-modal-box">
+            <div className="modal-header">
+              <span>
+                <i className="fa-solid fa-layer-group"></i> دليل الأصناف (اختر صنفاً للإضافة السريعة)
+              </span>
+              <span style={{ cursor: 'pointer', fontSize: '18px' }} onClick={() => setIsLookupModalOpen(false)}>
+                &times;
+              </span>
+            </div>
+            <div className="lookup-layout">
+              <div className="categories-panel">
+                <div className="categories-header">
+                  <span>المجموعات</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setNewItemName('');
+                      setNewItemCode(`1${itemsDatabase.length + 101}`);
+                      setNewItemBuyPrice('');
+                      setNewItemCashPrice('');
+                      setNewItemWholesalePrice('');
+                      setNewItemStock('');
+                      setIsEditItemModalOpen(true);
+                    }}
+                    style={{
+                      background: 'var(--accent)',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '3px',
+                      padding: '3px 5px',
+                      fontSize: '8px',
+                      cursor: 'pointer',
+                      fontWeight: 'bold',
+                      marginTop: '2px',
+                    }}
+                    title="إضافة صنف جديد"
+                  >
+                    <i className="fa-solid fa-plus"></i> صنف جديد
+                  </button>
+                </div>
+                <div className="categories-list" id="categoriesListContainer">
+                  <div
+                    className={`category-item ${selectedCategory === 'all' ? 'active' : ''}`}
+                    onClick={() => setSelectedCategory('all')}
+                  >
+                    الكل
+                  </div>
+                  {categoriesList.map((cat) => (
+                    <div
+                      key={cat}
+                      className={`category-item ${selectedCategory === cat ? 'active' : ''}`}
+                      onClick={() => setSelectedCategory(cat)}
+                    >
+                      {cat}
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div className="items-panel">
+                <div className="search-top-bar">
+                  <input
+                    type="text"
+                    id="lookupSearch"
+                    placeholder="بحث بالاسم أو الكود..."
+                    value={lookupSearch}
+                    onChange={(e) => setLookupSearch(e.target.value)}
+                    style={{ height: '24px', flex: 1, fontSize: '9.5px' }}
+                  />
+                </div>
+                <div className="lookup-cards-container" id="lookupCardsBody">
+                  {itemsDatabase
+                    .filter((item) => {
+                      if (selectedCategory !== 'all' && item.category !== selectedCategory) return false;
+                      const q = lookupSearch.toLowerCase().trim();
+                      return !q || item.name.toLowerCase().includes(q) || item.code.includes(q);
+                    })
+                    .map((item) => (
+                      <div
+                        key={item.code}
+                        className={`item-card-box ${item.stock <= 0 ? 'low-stock' : ''}`}
+                        onClick={() => quickAddItemToInvoiceAndReturn(item)}
+                      >
+                        <div className="item-card-header">
+                          <span>{item.name}</span>
+                          <span style={{ color: '#0284c7' }}>{item.code}</span>
+                        </div>
+                        <div className="item-card-body">
+                          <div className="item-card-info">
+                            <span>المتاح</span>
+                            <strong>{item.stock}</strong>
+                          </div>
+                          <div className="item-card-info">
+                            <span>نقدي</span>
+                            <strong style={{ color: '#16a34a' }}>{item.cashPrice.toFixed(2)}</strong>
+                          </div>
+                          <div className="item-card-info">
+                            <span>جملة</span>
+                            <strong style={{ color: '#d97706' }}>{item.wholesalePrice.toFixed(2)}</strong>
+                          </div>
+                          <div className="item-card-info">
+                            <span>شراء</span>
+                            <strong style={{ color: '#dc2626' }}>{item.buyPrice.toFixed(2)}</strong>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* نافذة إضافة صنف جديد للمخزون */}
+      {isEditItemModalOpen && (
+        <div className="modal-overlay" id="editItemModal" style={{ display: 'flex' }}>
+          <div className="modal-box">
+            <div className="modal-header">
+              <span>إضافة صنف جديد للمخزون</span>
+              <span style={{ cursor: 'pointer', fontSize: '18px' }} onClick={() => setIsEditItemModalOpen(false)}>
+                &times;
+              </span>
+            </div>
+            <div className="modal-body">
+              <div className="edit-card-grid">
+                <div className="field-inline span-2">
+                  <label>اسم الصنف الجديد</label>
+                  <input
+                    type="text"
+                    id="newInputItemName"
+                    value={newItemName}
+                    onChange={(e) => setNewItemName(e.target.value)}
+                    style={{ height: '24px', fontSize: '9.5px' }}
+                  />
+                </div>
+                <div className="field-inline span-2">
+                  <label>كود الصنف (تلقائي)</label>
+                  <input
+                    type="text"
+                    id="newInputItemCode"
+                    value={newItemCode}
+                    readOnly
+                    style={{ background: '#f1f5f9', fontWeight: 'bold', height: '24px', fontSize: '9.5px' }}
+                  />
+                </div>
+                <div className="field-inline">
+                  <label>سعر الشراء الأساسي</label>
+                  <input
+                    type="number"
+                    id="editBuyPrice"
+                    value={newItemBuyPrice}
+                    min="0"
+                    step="any"
+                    onChange={(e) => {
+                      const bp = e.target.value;
+                      setNewItemBuyPrice(bp);
+                      const num = parseFloat(bp) || 0;
+                      setNewItemCashPrice((num * 1.15).toFixed(2));
+                      setNewItemWholesalePrice((num * 1.08).toFixed(2));
+                    }}
+                    style={{ height: '24px', fontSize: '9.5px' }}
+                  />
+                </div>
+                <div className="field-inline">
+                  <label>المجموعة</label>
+                  <select
+                    id="editItemCategory"
+                    value={newItemCategory}
+                    onChange={(e) => setNewItemCategory(e.target.value)}
+                    style={{ height: '24px', fontSize: '9.5px' }}
+                  >
+                    {categoriesList.map((cat) => (
+                      <option key={cat} value={cat}>
+                        {cat}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="field-inline">
+                  <label>سعر القطاعي (نقدي)</label>
+                  <input
+                    type="number"
+                    id="editCashPriceManual"
+                    value={newItemCashPrice}
+                    min="0"
+                    step="any"
+                    onChange={(e) => setNewItemCashPrice(e.target.value)}
+                    style={{ height: '24px', fontSize: '9px' }}
+                  />
+                </div>
+                <div className="field-inline">
+                  <label>سعر الجملة</label>
+                  <input
+                    type="number"
+                    id="editWholesalePriceManual"
+                    value={newItemWholesalePrice}
+                    min="0"
+                    step="any"
+                    onChange={(e) => setNewItemWholesalePrice(e.target.value)}
+                    style={{ height: '24px', fontSize: '9px' }}
+                  />
+                </div>
+                <div className="field-inline span-2">
+                  <label>الكمية بالمخزون</label>
+                  <input
+                    type="number"
+                    id="editQty"
+                    value={newItemStock}
+                    min="0"
+                    step="any"
+                    onChange={(e) => setNewItemStock(e.target.value)}
+                    style={{ height: '24px', fontSize: '9.5px' }}
+                  />
+                </div>
+              </div>
+              <button
+                type="button"
+                className="btn-action-top"
+                style={{ background: 'var(--accent)', marginTop: '4px', padding: '7px', fontSize: '10px' }}
+                onClick={saveNewItemData}
+              >
+                <i className="fa-solid fa-check"></i> حفظ والرجوع للفاتورة
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* نافذة تعديل بيانات البند داخل الفاتورة */}
+      {isModifyModalOpen && (
+        <div className="modal-overlay" id="modifyInvoiceItemModal" style={{ display: 'flex' }}>
+          <div className="modal-box">
+            <div className="modal-header">
+              <span>
+                <i className="fa-solid fa-pen-to-square"></i> تعديل صنف في الفاتورة
+              </span>
+              <span style={{ cursor: 'pointer', fontSize: '18px' }} onClick={() => setIsModifyModalOpen(false)}>
+                &times;
+              </span>
+            </div>
+            <div className="modal-body">
+              <input type="hidden" id="modifyItemIndex" value={modifyIndex} />
+              <div className="field-inline">
+                <label>اسم الصنف</label>
+                <input
+                  type="text"
+                  id="modifyItemName"
+                  value={modifyName}
+                  readOnly
+                  style={{ background: '#f1f5f9', height: '24px', fontSize: '9.5px' }}
+                />
+              </div>
+              <div className="edit-card-grid">
+                <div className="field-inline">
+                  <label>الكمية</label>
+                  <input
+                    type="number"
+                    id="modifyItemQty"
+                    min="0.01"
+                    step="any"
+                    value={modifyQty}
+                    onChange={(e) => setModifyQty(e.target.value)}
+                    style={{ height: '24px', fontSize: '9.5px' }}
+                  />
+                </div>
+                <div className="field-inline">
+                  <label>سعر البيع</label>
+                  <input
+                    type="number"
+                    id="modifyItemPrice"
+                    min="0"
+                    step="any"
+                    value={modifyPrice}
+                    onChange={(e) => setModifyPrice(e.target.value)}
+                    style={{ height: '24px', fontSize: '9.5px' }}
+                  />
+                </div>
+              </div>
+              <div className="field-inline span-2">
+                <label>الوصف / البيان</label>
+                <input
+                  type="text"
+                  id="modifyItemSpec"
+                  placeholder="اختياري..."
+                  value={modifySpec}
+                  onChange={(e) => setModifySpec(e.target.value)}
+                  style={{ height: '24px', fontSize: '9.5px' }}
+                />
+              </div>
+              <button
+                type="button"
+                className="btn-action-top"
+                style={{ background: 'var(--accent)', marginTop: '6px', padding: '7px', fontSize: '10px' }}
+                onClick={saveModifiedInvoiceItem}
+              >
+                <i className="fa-solid fa-check"></i> حفظ التعديل
               </button>
             </div>
           </div>

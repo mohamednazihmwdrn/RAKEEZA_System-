@@ -1367,6 +1367,7 @@ export default function App() {
         showToast={showToast}
         onNavigateReports={(year) => handleNavigate('reports')}
         onNavigate={handleNavigate}
+        currentPage={currentPage}
       />
 
       {/* 👑 Owner Browsing Company Banner */}
@@ -1452,8 +1453,8 @@ export default function App() {
       {/* Main Content Area */}
       <main
         className={`${
-          appData.viewingClosedYear ? 'mt-[105px]' : 'mt-[60px]'
-        } p-2.5 sm:p-4 md:p-6 pb-24 md:pb-6 transition-all duration-300 flex-1 min-w-0 max-w-full overflow-x-hidden ${
+          appData.viewingClosedYear ? 'mt-[105px]' : 'mt-[56px]'
+        } p-2.5 sm:p-4 md:p-6 pb-6 transition-all duration-300 flex-1 min-w-0 max-w-full overflow-x-hidden ${
           isSidebarOpen ? 'md:mr-[290px]' : 'mr-0'
         }`}
       >
@@ -1534,79 +1535,9 @@ export default function App() {
         </div>
       </main>
 
-      {/* Mobile Sticky Quick Navigation Bar with Hardware & Screen Back Support */}
-      <nav
-        className="md:hidden fixed bottom-0 left-0 right-0 h-16 bg-white/95 backdrop-blur-md border-t border-slate-200/90 z-30 flex items-center justify-around px-2 shadow-lg no-print mobile-bottom-nav select-none"
-        aria-label="التنقل السريع للهاتف"
-      >
-        {currentPage !== 'home' ? (
-          <button
-            type="button"
-            onClick={() => {
-              if (window.history.length > 1) {
-                window.history.back();
-              } else {
-                handleNavigate('home');
-              }
-            }}
-            className="flex flex-col items-center justify-center flex-1 min-h-[48px] py-1 text-blue-700 hover:text-blue-900 active:scale-95 transition"
-            title="الرجوع للصفحة السابقة"
-          >
-            <RotateCcw className="w-5 h-5 mb-0.5" />
-            <span className="text-[11px] font-bold">رجوع</span>
-          </button>
-        ) : (
-          <button
-            onClick={() => handleNavigate('home')}
-            className="flex flex-col items-center justify-center flex-1 min-h-[48px] py-1 text-blue-900 font-bold"
-          >
-            <Home className="w-5 h-5 mb-0.5 text-blue-900" />
-            <span className="text-[11px]">الرئيسية</span>
-          </button>
-        )}
-
-        <button
-          onClick={() => handleNavigate('pos')}
-          className={`flex flex-col items-center justify-center flex-1 min-h-[48px] py-1 transition ${
-            currentPage === 'pos' ? 'text-amber-600 font-bold' : 'text-slate-600 hover:text-slate-900'
-          }`}
-        >
-          <Zap className="w-5 h-5 mb-0.5 text-amber-500" />
-          <span className="text-[11px] font-bold">الكاشير</span>
-        </button>
-
-        <button
-          onClick={() => handleNavigate('sales')}
-          className={`flex flex-col items-center justify-center flex-1 min-h-[48px] py-1 transition ${
-            currentPage === 'sales' ? 'text-blue-800 font-bold' : 'text-slate-600 hover:text-slate-900'
-          }`}
-        >
-          <ShoppingCart className="w-5 h-5 mb-0.5" />
-          <span className="text-[11px]">المبيعات</span>
-        </button>
-
-        <button
-          onClick={() => handleNavigate('purchases')}
-          className={`flex flex-col items-center justify-center flex-1 min-h-[48px] py-1 transition ${
-            currentPage === 'purchases' ? 'text-blue-800 font-bold' : 'text-slate-600 hover:text-slate-900'
-          }`}
-        >
-          <ShoppingBag className="w-5 h-5 mb-0.5" />
-          <span className="text-[11px]">المشتريات</span>
-        </button>
-
-        <button
-          onClick={() => setIsSidebarOpen((prev) => !prev)}
-          className="flex flex-col items-center justify-center flex-1 min-h-[48px] py-1 text-slate-600 hover:text-slate-900 transition"
-        >
-          <Menu className="w-5 h-5 mb-0.5" />
-          <span className="text-[11px]">القائمة</span>
-        </button>
-      </nav>
-
       {/* System Footer & Developer Copyright */}
       <footer
-        className={`no-print py-3.5 px-4 sm:px-6 bg-white border-t border-slate-200 text-xs text-slate-600 transition-all duration-300 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-xs mb-16 md:mb-0 ${
+        className={`no-print py-3.5 px-4 sm:px-6 bg-white border-t border-slate-200 text-xs text-slate-600 transition-all duration-300 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-xs mb-0 ${
           isSidebarOpen ? 'md:mr-[290px]' : 'mr-0'
         }`}
       >
