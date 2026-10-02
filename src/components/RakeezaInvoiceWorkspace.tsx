@@ -674,8 +674,15 @@ input, select {
         border-radius: 5px;
     }
     .invoice-card .span-2 {
-        grid-column: span 3;
+        grid-column: span 2;
     }
+    .invoice-card > .field-inline:nth-child(6) {
+        grid-column: span 2;
+    }
+    .invoice-card > .field-inline:nth-child(7) {
+        grid-column: span 4;
+    }
+    .invoice-card #custLimitDisplay,
     .invoice-card .span-3 {
         grid-column: span 6;
     }
@@ -861,7 +868,11 @@ export const RakeezaInvoiceWorkspace: React.FC<RakeezaInvoiceWorkspaceProps> = (
   showToast,
 }) => {
   const isSale = mode === 'sale';
-  const isReturn = invoiceType.startsWith('return_');
+  const [currentInvType, setCurrentInvType] = useState<'nagdi' | 'ajel' | 'return_nagdi' | 'return_ajel'>(invoiceType);
+  useEffect(() => {
+    setCurrentInvType(invoiceType);
+  }, [invoiceType]);
+  const isReturn = currentInvType.startsWith('return_');
   const isEditing = !!editingInvoice;
 
   // Window Maximize Toggle for large displays
@@ -1077,10 +1088,12 @@ export const RakeezaInvoiceWorkspace: React.FC<RakeezaInvoiceWorkspaceProps> = (
 
   // Dynamic Balance Display
   const partyAccountDisplay = useMemo(() => {
+    const isCashOp = currentInvType === 'nagdi' || currentInvType === 'return_nagdi';
+    const isRet = currentInvType.startsWith('return_');
     if (isSale) {
       if (!matchedCustomer) {
         return {
-          typeLabel: invoiceType === 'nagdi' ? 'نقدي' : 'آجل',
+          typeLabel: isRet ? (isCashOp ? 'مرتجع نقدي' : 'مرتجع آجل') : isCashOp ? 'نقدي' : 'آجل',
           balanceVal: 0,
         };
       }
@@ -1092,7 +1105,7 @@ export const RakeezaInvoiceWorkspace: React.FC<RakeezaInvoiceWorkspaceProps> = (
     } else {
       if (!matchedSupplier) {
         return {
-          typeLabel: invoiceType === 'nagdi' ? 'نقدي' : 'آجل',
+          typeLabel: isRet ? (isCashOp ? 'مرتجع نقدي' : 'مرتجع آجل') : isCashOp ? 'نقدي' : 'آجل',
           balanceVal: 0,
         };
       }
@@ -1102,7 +1115,7 @@ export const RakeezaInvoiceWorkspace: React.FC<RakeezaInvoiceWorkspaceProps> = (
         balanceVal: Math.abs(sum.balance),
       };
     }
-  }, [isSale, matchedCustomer, matchedSupplier, appData, invoiceType]);
+  }, [isSale, matchedCustomer, matchedSupplier, appData, currentInvType]);
 
   // -------------------------------------------------------------
   // ⚡ Precise Calculations Engine with Instant Live Updates
@@ -1130,16 +1143,17 @@ export const RakeezaInvoiceWorkspace: React.FC<RakeezaInvoiceWorkspaceProps> = (
     const extra = Math.max(0, parseFloat(extraIncomeVal) || 0);
     const net = Math.max(0, subTotal - disc + tax + extra);
 
+    const isCashOperation = currentInvType === 'nagdi' || currentInvType === 'return_nagdi';
     let paid = 0;
     if (paymentRows.length === 0) {
-      paid = invoiceType === 'nagdi' ? net : 0;
+      paid = isCashOperation ? net : 0;
     } else {
       paymentRows.forEach((p) => {
         paid += Number(p.amount) || 0;
       });
     }
 
-    const remain = Math.max(0, net - paid);
+    const remain = isCashOperation && paymentRows.length === 0 ? 0 : Math.max(0, net - paid);
 
     return {
       totalQty,
@@ -1159,7 +1173,7 @@ export const RakeezaInvoiceWorkspace: React.FC<RakeezaInvoiceWorkspaceProps> = (
     invTaxType,
     extraIncomeVal,
     paymentRows,
-    invoiceType,
+    currentInvType,
   ]);
 
   // Select Customer/Supplier from Autocomplete
@@ -1184,7 +1198,12 @@ export const RakeezaInvoiceWorkspace: React.FC<RakeezaInvoiceWorkspaceProps> = (
     setCurrentInvoicePriceType(type);
     setCurrentInvoiceItems((prev) =>
       prev.map((item) => {
-        const db = itemsDatabase.find((i) => i.code === item.code);
+        const db = itemsDatabase.find(
+          (i) =>
+            i.code === item.code ||
+            (item.itemId && i.id === item.itemId) ||
+            i.name.trim().toLowerCase() === item.name.trim().toLowerCase()
+        );
         if (db) {
           const newPrice =
             type === 'wholesale'
@@ -1213,10 +1232,15 @@ export const RakeezaInvoiceWorkspace: React.FC<RakeezaInvoiceWorkspaceProps> = (
         : dbItem.cashPrice;
 
     setCurrentInvoiceItems((prev) => {
-      const existing = prev.find((i) => i.code === dbItem.code);
+      const existing = prev.find(
+        (i) =>
+          i.code === dbItem.code ||
+          (dbItem.id && i.itemId === dbItem.id) ||
+          i.name.trim().toLowerCase() === dbItem.name.trim().toLowerCase()
+      );
       if (existing) {
         return prev.map((i) =>
-          i.code === dbItem.code
+          i === existing
             ? { ...i, qty: i.qty + 1, total: (i.qty + 1) * i.price }
             : i
         );
@@ -1426,7 +1450,7 @@ export const RakeezaInvoiceWorkspace: React.FC<RakeezaInvoiceWorkspaceProps> = (
         total: net,
         paymentMethod: paymentRows.length > 1 ? 'split' : primaryKey,
         paymentSplits: paymentRows.map((r) => ({ method: r.method, amount: r.amount })),
-        type: invoiceType,
+        type: currentInvType,
         salesType: currentInvoicePriceType === 'wholesale' ? 'wholesale' : 'cash',
         paidAmount: paid,
         remainingAmount: remain,
@@ -1476,7 +1500,7 @@ export const RakeezaInvoiceWorkspace: React.FC<RakeezaInvoiceWorkspaceProps> = (
           method: r.method.includes('فودافون') ? 'vodafone' : r.method.includes('انستاباي') ? 'instapay' : r.method.includes('بنك') ? 'bank' : 'drawer',
           amount: r.amount,
         })),
-        type: invoiceType,
+        type: currentInvType,
         paidAmount: paid,
         remainingAmount: remain,
         status: 'approved',
@@ -1691,7 +1715,22 @@ export const RakeezaInvoiceWorkspace: React.FC<RakeezaInvoiceWorkspaceProps> = (
           {/* Header Title */}
           <div className="header-title">
             <span>
-              <i className="fa-solid fa-cube"></i> RAKEEZA | ركيزة - النظام الموحد الشامل
+              <i className={isSale ? "fa-solid fa-receipt" : "fa-solid fa-truck-ramp-box"}></i>{' '}
+              {isSale
+                ? currentInvType === 'return_nagdi'
+                  ? 'تسجيل مرتجع مبيعات نقدي'
+                  : currentInvType === 'return_ajel'
+                  ? 'تسجيل مرتجع مبيعات آجل'
+                  : currentInvType === 'nagdi'
+                  ? 'تسجيل فاتورة مبيعات نقدية'
+                  : 'تسجيل فاتورة مبيعات آجلة'
+                : currentInvType === 'return_nagdi'
+                ? 'تسجيل مرتجع مشتريات نقدي'
+                : currentInvType === 'return_ajel'
+                ? 'تسجيل مرتجع مشتريات آجل'
+                : currentInvType === 'nagdi'
+                ? 'تسجيل فاتورة مشتريات نقدية'
+                : 'تسجيل فاتورة مشتريات وتوريدات آجلة'}
             </span>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <span id="liveTime">{liveTimeStr}</span>
@@ -2095,10 +2134,24 @@ export const RakeezaInvoiceWorkspace: React.FC<RakeezaInvoiceWorkspaceProps> = (
                     إجمالي الكمية: <span id="lblItemsTotal">{calculations.totalQty}</span>
                   </div>
                   <div className="summary-item">
-                    المدفوع: <span id="lblPaidTotal">{calculations.paid.toFixed(2)}</span>
+                    {isReturn
+                      ? currentInvType === 'return_nagdi'
+                        ? (isSale ? 'المسترد نقداً للعميل:' : 'المسترد نقداً للدرج:')
+                        : 'المدفوع:'
+                      : currentInvType === 'nagdi'
+                      ? 'المدفوع نقداً:'
+                      : 'المسدد مقدم:'}{' '}
+                    <span id="lblPaidTotal">{calculations.paid.toFixed(2)}</span>
                   </div>
                   <div className="summary-item">
-                    المتبقي: <span id="lblRemainTotal">{calculations.remain.toFixed(2)}</span>
+                    {isReturn
+                      ? currentInvType === 'return_ajel'
+                        ? (isSale ? 'خصم من مديونية العميل:' : 'خصم من مستحق المورد:')
+                        : 'المتبقي:'
+                      : currentInvType === 'ajel'
+                      ? (isSale ? 'المتبقي (مديونية):' : 'المتبقي (مستحق):')
+                      : 'المتبقي:'}{' '}
+                    <span id="lblRemainTotal">{calculations.remain.toFixed(2)}</span>
                   </div>
                   <div className="summary-item summary-net">
                     الصافي النهائي: <span id="lblNetTotal">{calculations.net.toFixed(2)}</span>
@@ -2111,7 +2164,7 @@ export const RakeezaInvoiceWorkspace: React.FC<RakeezaInvoiceWorkspaceProps> = (
                     style={{ background: 'var(--accent)', padding: '7px', fontSize: '9.5px' }}
                     onClick={saveInvoice}
                   >
-                    <i className="fa-solid fa-save"></i> حفظ وترحيل الحسابات
+                    <i className="fa-solid fa-save"></i> {isReturn ? 'حفظ وترحيل المرتجع' : 'حفظ وترحيل الفاتورة'}
                   </button>
                   <button
                     className="btn-action"
@@ -2132,7 +2185,7 @@ export const RakeezaInvoiceWorkspace: React.FC<RakeezaInvoiceWorkspaceProps> = (
                         total: calculations.net,
                         paidAmount: calculations.paid,
                         remainingAmount: calculations.remain,
-                        type: invoiceType,
+                        type: currentInvType,
                       };
                       printInvoiceWindow(dummyInv, isSale, appData.settings);
                     }}
@@ -2554,6 +2607,79 @@ export const RakeezaInvoiceWorkspace: React.FC<RakeezaInvoiceWorkspaceProps> = (
               </span>
             </div>
             <div className="modal-body">
+              {/* اختيار وتأكيد نوع العملية المحاسبية للفاتورة */}
+              <div className="field-inline" style={{ gap: '3px', background: '#f8fafc', padding: '5px', borderRadius: '4px', border: '1px solid #e2e8f0' }}>
+                <label style={{ fontSize: '9px', color: '#1e293b' }}>
+                  نوع العملية والفاتورة ({isSale ? 'مبيعات' : 'مشتريات وتوريدات'}):
+                </label>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: '3px' }}>
+                  <button
+                    type="button"
+                    onClick={() => setCurrentInvType('nagdi')}
+                    style={{
+                      padding: '5px 2px',
+                      background: currentInvType === 'nagdi' ? '#16a34a' : '#fff',
+                      color: currentInvType === 'nagdi' ? 'white' : '#334155',
+                      border: currentInvType === 'nagdi' ? '1px solid #16a34a' : '1px solid #cbd5e1',
+                      borderRadius: '3px',
+                      fontWeight: 'bold',
+                      fontSize: '8.5px',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    {isSale ? 'بيع نقدي' : 'شراء نقدي'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCurrentInvType('ajel')}
+                    style={{
+                      padding: '5px 2px',
+                      background: currentInvType === 'ajel' ? '#2563eb' : '#fff',
+                      color: currentInvType === 'ajel' ? 'white' : '#334155',
+                      border: currentInvType === 'ajel' ? '1px solid #2563eb' : '1px solid #cbd5e1',
+                      borderRadius: '3px',
+                      fontWeight: 'bold',
+                      fontSize: '8.5px',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    {isSale ? 'بيع آجل' : 'شراء آجل'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCurrentInvType('return_nagdi')}
+                    style={{
+                      padding: '5px 2px',
+                      background: currentInvType === 'return_nagdi' ? '#d97706' : '#fff',
+                      color: currentInvType === 'return_nagdi' ? 'white' : '#334155',
+                      border: currentInvType === 'return_nagdi' ? '1px solid #d97706' : '1px solid #cbd5e1',
+                      borderRadius: '3px',
+                      fontWeight: 'bold',
+                      fontSize: '8.5px',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    مرتجع نقدي
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCurrentInvType('return_ajel')}
+                    style={{
+                      padding: '5px 2px',
+                      background: currentInvType === 'return_ajel' ? '#dc2626' : '#fff',
+                      color: currentInvType === 'return_ajel' ? 'white' : '#334155',
+                      border: currentInvType === 'return_ajel' ? '1px solid #dc2626' : '1px solid #cbd5e1',
+                      borderRadius: '3px',
+                      fontWeight: 'bold',
+                      fontSize: '8.5px',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    مرتجع آجل
+                  </button>
+                </div>
+              </div>
+
               <div className="field-inline" style={{ gap: '3px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <label style={{ fontSize: '9px' }}>خصم الفاتورة الكلية</label>
@@ -3027,7 +3153,7 @@ export const RakeezaInvoiceWorkspace: React.FC<RakeezaInvoiceWorkspaceProps> = (
                   />
                 </div>
                 <div className="field-inline">
-                  <label>سعر البيع</label>
+                  <label>{isSale ? 'سعر البيع' : 'سعر الشراء'}</label>
                   <input
                     type="number"
                     id="modifyItemPrice"

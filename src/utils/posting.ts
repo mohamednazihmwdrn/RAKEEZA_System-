@@ -436,8 +436,15 @@ export function postPurchaseInvoice(
 
       // Rollback cashbox
       if (oldInv.paidAmount && oldInv.paidAmount > 0) {
-        const mKey = mapPaymentMethodToKey(oldInv.paymentMethod);
-        data.cashBox[mKey] = (data.cashBox[mKey] || 0) + (wasReturn ? -oldInv.paidAmount : oldInv.paidAmount);
+        if (oldInv.paymentSplits && oldInv.paymentSplits.length > 0) {
+          oldInv.paymentSplits.forEach((sp) => {
+            const key = mapPaymentMethodToKey(sp.method);
+            data.cashBox[key] = (data.cashBox[key] || 0) + (wasReturn ? -sp.amount : sp.amount);
+          });
+        } else {
+          const mKey = mapPaymentMethodToKey(oldInv.paymentMethod);
+          data.cashBox[mKey] = (data.cashBox[mKey] || 0) + (wasReturn ? -oldInv.paidAmount : oldInv.paidAmount);
+        }
       }
 
       data.cashTransactions = data.cashTransactions.filter((tx) => tx.invoiceId !== oldInvoiceId);
@@ -691,6 +698,146 @@ export function postPurchaseInvoice(
     isApproved: true,
   });
   data.nextJournalId = nextJid + 1;
+
+  return data;
+}
+
+/**
+ * 🗑️ إلغاء وحذف فاتورة مبيعات مع التسوية التلقائية للمخزون والخزينة وحساب العميل
+ */
+export function deleteSaleInvoice(appData: AppData, invoiceId: number): AppData {
+  const data: AppData = {
+    ...appData,
+    items: (appData.items || []).map((i) => ({ ...i, movements: [...(i.movements || [])] })),
+    customers: (appData.customers || []).map((c) => ({ ...c, transactions: [...(c.transactions || [])] })),
+    cashTransactions: [...(appData.cashTransactions || [])],
+    cashBox: { ...appData.cashBox },
+    journalEntries: [...(appData.journalEntries || [])],
+    salesInvoices: [...(appData.salesInvoices || [])],
+  };
+
+  const oldInv = data.salesInvoices.find((i) => i.id === invoiceId);
+  if (!oldInv) return data;
+
+  const wasReturn = oldInv.type.startsWith('return_');
+  const dateStr = new Date().toISOString().split('T')[0];
+
+  // 1. Rollback stock movements
+  oldInv.items?.forEach((itm) => {
+    const stockItm = data.items.find((i) => (itm.itemId && i.id === itm.itemId) || i.name.trim() === itm.name.trim());
+    if (stockItm) {
+      const qtyDiff = wasReturn ? -itm.qty : itm.qty;
+      stockItm.quantity = (stockItm.quantity || 0) + qtyDiff;
+      stockItm.movements.push({
+        date: dateStr,
+        type: 'adjustment',
+        qty: qtyDiff,
+        price: itm.price,
+        total: qtyDiff * itm.price,
+        note: `تسوية واسترجاع رصيد المخزن بعد إلغاء وحذف فاتورة المبيعات #${oldInv.id}`,
+      });
+    }
+  });
+
+  // 2. Rollback customer balance
+  if (oldInv.customerName) {
+    const cust = data.customers.find((c) => c.name.trim().toLowerCase() === oldInv.customerName.trim().toLowerCase());
+    if (cust) {
+      const unpaid = oldInv.remainingAmount !== undefined ? oldInv.remainingAmount : (oldInv.total - (oldInv.paidAmount || 0));
+      if (unpaid > 0) {
+        cust.balance = (cust.balance || 0) - (wasReturn ? -unpaid : unpaid);
+        cust.transactions = (cust.transactions || []).filter((tx) => tx.invoiceId !== invoiceId);
+      }
+    }
+  }
+
+  // 3. Rollback cashbox
+  if (oldInv.paidAmount && oldInv.paidAmount > 0) {
+    if (oldInv.paymentSplits && oldInv.paymentSplits.length > 0) {
+      oldInv.paymentSplits.forEach((sp) => {
+        const key = mapPaymentMethodToKey(sp.method);
+        data.cashBox[key] = (data.cashBox[key] || 0) - (wasReturn ? -sp.amount : sp.amount);
+      });
+    } else {
+      const key = oldInv.paymentMethod === 'split' ? 'drawer' : (oldInv.paymentMethod || 'drawer');
+      data.cashBox[key] = (data.cashBox[key] || 0) - (wasReturn ? -oldInv.paidAmount : oldInv.paidAmount);
+    }
+  }
+
+  // 4. Remove previous cash transactions & journal entries for this invoice
+  data.cashTransactions = data.cashTransactions.filter((tx) => tx.invoiceId !== invoiceId);
+  data.journalEntries = data.journalEntries.filter((je) => je.reference !== `SALE-INV-${invoiceId}`);
+  data.salesInvoices = data.salesInvoices.filter((i) => i.id !== invoiceId);
+
+  return data;
+}
+
+/**
+ * 🗑️ إلغاء وحذف فاتورة مشتريات مع التسوية التلقائية للمخزون والخزينة وحساب المورد
+ */
+export function deletePurchaseInvoice(appData: AppData, invoiceId: number): AppData {
+  const data: AppData = {
+    ...appData,
+    items: (appData.items || []).map((i) => ({ ...i, movements: [...(i.movements || [])] })),
+    suppliers: (appData.suppliers || []).map((s) => ({ ...s, transactions: [...(s.transactions || [])] })),
+    cashTransactions: [...(appData.cashTransactions || [])],
+    cashBox: { ...appData.cashBox },
+    journalEntries: [...(appData.journalEntries || [])],
+    purchaseInvoices: [...(appData.purchaseInvoices || [])],
+  };
+
+  const oldInv = data.purchaseInvoices.find((i) => i.id === invoiceId);
+  if (!oldInv) return data;
+
+  const wasReturn = oldInv.type.startsWith('return_');
+  const dateStr = new Date().toISOString().split('T')[0];
+
+  // 1. Rollback stock
+  oldInv.items?.forEach((itm) => {
+    const stockItm = data.items.find((i) => (itm.itemId && i.id === itm.itemId) || i.name.trim() === itm.name.trim());
+    if (stockItm) {
+      const qtyDiff = wasReturn ? itm.qty : -itm.qty;
+      stockItm.quantity = Math.max(0, (stockItm.quantity || 0) + qtyDiff);
+      stockItm.movements.push({
+        date: dateStr,
+        type: 'adjustment',
+        qty: qtyDiff,
+        price: itm.price,
+        total: qtyDiff * itm.price,
+        note: `تسوية وخصم رصيد المخزن بعد إلغاء وحذف فاتورة المشتريات #${oldInv.id}`,
+      });
+    }
+  });
+
+  // 2. Rollback supplier balance
+  if (oldInv.supplierName) {
+    const supp = data.suppliers.find((s) => s.name.trim().toLowerCase() === oldInv.supplierName.trim().toLowerCase());
+    if (supp) {
+      const unpaid = oldInv.remainingAmount !== undefined ? oldInv.remainingAmount : (oldInv.total - (oldInv.paidAmount || 0));
+      if (unpaid > 0) {
+        supp.balance = (supp.balance || 0) - (wasReturn ? -unpaid : unpaid);
+        supp.transactions = (supp.transactions || []).filter((tx) => tx.invoiceId !== invoiceId);
+      }
+    }
+  }
+
+  // 3. Rollback cashbox
+  if (oldInv.paidAmount && oldInv.paidAmount > 0) {
+    if (oldInv.paymentSplits && oldInv.paymentSplits.length > 0) {
+      oldInv.paymentSplits.forEach((sp) => {
+        const key = mapPaymentMethodToKey(sp.method);
+        data.cashBox[key] = (data.cashBox[key] || 0) + (wasReturn ? -sp.amount : sp.amount);
+      });
+    } else {
+      const mKey = mapPaymentMethodToKey(oldInv.paymentMethod);
+      data.cashBox[mKey] = (data.cashBox[mKey] || 0) + (wasReturn ? -oldInv.paidAmount : oldInv.paidAmount);
+    }
+  }
+
+  // 4. Remove previous cash transactions & journal entries for this invoice
+  data.cashTransactions = data.cashTransactions.filter((tx) => tx.invoiceId !== invoiceId);
+  data.journalEntries = data.journalEntries.filter((je) => je.reference !== `PUR-INV-${invoiceId}`);
+  data.purchaseInvoices = data.purchaseInvoices.filter((i) => i.id !== invoiceId);
 
   return data;
 }

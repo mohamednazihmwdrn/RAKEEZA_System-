@@ -30,7 +30,7 @@ import { exportToExcel } from '../utils/excelExport';
 import { openUnifiedPrintWindow } from '../utils/printUnified';
 import { TableActionButtons } from './TableActionButtons';
 import { generateInvoiceWhatsAppMessage, openWhatsAppChat } from '../services/whatsappService';
-import { postSaleInvoice } from '../utils/posting';
+import { postSaleInvoice, deleteSaleInvoice } from '../utils/posting';
 import { calculateCustomerBalance } from '../utils/accounting';
 import { RakeezaInvoiceWorkspace } from './RakeezaInvoiceWorkspace';
 
@@ -666,71 +666,21 @@ export const SalesView: React.FC<SalesViewProps> = ({ appData, onUpdateData, sho
   };
 
   const handleDeleteInvoice = (id: number) => {
-    if (!confirm('هل أنت متأكد من حذف هذه الفاتورة؟ سيتم استرجاع كميات الأصناف تلقائياً إلى رصيد المخزون وتسوية الحسابات.')) return;
-    const updatedData = { ...appData };
-    const invToDelete = updatedData.salesInvoices.find((i) => i.id === id);
+    if (!confirm('هل أنت متأكد من حذف هذه الفاتورة؟ سيتم استرجاع كميات الأصناف تلقائياً إلى رصيد المخزون وتسوية الحسابات والخزينة.')) return;
+    const invToDelete = appData.salesInvoices.find((i) => i.id === id);
+    if (!invToDelete) return;
 
-    if (invToDelete) {
-      const isReturn = invToDelete.type?.startsWith('return_');
-      let restoredItemsCount = 0;
-
-      // 1. Rollback stock for all items
-      invToDelete.items?.forEach((itm) => {
-        const sItm = updatedData.items.find((i) => (itm.itemId && i.id === itm.itemId) || i.name.trim() === itm.name.trim());
-        if (sItm) {
-          const qtyDelta = isReturn ? -itm.qty : itm.qty;
-          sItm.quantity = (sItm.quantity || 0) + qtyDelta;
-          restoredItemsCount += itm.qty;
-
-          if (!sItm.movements) sItm.movements = [];
-          sItm.movements.push({
-            date: new Date().toISOString().split('T')[0],
-            type: 'adjustment',
-            qty: qtyDelta,
-            price: itm.price,
-            total: qtyDelta * (itm.price || 0),
-            note: `استرجاع رصيد المخزن بعد إلغاء/حذف فاتورة المبيعات #${id}`,
-          });
-        }
-      });
-
-      // 2. Rollback customer balance if credit sale
-      if (invToDelete.customerName) {
-        const cust = updatedData.customers.find((c) => c.name === invToDelete.customerName);
-        if (cust) {
-          const unpaidDebt = invToDelete.remainingAmount !== undefined ? invToDelete.remainingAmount : (invToDelete.total - (invToDelete.paidAmount || 0));
-          if (unpaidDebt > 0) {
-            cust.balance = Math.max(0, (cust.balance || 0) - (isReturn ? -unpaidDebt : unpaidDebt));
-          }
-        }
-      }
-
-      // 3. Rollback treasury cashbox if any paid amount
-      if (invToDelete.paidAmount && invToDelete.paidAmount > 0) {
-        const method = invToDelete.paymentMethod || 'drawer';
-        if (updatedData.cashBox[method] !== undefined) {
-          updatedData.cashBox[method] = isReturn
-            ? (updatedData.cashBox[method] || 0) + invToDelete.paidAmount
-            : Math.max(0, (updatedData.cashBox[method] || 0) - invToDelete.paidAmount);
-        }
-      }
-
-      // Remove related cash transaction and journal entry
-      updatedData.cashTransactions = (updatedData.cashTransactions || []).filter((tx) => tx.invoiceId !== id);
-      updatedData.journalEntries = (updatedData.journalEntries || []).filter((je) => je.reference !== `SALE-INV-${id}`);
-    }
-
+    const updatedData = deleteSaleInvoice(appData, id);
     if (!updatedData.deletedRecords) updatedData.deletedRecords = {};
     updatedData.deletedRecords[`salesInvoices_${id}`] = Date.now();
 
-    updatedData.salesInvoices = updatedData.salesInvoices.filter((i) => i.id !== id);
     onUpdateData(updatedData, {
       action: 'delete_invoice',
       module: 'المبيعات',
-      details: `حذف فاتورة مبيعات رقم #${id} واسترجاع الأصناف للمخزون`,
+      details: `حذف ${invToDelete.type.startsWith('return_') ? 'مرتجع' : 'فاتورة'} مبيعات رقم #${id} وتسوية المخزون والخزينة والعميل`,
       deletedId: id,
     });
-    showToast(`تم حذف الفاتورة رقم #${id} وإعادة كميات الأصناف كاملة إلى رصيد المخزن بنجاح`, 'success');
+    showToast(`تم حذف الفاتورة رقم #${id} وإعادة كميات الأصناف كاملة إلى رصيد المخزن وتسوية الحسابات والخزينة بدقة`, 'success');
   };
 
   const handleOpenPayModal = (inv: SaleInvoice) => {

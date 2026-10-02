@@ -25,7 +25,7 @@ import { openUnifiedPrintWindow } from '../utils/printUnified';
 import { TableActionButtons } from './TableActionButtons';
 import { InvoiceItemModal } from './InvoiceItemModal';
 import { UnifiedInvoiceItemSystem, InvoiceItemUnified, PaymentRow } from './UnifiedInvoiceItemSystem';
-import { postPurchaseInvoice } from '../utils/posting';
+import { postPurchaseInvoice, deletePurchaseInvoice } from '../utils/posting';
 import { calculateSupplierBalance } from '../utils/accounting';
 import { RakeezaInvoiceWorkspace } from './RakeezaInvoiceWorkspace';
 
@@ -533,70 +533,20 @@ export const PurchasesView: React.FC<PurchasesViewProps> = ({ appData, onUpdateD
 
   const handleDeleteInvoice = (id: number) => {
     if (!confirm('هل أنت متأكد من حذف فاتورة المشتريات هذه؟ سيتم خصم الكميات المشتراة من رصيد المخزن وتسوية حساب المورد والخزينة تلقائياً.')) return;
-    const updatedData = { ...appData };
-    const invToDelete = updatedData.purchaseInvoices.find((i) => i.id === id);
+    const invToDelete = appData.purchaseInvoices.find((i) => i.id === id);
+    if (!invToDelete) return;
 
-    if (invToDelete) {
-      const isReturn = invToDelete.type?.startsWith('return_');
-
-      // 1. Rollback stock
-      invToDelete.items?.forEach((itm) => {
-        const sItm = updatedData.items.find((i) => (itm.itemId && i.id === itm.itemId) || i.name.trim() === itm.name.trim());
-        if (sItm) {
-          // Purchased items were added (+qty), so deleting invoice deducts them (-qty)
-          // Returned purchases were deducted (-qty), so deleting return restores them (+qty)
-          const qtyDelta = isReturn ? itm.qty : -itm.qty;
-          sItm.quantity = Math.max(0, (sItm.quantity || 0) + qtyDelta);
-
-          if (!sItm.movements) sItm.movements = [];
-          sItm.movements.push({
-            date: new Date().toISOString().split('T')[0],
-            type: 'adjustment',
-            qty: qtyDelta,
-            price: itm.price,
-            total: qtyDelta * (itm.price || 0),
-            note: `تسوية رصيد المخزن بعد إلغاء/حذف فاتورة المشتريات #${id}`,
-          });
-        }
-      });
-
-      // 2. Rollback supplier balance
-      if (invToDelete.supplierName) {
-        const supp = updatedData.suppliers.find((s) => s.name === invToDelete.supplierName);
-        if (supp) {
-          const unpaid = invToDelete.remainingAmount !== undefined ? invToDelete.remainingAmount : (invToDelete.total - (invToDelete.paidAmount || 0));
-          if (unpaid > 0) {
-            supp.balance = Math.max(0, (supp.balance || 0) - (isReturn ? -unpaid : unpaid));
-          }
-        }
-      }
-
-      // 3. Rollback treasury cashbox if any paid amount
-      if (invToDelete.paidAmount && invToDelete.paidAmount > 0) {
-        const method = invToDelete.paymentMethod || 'drawer';
-        if (updatedData.cashBox[method] !== undefined) {
-          updatedData.cashBox[method] = isReturn
-            ? Math.max(0, (updatedData.cashBox[method] || 0) - invToDelete.paidAmount)
-            : (updatedData.cashBox[method] || 0) + invToDelete.paidAmount;
-        }
-      }
-
-      // Remove related cash transaction and journal entry
-      updatedData.cashTransactions = (updatedData.cashTransactions || []).filter((tx) => tx.invoiceId !== id);
-      updatedData.journalEntries = (updatedData.journalEntries || []).filter((je) => je.reference !== `PUR-INV-${id}`);
-    }
-
+    const updatedData = deletePurchaseInvoice(appData, id);
     if (!updatedData.deletedRecords) updatedData.deletedRecords = {};
     updatedData.deletedRecords[`purchaseInvoices_${id}`] = Date.now();
 
-    updatedData.purchaseInvoices = updatedData.purchaseInvoices.filter((i) => i.id !== id);
     onUpdateData(updatedData, {
       action: 'delete_purchase',
       module: 'المشتريات',
-      details: `تم حذف فاتورة الشراء رقم #${id} وتسوية رصيد المخزون والطرف المالي`,
+      details: `تم حذف ${invToDelete.type.startsWith('return_') ? 'مرتجع' : 'فاتورة'} الشراء رقم #${id} وتسوية رصيد المخزون وحساب المورد والخزينة`,
       deletedId: id,
     });
-    showToast(`تم حذف فاتورة المشتريات رقم #${id} وتسوية رصيد الأصناف بالمخزن بنجاح`, 'success');
+    showToast(`تم حذف فاتورة المشتريات رقم #${id} وتسوية المخزون وحساب المورد والخزينة بنجاح`, 'success');
   };
 
   const handleOpenPayModal = (inv: PurchaseInvoice) => {
