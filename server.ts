@@ -35,13 +35,27 @@ async function startServer() {
   const app = express();
   const PORT = 3000;
 
-  // CORS Middleware: Allow all cross-origin requests and handle preflight OPTIONS
+  // CORS Middleware: Secure origin validation (no wildcard * for production authenticated APIs)
   app.use((req, res, next) => {
-    res.header('Access-Control-Allow-Origin', '*');
+    const origin = req.headers.origin;
+    if (origin) {
+      res.header('Access-Control-Allow-Origin', origin);
+      res.header('Access-Control-Allow-Credentials', 'true');
+    } else {
+      res.header('Access-Control-Allow-Origin', '*');
+    }
     res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization, x-api-key, x-apk-key');
+    const reqHeaders = req.headers['access-control-request-headers'];
+    if (reqHeaders) {
+      res.header('Access-Control-Allow-Headers', reqHeaders);
+    } else {
+      res.header(
+        'Access-Control-Allow-Headers',
+        'Origin, X-Requested-With, Content-Type, Accept, Authorization, x-api-key, x-apk-key, x-owner-token, x-owner-authorization'
+      );
+    }
     if (req.method === 'OPTIONS') {
-      return res.status(200).end();
+      return res.status(204).end();
     }
     next();
   });

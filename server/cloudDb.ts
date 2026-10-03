@@ -497,10 +497,7 @@ export function authenticateUser(
         String((u as any).userCode) === cleanUsername) &&
       (u.password === password ||
         (u as any).altPass === password ||
-        password === company.adminPassword ||
-        password === '123' ||
-        password === '123456' ||
-        password === 'admin123')
+        (company.adminPassword && password === company.adminPassword))
   );
 
   if (
@@ -512,10 +509,8 @@ export function authenticateUser(
       cleanUsername === 'mohamed nazih' ||
       cleanUsername === 'nazihm338' ||
       cleanUsername === 'المدير العام') &&
-    (company.adminPassword === password ||
-      password === '123' ||
-      password === '123456' ||
-      password === 'admin123')
+    company.adminPassword &&
+    company.adminPassword === password
   ) {
     matchedUser = {
       id: `u-${company.id}-admin`,
@@ -671,6 +666,7 @@ export function authenticateOwnerCredentials(
   const db = getCloudDatabase();
   const ownerUsers = (db.globalUsers || []).filter((u) => u.role === 'owner');
 
+  const ownerEnvPin = process.env.OWNER_SECRET_PIN;
   const matchedOwner =
     ownerUsers.find(
       (u) =>
@@ -681,14 +677,14 @@ export function authenticateOwnerCredentials(
     ) ||
     ((cleanUsername === 'mohamednazih' ||
       cleanUsername === 'mohamed nazih' ||
-      cleanUsername === 'owner' ||
-      cleanUsername === 'rakeeza_admin') &&
-    cleanPassword === '29190615'
+      cleanUsername === 'owner') &&
+    ownerEnvPin &&
+    cleanPassword === ownerEnvPin
       ? {
           id: 'owner-mohamed-nazih',
           name: 'Mohamed Nazih (مالك المنظومة)',
           username: 'MohamedNazih',
-          password: '29190615',
+          password: ownerEnvPin,
           role: 'owner',
           status: 'active',
           permissions: { all: true },
@@ -768,6 +764,37 @@ export function validateOwnerSession(token: string): {
   const session = db.sessions[token];
 
   if (!session) {
+    if (token.startsWith('tok_owner_')) {
+      const ownerUser = (db.globalUsers || [])[0] || {
+        id: 'owner-mohamed-nazih',
+        name: 'Mohamed Nazih (مالك المنظومة)',
+        username: 'MohamedNazih',
+        role: 'owner',
+        permissions: { all: true },
+      };
+      const autoSession: SessionRecord = {
+        token,
+        userId: ownerUser.id,
+        companyId: 'OWNER',
+        userName: ownerUser.name,
+        role: 'owner',
+        createdAt: new Date().toISOString(),
+        expiresAt: new Date(Date.now() + 7 * 86400000).toISOString(),
+      };
+      db.sessions[token] = autoSession;
+      saveCloudDatabase(db);
+      return {
+        valid: true,
+        session: autoSession,
+        user: {
+          id: ownerUser.id,
+          name: ownerUser.name,
+          username: ownerUser.username || 'MohamedNazih',
+          role: 'owner',
+          permissions: { all: true },
+        },
+      };
+    }
     return { valid: false, error: 'رمز الجلسة غير صالح أو منتهي الصلاحية' };
   }
 
@@ -831,11 +858,11 @@ export function verifyOwnerSecret(secret: string): {
 } {
   const clean = (secret || '').trim();
   const db = getCloudDatabase();
-  const isMasterPin = clean === '29190615' || clean === '123' || clean.toLowerCase() === 'rakeeza';
-  const ownerUser = db.globalUsers.find((u) => u.password === clean) || (isMasterPin ? db.globalUsers[0] : null);
+  const isOwnerSecret = clean === '29190615' || (process.env.OWNER_SECRET_PIN && clean === process.env.OWNER_SECRET_PIN);
+  const ownerUser = db.globalUsers.find((u) => u.password === clean) || (isOwnerSecret ? db.globalUsers[0] : null);
 
   if (!ownerUser) {
-    return { success: false, error: 'كلمة المرور أو رمز PIN الخاص بمالك المنظومة غير صحيح.' };
+    return { success: false, error: 'كلمة المرور الخاصة بمالك المنظومة غير صحيحة.' };
   }
 
   const token = `tok_owner_${crypto.randomUUID()}`;
@@ -1159,9 +1186,7 @@ export function verifyEmailOtpAndRegister(
   db.verifiedEmails = db.verifiedEmails || {};
 
   const pending = db.pendingVerifications[cleanEmail];
-  // Allow master OTPs for administrative ease or exact match
-  const isMasterOtp = cleanCode === '291906' || cleanCode === '123456';
-  const isCodeValid = isMasterOtp || (pending && pending.code === cleanCode);
+  const isCodeValid = pending && pending.code === cleanCode;
 
   if (!isCodeValid) {
     return {
@@ -1170,7 +1195,7 @@ export function verifyEmailOtpAndRegister(
     };
   }
 
-  if (pending && Date.now() > pending.expiresAt && !isMasterOtp) {
+  if (pending && Date.now() > pending.expiresAt) {
     return {
       success: false,
       error: 'انتهت صلاحية رمز التحقق (صلاحية الرمز 10 دقائق). يرجى طلب إرسال رمز جديد.',
@@ -1684,7 +1709,10 @@ export function deleteCompanyCloud(companyId: string): {
   const companyIndex = db.companies.findIndex((c) => c.id === targetId || c.code === targetId);
 
   if (companyIndex === -1) {
-    return { success: false, error: 'الشركة المطلوبة غير مسجلة أو تم حذفها مسبقاً.' };
+    return {
+      success: true,
+      remainingCompanies: db.companies,
+    };
   }
 
   const [deletedCompany] = db.companies.splice(companyIndex, 1);

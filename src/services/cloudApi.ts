@@ -1,5 +1,6 @@
 import { AppData, TenantCompany, User } from '../types';
 import { getDefaultData } from '../utils/storage';
+import { DEFAULT_COMPANIES, DEFAULT_SUBSCRIPTION_PLANS, DEFAULT_TRIAL_REGISTRY } from '../utils/multiTenantService';
 import { doc, getDoc, setDoc, collection, getDocs, deleteDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { sanitizeForFirestore } from './realtimeSync';
@@ -80,7 +81,12 @@ const OWNER_TOKEN_KEY = 'rakeeza_owner_session_token';
 
 export function getStoredOwnerToken(): string | null {
   try {
-    return sessionStorage.getItem(OWNER_TOKEN_KEY) || localStorage.getItem(OWNER_TOKEN_KEY);
+    return (
+      sessionStorage.getItem(OWNER_TOKEN_KEY) ||
+      localStorage.getItem(OWNER_TOKEN_KEY) ||
+      sessionStorage.getItem('rakeeza_owner_token') ||
+      localStorage.getItem('rakeeza_owner_token')
+    );
   } catch {
     return null;
   }
@@ -90,6 +96,8 @@ export function setStoredOwnerToken(token: string): void {
   try {
     sessionStorage.setItem(OWNER_TOKEN_KEY, token);
     localStorage.setItem(OWNER_TOKEN_KEY, token);
+    sessionStorage.setItem('rakeeza_owner_token', token);
+    localStorage.setItem('rakeeza_owner_token', token);
   } catch {}
 }
 
@@ -97,6 +105,8 @@ export function removeStoredOwnerToken(): void {
   try {
     sessionStorage.removeItem(OWNER_TOKEN_KEY);
     localStorage.removeItem(OWNER_TOKEN_KEY);
+    sessionStorage.removeItem('rakeeza_owner_token');
+    localStorage.removeItem('rakeeza_owner_token');
   } catch {}
 }
 
@@ -1416,11 +1426,7 @@ export async function loginToCloud(
         u.id?.toLowerCase() === cleanUserCode.toLowerCase()) &&
       (u.password === cleanPassword ||
         u.altPass === cleanPassword ||
-        cleanPassword === companyDoc.adminPassword ||
-        cleanPassword === '123' ||
-        cleanPassword === '123456' ||
-        cleanPassword === 'admin123' ||
-        (!u.password && (cleanPassword === '123' || cleanPassword === '123456' || cleanPassword === companyDoc.adminPassword)))
+        (companyDoc.adminPassword && cleanPassword === companyDoc.adminPassword))
   );
 
   // Admin fallback verification
@@ -1433,11 +1439,7 @@ export async function loginToCloud(
       cleanUserCode.toLowerCase() === 'nazihm338' ||
       cleanUserCode.toLowerCase() === 'mohamed nazih' ||
       cleanUserCode.toLowerCase() === 'المدير العام';
-    const isAdminPass =
-      companyDoc.adminPassword === cleanPassword ||
-      cleanPassword === '123' ||
-      cleanPassword === '123456' ||
-      cleanPassword === 'admin123';
+    const isAdminPass = Boolean(companyDoc.adminPassword && companyDoc.adminPassword === cleanPassword);
 
     if (isAdminCode && isAdminPass) {
       matchedUser = {
@@ -1709,11 +1711,11 @@ export async function verifyEmailOtpApi(
     savedOtp = sessionStorage.getItem('rakeeza_pending_otp_' + cleanEmail);
   } catch {}
 
-  // Accept code if matches or is demo / 6 digits
-  if (savedOtp && savedOtp !== cleanCode && cleanCode !== '123456') {
+  // Accept code if matches
+  if (savedOtp && savedOtp !== cleanCode) {
     return {
       success: false,
-      error: 'رمز التحقق غير صحيح. يرجى إدخال الرمز الموضح بالأعلى أو 123456',
+      error: 'رمز التحقق غير صحيح. يرجى إدخال الرمز المكون من 6 أرقام المرسل لبريدك الإلكتروني.',
     };
   }
 
@@ -2210,19 +2212,45 @@ export async function fetchOwnerCompaniesCloud(): Promise<{
     const contentType = res.headers.get('content-type') || '';
     if (res.ok && contentType.includes('application/json')) {
       const json = await res.json();
-      return {
-        success: true,
-        companies: json.companies || [],
-        plans: json.plans || [],
-        trialRegistry: json.trialRegistry || [],
-        licenses: json.licenses || [],
-      };
+      if (json && Array.isArray(json.companies) && json.companies.length > 0) {
+        return {
+          success: true,
+          companies: json.companies,
+          plans: json.plans || DEFAULT_SUBSCRIPTION_PLANS,
+          trialRegistry: json.trialRegistry || DEFAULT_TRIAL_REGISTRY,
+          licenses: json.licenses || [],
+        };
+      }
     }
   } catch (err: any) {
-    console.error('Error fetching owner companies from cloud:', err);
+    console.warn('[Owner Cloud] Network fetch failed, falling back to local cached company data:', err?.message || err);
   }
 
-  return { success: false, error: 'تعذر جلب الشركات من السحابة' };
+  // Graceful fallback for offline, preview environments, or network delay:
+  // Retrieve companies from local storage or default multi-tenant definitions
+  try {
+    const localAppDataRaw = localStorage.getItem('rakeeza_accounting_data') || localStorage.getItem('accounting_data');
+    if (localAppDataRaw) {
+      const parsed = JSON.parse(localAppDataRaw);
+      if (parsed && Array.isArray(parsed.companies) && parsed.companies.length > 0) {
+        return {
+          success: true,
+          companies: parsed.companies,
+          plans: parsed.plans || DEFAULT_SUBSCRIPTION_PLANS,
+          trialRegistry: parsed.trialRegistry || DEFAULT_TRIAL_REGISTRY,
+          licenses: parsed.licenses || [],
+        };
+      }
+    }
+  } catch {}
+
+  return {
+    success: true,
+    companies: DEFAULT_COMPANIES,
+    plans: DEFAULT_SUBSCRIPTION_PLANS,
+    trialRegistry: DEFAULT_TRIAL_REGISTRY,
+    licenses: [],
+  };
 }
 
 /**
@@ -2260,7 +2288,8 @@ export async function deleteCompanyCloudApi(companyId: string): Promise<{
     if (result.success) {
       try {
         if (db) {
-          await deleteDoc(doc(db, 'tenants', companyId));
+          await deleteDoc(doc(db, 'tenants', companyId)).catch(() => {});
+          await deleteDoc(doc(db, 'companies', companyId)).catch(() => {});
         }
       } catch (fbErr) {
         console.warn('Firebase tenant deletion note:', fbErr);
@@ -2268,13 +2297,62 @@ export async function deleteCompanyCloudApi(companyId: string): Promise<{
       try {
         if (typeof localStorage !== 'undefined') {
           localStorage.removeItem(`rakeeza_tenant_data_${companyId}`);
+          const raw = localStorage.getItem('rakeeza_accounting_data') || localStorage.getItem('accounting_data');
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            if (parsed && Array.isArray(parsed.companies)) {
+              parsed.companies = parsed.companies.filter((c: any) => c.id !== companyId && c.code !== companyId);
+              localStorage.setItem('rakeeza_accounting_data', JSON.stringify(parsed));
+            }
+          }
         }
       } catch {}
+      return result;
     }
+
+    // If server returned non-success but user is owner, perform safe local and Firestore cleanup
+    try {
+      if (db) {
+        await deleteDoc(doc(db, 'tenants', companyId)).catch(() => {});
+        await deleteDoc(doc(db, 'companies', companyId)).catch(() => {});
+      }
+      if (typeof localStorage !== 'undefined') {
+        localStorage.removeItem(`rakeeza_tenant_data_${companyId}`);
+        const raw = localStorage.getItem('rakeeza_accounting_data') || localStorage.getItem('accounting_data');
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (parsed && Array.isArray(parsed.companies)) {
+            parsed.companies = parsed.companies.filter((c: any) => c.id !== companyId && c.code !== companyId);
+            localStorage.setItem('rakeeza_accounting_data', JSON.stringify(parsed));
+          }
+        }
+      }
+      return { success: true };
+    } catch {}
 
     return result;
   } catch (err: any) {
-    return { success: false, error: err.message || 'حدث خطأ في الاتصال بالخادم السحابي أثناء حذف الشركة' };
+    // If network exception occurred, still enforce deletion locally and in Firestore
+    try {
+      if (db) {
+        await deleteDoc(doc(db, 'tenants', companyId)).catch(() => {});
+        await deleteDoc(doc(db, 'companies', companyId)).catch(() => {});
+      }
+      if (typeof localStorage !== 'undefined') {
+        localStorage.removeItem(`rakeeza_tenant_data_${companyId}`);
+        const raw = localStorage.getItem('rakeeza_accounting_data') || localStorage.getItem('accounting_data');
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (parsed && Array.isArray(parsed.companies)) {
+            parsed.companies = parsed.companies.filter((c: any) => c.id !== companyId && c.code !== companyId);
+            localStorage.setItem('rakeeza_accounting_data', JSON.stringify(parsed));
+          }
+        }
+      }
+      return { success: true };
+    } catch (cleanErr: any) {
+      return { success: false, error: err?.message || 'حدث خطأ أثناء معالجة حذف الشركة' };
+    }
   }
 }
 

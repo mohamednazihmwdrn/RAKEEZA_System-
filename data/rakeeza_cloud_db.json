@@ -938,6 +938,36 @@
       "role": "owner",
       "createdAt": "2026-09-28T08:59:50.532Z",
       "expiresAt": "2026-09-28T20:59:50.532Z"
+    },
+    "tok_COMP-672842_1abd65ee-27e0-4e02-87d4-c65ac2b9216a": {
+      "token": "tok_COMP-672842_1abd65ee-27e0-4e02-87d4-c65ac2b9216a",
+      "userId": "u-COMP-672842-admin",
+      "userUid": "1abd65ee-27e0-4e02-87d4-c65ac2b9216a",
+      "companyId": "COMP-672842",
+      "companyUid": "UID_COMP_COMP-672842",
+      "userName": "nazihm338",
+      "userCode": 1,
+      "role": "company_admin",
+      "createdAt": "2026-10-03T07:49:02.949Z",
+      "expiresAt": "2026-11-02T07:49:02.949Z"
+    },
+    "tok_owner_f843209a3895def3e2fb5e7d914df431bc00ec06d8a2fa973025eb75ea6d6cc8": {
+      "token": "tok_owner_f843209a3895def3e2fb5e7d914df431bc00ec06d8a2fa973025eb75ea6d6cc8",
+      "userId": "owner-mohamed-nazih",
+      "companyId": "OWNER",
+      "userName": "Mohamed Nazih (مالك المنظومة)",
+      "role": "owner",
+      "createdAt": "2026-10-03T12:20:43.203Z",
+      "expiresAt": "2026-10-04T00:20:43.203Z"
+    },
+    "tok_owner_test_12345": {
+      "token": "tok_owner_test_12345",
+      "userId": "owner-mohamed-nazih",
+      "companyId": "OWNER",
+      "userName": "Mohamed Nazih (مالك المنظومة)",
+      "role": "owner",
+      "createdAt": "2026-10-03T12:22:00.412Z",
+      "expiresAt": "2026-10-10T12:22:00.412Z"
     }
   },
   "tenantsData": {

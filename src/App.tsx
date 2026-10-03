@@ -129,6 +129,26 @@ export default function App() {
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [toastType, setToastType] = useState<'success' | 'error' | 'warning' | 'info'>('success');
 
+  // Secret 5-clicks trigger on RAKEEZA in footer
+  const [footerClicks, setFooterClicks] = useState(0);
+  const [lastFooterClickTime, setLastFooterClickTime] = useState(0);
+
+  const handleFooterSecretClicks = () => {
+    const now = Date.now();
+    if (now - lastFooterClickTime < 3000) {
+      const next = footerClicks + 1;
+      if (next >= 5) {
+        setFooterClicks(0);
+        window.dispatchEvent(new CustomEvent('trigger_rakeeza_owner_modal'));
+      } else {
+        setFooterClicks(next);
+      }
+    } else {
+      setFooterClicks(1);
+    }
+    setLastFooterClickTime(now);
+  };
+
   const showToast = (msg: string, type: 'success' | 'error' | 'warning' | 'info' = 'success') => {
     setToastMessage(msg);
     setToastType(type);
@@ -1542,7 +1562,13 @@ export default function App() {
         }`}
       >
         <div className="flex items-center gap-2 text-center sm:text-right">
-          <span className="font-bold text-[#1a237e] text-sm">منظومة ركيزة | RAKEEZA ERP</span>
+          <span
+            onClick={handleFooterSecretClicks}
+            className="font-bold text-[#1a237e] text-sm cursor-pointer select-none hover:text-blue-800 transition"
+            title="منظومة ركيزة RAKEEZA ERP"
+          >
+            منظومة ركيزة | RAKEEZA ERP
+          </span>
           <span className="text-slate-300">|</span>
           <span>جميع الحقوق محفوظة © {new Date().getFullYear()}</span>
         </div>

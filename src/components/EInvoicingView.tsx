@@ -17,12 +17,12 @@ export const EInvoicingView: React.FC<EInvoicingViewProps> = ({
 }) => {
   const [config, setConfig] = useState<EInvoiceConfig>(
     appData.eInvoiceConfig || {
-      taxRegNumber: appData.settings.taxNumber || '123-456-789',
-      commercialRegNumber: appData.settings.commercialReg || 'CR-98765',
+      taxRegNumber: appData.settings.taxNumber || '',
+      commercialRegNumber: appData.settings.commercialReg || '',
       branchCode: '0',
-      activityCode: appData.settings.activityCode || '4651',
-      posSerial: 'NAZIH-POS-001',
-      isEtaConnected: true,
+      activityCode: appData.settings.activityCode || '',
+      posSerial: '',
+      isEtaConnected: Boolean(appData.eInvoiceConfig?.isEtaConnected),
       autoGenerateQr: true,
     }
   );
@@ -168,8 +168,8 @@ export const EInvoicingView: React.FC<EInvoicingViewProps> = ({
     setSignedStatus(null);
     setTimeout(() => {
       setIsSigning(false);
-      setSignedStatus('تم توقيع الفاتورة إلكترونياً بنجاح بواسطة E-Token (Egypt Trust) وتأكيد صلاحية الختم الإلكتروني');
-      showToast('تم التحقق والتوقيع الرقمي للوثيقة الضريبية', 'success');
+      setSignedStatus('[محاكاة واختبار]: تم إنشاء حزمة المحاكاة للتوقيع الإلكتروني وتجهيز بنية ملف الختم الرقمي (Simulation / Preparation Mode)');
+      showToast('تم تجهيز بنية التوقيع الرقمي (وضع المحاكاة والتهيئة)', 'info');
     }, 1200);
   };
 
@@ -181,9 +181,9 @@ export const EInvoicingView: React.FC<EInvoicingViewProps> = ({
       const taxDeducted = inv.withholdingTax || (amount * rate) / 100;
       return {
         'مسلسل': idx + 1,
-        'رقم الملف الضريبي للمتعامل': '123-456-789',
+        'رقم الملف الضريبي للمتعامل': appData.settings.taxNumber || 'غير مسجل',
         'اسم المأمورية التابع لها': 'مأمورية ضرائب الشركات المساهمة',
-        'الرقم القومي / السجل التجاري': 'CR-102938',
+        'الرقم القومي / السجل التجاري': appData.settings.commercialReg || 'غير مسجل',
         'اسم الممول / المورد': inv.supplierName,
         'نوع التعامل': 'توريدات ومشتريات بضائع',
         'طبيعة التعامل': 'سلع محلية خاضعة للخصم',

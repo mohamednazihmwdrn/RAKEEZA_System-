@@ -103,6 +103,26 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   const [openReportsSub, setOpenReportsSub] = useState<Record<string, boolean>>({});
 
+  const [secretClicks, setSecretClicks] = useState(0);
+  const [lastSecretTime, setLastSecretTime] = useState(0);
+
+  const handleSecretRakeezaClicks = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const now = Date.now();
+    if (now - lastSecretTime < 3000) {
+      const next = secretClicks + 1;
+      if (next >= 5) {
+        setSecretClicks(0);
+        window.dispatchEvent(new CustomEvent('trigger_rakeeza_owner_modal'));
+      } else {
+        setSecretClicks(next);
+      }
+    } else {
+      setSecretClicks(1);
+    }
+    setLastSecretTime(now);
+  };
+
   const toggleItem = (key: string) => {
     setOpenItems((prev) => ({ ...prev, [key]: !prev[key] }));
   };
@@ -138,7 +158,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               alt="شعار ركيزة"
               className="w-8 h-8 rounded-lg object-contain bg-[#0f2756] p-0.5 border border-amber-300/30"
             />
-            <div>
+            <div onClick={handleSecretRakeezaClicks} className="cursor-pointer select-none">
               <span className="font-black text-amber-300 text-sm tracking-wide block">RAKEEZA | ركيزة</span>
               <span className="text-[10px] text-blue-200/80 block">منظومة الإدارة والمحاسبة</span>
             </div>
@@ -161,7 +181,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             alt="شعار ركيزة"
             className="w-7 h-7 rounded-lg object-contain bg-[#0f2756] p-0.5 border border-amber-300/30"
           />
-          <div>
+          <div onClick={handleSecretRakeezaClicks} className="cursor-pointer select-none">
             <span className="font-black text-amber-300 text-sm tracking-wider block">RAKEEZA ERP</span>
             <span className="text-[10px] text-blue-200/80 block">منظومة ركيزة المحاسبية</span>
           </div>
