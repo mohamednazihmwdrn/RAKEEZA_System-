@@ -724,39 +724,105 @@ export const PurchasesView: React.FC<PurchasesViewProps> = ({ appData, onUpdateD
     }
   };
 
+  const totalPurchasesAmount = (appData.purchaseInvoices || []).reduce((acc, i) => acc + (i.total || 0), 0);
+  const totalPurchasesPaid = (appData.purchaseInvoices || []).reduce((acc, i) => acc + (i.paidAmount || 0), 0);
+  const totalPurchasesRemaining = totalPurchasesAmount - totalPurchasesPaid;
+
   return (
     <div className="space-y-4">
+      {/* 🏛️ ترويسة قسم إدارة المشتريات والتوريد - ثيم أخضر بترولي زمردي مميز وفارق بصرياً عن المبيعات */}
+      <div className="bg-gradient-to-r from-teal-950 via-emerald-900 to-teal-800 text-white p-3 sm:p-4 rounded-xl shadow-sm border border-teal-700/50 flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-lg bg-teal-600/40 border border-teal-400/40 flex items-center justify-center shrink-0">
+            <Building2 className="w-6 h-6 text-teal-300" />
+          </div>
+          <div>
+            <h2 className="text-sm sm:text-base font-black tracking-wide flex items-center gap-2">
+              <span>إدارة فواتير المشتريات والتوريدات</span>
+              <span className="text-[10px] bg-teal-400/20 text-teal-200 border border-teal-400/30 px-2 py-0.5 rounded-full font-bold">
+                ركيزة للمشتريات
+              </span>
+            </h2>
+            <p className="text-[11px] text-teal-200">
+              تسجيل وتدقيق فواتير الشراء النقدي والآجل والتوريدات ومستحقات الموردين بدقة متناهية
+            </p>
+          </div>
+        </div>
+
+        {/* Quick KPI badges */}
+        <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
+          <div className="bg-white/10 backdrop-blur-xs border border-white/15 px-2.5 py-1 rounded-lg flex flex-col items-center">
+            <span className="text-[9px] text-teal-200">عدد الفواتير</span>
+            <span className="text-xs font-black font-mono text-white">{appData.purchaseInvoices?.length || 0}</span>
+          </div>
+          <div className="bg-white/10 backdrop-blur-xs border border-white/15 px-2.5 py-1 rounded-lg flex flex-col items-center">
+            <span className="text-[9px] text-teal-200">إجمالي المشتريات</span>
+            <span className="text-xs font-black font-mono text-emerald-300">{totalPurchasesAmount.toLocaleString()} ج.م</span>
+          </div>
+          <div className="bg-white/10 backdrop-blur-xs border border-white/15 px-2.5 py-1 rounded-lg flex flex-col items-center">
+            <span className="text-[9px] text-teal-200">المسدد للموردين</span>
+            <span className="text-xs font-black font-mono text-teal-200">{totalPurchasesPaid.toLocaleString()} ج.م</span>
+          </div>
+          <div className="bg-white/10 backdrop-blur-xs border border-white/15 px-2.5 py-1 rounded-lg flex flex-col items-center">
+            <span className="text-[9px] text-teal-200">مستحقات آجلة</span>
+            <span className="text-xs font-black font-mono text-amber-300">{totalPurchasesRemaining.toLocaleString()} ج.م</span>
+          </div>
+        </div>
+      </div>
+
       {/* Action Bar */}
       <div className="bg-white p-3 sm:p-4 rounded-xl shadow-xs border border-slate-200/90 flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between">
         <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2">
+          {/* 1. شراء نقدي */}
           <button
             onClick={() => openCreateModal('nagdi')}
-            className="min-h-[40px] bg-emerald-700 hover:bg-emerald-800 active:bg-emerald-900 text-white px-3 sm:px-4 py-2 rounded-lg text-xs md:text-sm font-semibold transition cursor-pointer flex items-center justify-center gap-1.5 shadow-xs"
+            className="min-h-[40px] bg-teal-700 hover:bg-teal-800 active:bg-teal-900 text-white px-3 sm:px-4 py-2 rounded-lg text-xs md:text-sm font-bold transition cursor-pointer flex items-center justify-center gap-1.5 shadow-xs border border-teal-800 hover:scale-[1.02]"
+            title="فاتورة شراء نقدي بسداد فوري للمورد من الخزينة"
           >
             <Plus className="w-4 h-4 shrink-0" />
-            <span>شراء نقدي</span>
+            <span>🛒 شراء نقدي</span>
           </button>
+
+          {/* 2. شراء جملة / توريد */}
+          <button
+            onClick={() => openCreateModal('nagdi')}
+            className="min-h-[40px] bg-cyan-800 hover:bg-cyan-900 active:bg-cyan-950 text-white px-3 sm:px-4 py-2 rounded-lg text-xs md:text-sm font-bold transition cursor-pointer flex items-center justify-center gap-1.5 shadow-xs border border-cyan-900 hover:scale-[1.02]"
+            title="فاتورة توريد وشراء كميات جملة"
+          >
+            <Building2 className="w-4 h-4 shrink-0" />
+            <span>📦 شراء جملة / توريد</span>
+          </button>
+
+          {/* 3. شراء أجل */}
           <button
             onClick={() => openCreateModal('ajel')}
-            className="min-h-[40px] bg-amber-600 hover:bg-amber-700 active:bg-amber-800 text-white px-3 sm:px-4 py-2 rounded-lg text-xs md:text-sm font-semibold transition cursor-pointer flex items-center justify-center gap-1.5 shadow-xs"
+            className="min-h-[40px] bg-amber-700 hover:bg-amber-800 active:bg-amber-900 text-white px-3 sm:px-4 py-2 rounded-lg text-xs md:text-sm font-bold transition cursor-pointer flex items-center justify-center gap-1.5 shadow-xs border border-amber-800 hover:scale-[1.02]"
+            title="فاتورة شراء آجل على حساب ومستحقات المورد"
           >
-            <Plus className="w-4 h-4 shrink-0" />
-            <span>شراء أجل</span>
+            <DollarSign className="w-4 h-4 shrink-0" />
+            <span>⏳ شراء أجل</span>
           </button>
+
+          {/* 4. مرتجع نقدي */}
           <button
             onClick={() => openCreateModal('return_nagdi')}
-            className="min-h-[40px] bg-rose-600 hover:bg-rose-700 active:bg-rose-800 text-white px-3 sm:px-4 py-2 rounded-lg text-xs md:text-sm font-semibold transition cursor-pointer flex items-center justify-center gap-1.5 shadow-xs"
+            className="min-h-[40px] bg-rose-700 hover:bg-rose-800 active:bg-rose-900 text-white px-3 sm:px-4 py-2 rounded-lg text-xs md:text-sm font-bold transition cursor-pointer flex items-center justify-center gap-1.5 shadow-xs border border-rose-800 hover:scale-[1.02]"
+            title="مرتجع بضاعة واسترداد نقدي من المورد إلى الخزينة"
           >
             <RotateCcw className="w-4 h-4 shrink-0" />
-            <span>مرتجع نقدي</span>
+            <span>↩ مرتجع نقدي</span>
           </button>
+
+          {/* 5. مرتجع أجل */}
           <button
             onClick={() => openCreateModal('return_ajel')}
-            className="min-h-[40px] bg-slate-600 hover:bg-slate-700 active:bg-slate-800 text-white px-3 sm:px-4 py-2 rounded-lg text-xs md:text-sm font-semibold transition cursor-pointer flex items-center justify-center gap-1.5 shadow-xs"
+            className="min-h-[40px] bg-slate-700 hover:bg-slate-800 active:bg-slate-900 text-white px-3 sm:px-4 py-2 rounded-lg text-xs md:text-sm font-bold transition cursor-pointer flex items-center justify-center gap-1.5 shadow-xs border border-slate-800 hover:scale-[1.02]"
+            title="مرتجع بضاعة وخصم من مستحقات المورد"
           >
             <RotateCcw className="w-4 h-4 shrink-0" />
-            <span>مرتجع أجل</span>
+            <span>↩ مرتجع أجل</span>
           </button>
+
           <TableActionButtons
             onPrint={handlePrintPurchasesList}
             onExportExcel={handleExportPurchasesExcel}
@@ -1084,6 +1150,7 @@ export const PurchasesView: React.FC<PurchasesViewProps> = ({ appData, onUpdateD
           }}
           mode="purchase"
           invoiceType={modalType}
+          pricingType="buy"
           editingInvoice={editingInvoiceId !== null ? appData.purchaseInvoices.find((i) => i.id === editingInvoiceId) || null : null}
           appData={appData}
           onUpdateData={onUpdateData}
@@ -1182,6 +1249,7 @@ export const PurchasesView: React.FC<PurchasesViewProps> = ({ appData, onUpdateD
         isOpen={activeModal === 'view'}
         title={`📋 تفاصيل فاتورة الشراء #${selectedInvoice?.id}`}
         onClose={() => setActiveModal(null)}
+        maxWidth="max-w-5xl xl:max-w-6xl w-full"
       >
         {selectedInvoice && (
           <InvoiceCardTemplate

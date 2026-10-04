@@ -16,12 +16,14 @@ interface PriceManagementViewProps {
   appData: AppData;
   onUpdateData: (newData: AppData) => void;
   showToast: (msg: string, type?: 'success' | 'error' | 'warning' | 'info') => void;
+  onNavigate?: (page: string) => void;
 }
 
 export const PriceManagementView: React.FC<PriceManagementViewProps> = ({
   appData,
   onUpdateData,
   showToast,
+  onNavigate,
 }) => {
   // Ensure sync
   const syncedData = useMemo(() => ensureProductPricesSynced(appData), [appData]);
@@ -510,7 +512,18 @@ export const PriceManagementView: React.FC<PriceManagementViewProps> = ({
           </p>
         </div>
 
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-2 items-center">
+          {onNavigate && (
+            <button
+              type="button"
+              onClick={() => onNavigate('company_prices')}
+              className="bg-purple-600 hover:bg-purple-700 text-white font-bold px-3 py-1.5 rounded-lg text-xs flex items-center gap-1.5 cursor-pointer shadow-xs transition"
+              title="الانتقال إلى قائمة أسعار الشركات والتصنيفات"
+            >
+              <span>🏢</span>
+              <span>قائمة أسعار الشركات والتصنيفات</span>
+            </button>
+          )}
           <TableActionButtons
             onPrint={handlePrintPriceList}
             onExportExcel={handleExportExcel}

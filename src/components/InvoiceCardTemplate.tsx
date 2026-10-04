@@ -1,6 +1,7 @@
 import React from 'react';
 import { SaleInvoice, PurchaseInvoice, Settings } from '../types';
 import { printInvoiceWindow } from '../utils/printInvoice';
+import { tafqeetArabic } from '../utils/tafqeet';
 
 interface InvoiceCardTemplateProps {
   invoice: SaleInvoice | PurchaseInvoice;
@@ -171,14 +172,14 @@ export const InvoiceCardTemplate: React.FC<InvoiceCardTemplateProps> = ({
         </div>
       </div>
 
-      {/* The Unified Standard Invoice Container */}
-      <div className="bg-white border-[3px] border-black p-4 sm:p-6 text-black flex flex-col justify-between shadow-lg">
+      {/* The Unified Standard Invoice Container - Clean, Light and Modern */}
+      <div className="bg-white border-2 border-slate-300 rounded-xl p-4 sm:p-6 text-slate-800 flex flex-col justify-between shadow-lg">
         <div>
           {/* 1. الترويسة الديناميكية */}
-          <div className="flex justify-between items-center border-b-2 border-black pb-2 mb-3 w-full">
+          <div className="flex justify-between items-center border-b border-slate-200 pb-2 mb-3 w-full">
             <div className="text-right flex-1">
-              <h2 className="text-lg font-bold text-black m-0 leading-tight">{companyName}</h2>
-              <p className="text-xs text-[#333] m-0">{companyAddress}</p>
+              <h2 className="text-lg font-bold text-slate-900 m-0 leading-tight">{companyName}</h2>
+              <p className="text-xs text-slate-500 m-0">{companyAddress}</p>
             </div>
 
             {/* اللوجو / الشعار في المنتصف */}
@@ -193,7 +194,7 @@ export const InvoiceCardTemplate: React.FC<InvoiceCardTemplateProps> = ({
             </div>
 
             <div className="text-left flex-1">
-              <ul className="list-none p-0 m-0 text-xs font-semibold" dir="ltr">
+              <ul className="list-none p-0 m-0 text-xs font-semibold text-slate-700" dir="ltr">
                 {companyPhone1 && <li className="mb-0.5">{companyPhone1}</li>}
                 {companyPhone2 && <li className="mb-0.5">{companyPhone2}</li>}
                 {companyPhone3 && <li className="mb-0.5">{companyPhone3}</li>}
@@ -201,14 +202,14 @@ export const InvoiceCardTemplate: React.FC<InvoiceCardTemplateProps> = ({
             </div>
           </div>
 
-          {/* 2. مستطيل البيانات المنكمش */}
-          <div className="flex flex-col sm:flex-row justify-between items-center border-[1.5px] border-black p-2 sm:px-3 mb-3 text-xs leading-snug w-full bg-[#fafafa] gap-2">
+          {/* 2. مستطيل البيانات */}
+          <div className="flex flex-col sm:flex-row justify-between items-center border border-slate-200 rounded-lg p-2 sm:px-3 mb-3 text-xs leading-snug w-full bg-slate-50 gap-2">
             <div className="text-right w-full sm:w-auto">
-              <p className="m-0.5">
-                <strong>{partyLabel}:</strong> <span>{partyName}</span>
+              <p className="m-0.5 text-slate-800">
+                <strong className="text-slate-600">{partyLabel}:</strong> <span className="font-bold text-slate-900">{partyName}</span>
               </p>
-              <p className="m-0.5">
-                <strong>{partyIdLabel}:</strong> <span dir="ltr">{partyPhone}</span>
+              <p className="m-0.5 text-slate-800">
+                <strong className="text-slate-600">{partyIdLabel}:</strong> <span dir="ltr" className="font-mono">{partyPhone}</span>
               </p>
               {(invoice as any).customerRepName && (
                 <p className="m-0.5 text-indigo-900 font-bold">
@@ -220,10 +221,10 @@ export const InvoiceCardTemplate: React.FC<InvoiceCardTemplateProps> = ({
 
             <div className="text-center w-full sm:w-auto">
               <p className="m-0.5">
-                <strong>{invoiceTypeTitle}</strong> -{' '}
-                <strong className="text-sm">#{invoiceNumber}</strong>
+                <span className="font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-200">{invoiceTypeTitle}</span> -{' '}
+                <strong className="text-sm font-mono text-slate-900">#{invoiceNumber}</strong>
               </p>
-              <p className="m-0.5">
+              <p className="m-0.5 text-slate-700">
                 <strong>وسيلة الدفع:</strong> <span>{paymentMethodType}</span>
               </p>
               {invoice.salesRep && (
@@ -234,45 +235,45 @@ export const InvoiceCardTemplate: React.FC<InvoiceCardTemplateProps> = ({
             </div>
 
             <div className="text-left w-full sm:w-auto" dir="rtl">
-              <p className="m-0.5">
-                <strong>التاريخ:</strong> <span className="font-mono">{invoiceDate}</span>
+              <p className="m-0.5 text-slate-700">
+                <strong>التاريخ:</strong> <span className="font-mono font-bold text-slate-900">{invoiceDate}</span>
               </p>
-              <p className="m-0.5">
-                <strong>الوقت:</strong> <span className="font-mono">{invoiceTime}</span>
+              <p className="m-0.5 text-slate-700">
+                <strong>الوقت:</strong> <span className="font-mono text-slate-800">{invoiceTime}</span>
               </p>
             </div>
           </div>
 
           {invoice.notes && (
-            <div className="text-xs bg-[#eef2f5] border border-black p-1.5 px-2 mb-3 rounded-none">
+            <div className="text-xs bg-slate-50 border border-slate-200 p-2 mb-3 rounded-lg text-slate-700">
               <strong>📝 ملاحظات:</strong> {invoice.notes}
             </div>
           )}
 
-          {/* 3. جدول الأصناف */}
-          <div className="w-full overflow-x-auto mb-3">
-            <table className="w-full border-collapse border border-black text-center text-xs">
-              <thead>
-                <tr className="bg-[#ededed] font-bold">
-                  <th className="border border-black p-1.5" style={{ width: '30%' }}>
+          {/* 3. جدول الأصناف - نظيف تماماً وخالٍ من التظليل الأسود */}
+          <div className="w-full overflow-x-auto mb-3 rounded-lg border border-slate-200">
+            <table className="w-full border-collapse text-center text-xs">
+              <thead className="bg-slate-100 text-slate-800 font-bold border-b border-slate-300">
+                <tr>
+                  <th className="border border-slate-200 p-2 text-right font-black" style={{ width: '30%' }}>
                     اسم الصنف
                   </th>
-                  <th className="border border-black p-1.5" style={{ width: '22%' }}>
+                  <th className="border border-slate-200 p-2 text-right font-medium" style={{ width: '22%' }}>
                     الوصف
                   </th>
-                  <th className="border border-black p-1.5" style={{ width: '8%' }}>
-                    العدد
+                  <th className="border border-slate-200 p-2 font-bold" style={{ width: '8%' }}>
+                    الكمية
                   </th>
-                  <th className="border border-black p-1.5" style={{ width: '12%' }}>
+                  <th className="border border-slate-200 p-2 font-bold" style={{ width: '12%' }}>
                     السعر
                   </th>
-                  <th className="border border-black p-1.5" style={{ width: '8%' }}>
+                  <th className="border border-slate-200 p-2 font-bold" style={{ width: '8%' }}>
                     الخصم
                   </th>
-                  <th className="border border-black p-1.5" style={{ width: '8%' }}>
+                  <th className="border border-slate-200 p-2 font-bold" style={{ width: '8%' }}>
                     الضريبة
                   </th>
-                  <th className="border border-black p-1.5" style={{ width: '12%' }}>
+                  <th className="border border-slate-200 p-2 font-black" style={{ width: '12%' }}>
                     الإجمالي
                   </th>
                 </tr>
@@ -280,7 +281,7 @@ export const InvoiceCardTemplate: React.FC<InvoiceCardTemplateProps> = ({
               <tbody>
                 {items.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="border border-black p-3 text-slate-500">
+                    <td colSpan={7} className="border border-slate-200 p-4 text-slate-400 bg-white">
                       لا توجد أصناف في هذه الفاتورة
                     </td>
                   </tr>
@@ -301,24 +302,24 @@ export const InvoiceCardTemplate: React.FC<InvoiceCardTemplateProps> = ({
                       : `${parseFloat((item.taxValue ?? item.tax ?? 0).toString()).toFixed(2)} ج.م`;
 
                     return (
-                      <tr key={idx}>
-                        <td className="border border-black p-1.5 font-semibold text-right pr-2">
+                      <tr key={idx} className="bg-white hover:bg-slate-50 transition-colors">
+                        <td className="border border-slate-200 p-2 font-bold text-right text-slate-900 pr-2.5">
                           {item.name}
                         </td>
-                        <td className="border border-black p-1.5 text-slate-700">
+                        <td className="border border-slate-200 p-2 text-right text-slate-600">
                           {item.notes || '-'}
                         </td>
-                        <td className="border border-black p-1.5 font-mono">{item.qty}</td>
-                        <td className="border border-black p-1.5 font-mono">
+                        <td className="border border-slate-200 p-2 font-mono font-bold text-slate-900">{item.qty}</td>
+                        <td className="border border-slate-200 p-2 font-mono font-bold text-slate-900">
                           {parseFloat(item.price.toString()).toFixed(2)}
                         </td>
-                        <td className="border border-black p-1.5 font-mono text-[11px]">
+                        <td className="border border-slate-200 p-2 font-mono text-[11px] text-slate-700">
                           {discDisplay}
                         </td>
-                        <td className="border border-black p-1.5 font-mono text-[11px]">
+                        <td className="border border-slate-200 p-2 font-mono text-[11px] text-slate-700">
                           {taxDisplay}
                         </td>
-                        <td className="border border-black p-1.5 font-bold font-mono">
+                        <td className="border border-slate-200 p-2 font-black font-mono text-slate-950">
                           {parseFloat(item.total.toString()).toFixed(2)}
                         </td>
                       </tr>
@@ -329,32 +330,54 @@ export const InvoiceCardTemplate: React.FC<InvoiceCardTemplateProps> = ({
             </table>
           </div>
 
-          {/* 4. الحسابات والملخص */}
-          <div className="flex justify-end mt-2 mb-3 w-full">
-            <div className="w-64 flex flex-col gap-1 text-xs font-bold">
+          {/* 4. الحسابات والملخص - تصميم ناصع وفاتح ومتجاوب للشاشات الكبيرة */}
+          <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-end gap-3 mt-3 mb-3 w-full">
+            {/* جهة اليمين: تفقيط المبلغ والتوقيع والشروط */}
+            <div className="flex-1 flex flex-col justify-between gap-2 bg-slate-50 border border-slate-200 rounded-lg p-3 text-xs text-slate-700">
+              <div>
+                <span className="font-bold text-slate-900 block mb-1">المبلغ كتابة بالحروف:</span>
+                <p className="font-bold text-emerald-800 bg-emerald-50/70 border border-emerald-200 p-2 rounded text-xs leading-relaxed">
+                  {tafqeetArabic(grandTotal)}
+                </p>
+              </div>
+
+              <div className="flex justify-between items-center pt-2 border-t border-slate-200 text-[11px] text-slate-600 mt-2">
+                <div>
+                  <span className="font-bold">المستلم: </span>
+                  <span className="underline decoration-dotted decoration-slate-400">........................</span>
+                </div>
+                <div>
+                  <span className="font-bold">توقيع المسؤول / الختم: </span>
+                  <span className="underline decoration-dotted decoration-slate-400">........................</span>
+                </div>
+              </div>
+            </div>
+
+            {/* جهة اليسار: جدول الحسابات والأرقام */}
+            <div className="w-full sm:w-80 flex flex-col gap-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg p-3 shadow-xs shrink-0">
               {discountVal > 0 && (
-                <div className="flex justify-between items-center py-0.5">
-                  <span>خصم الفاتورة ({discountVal}%):</span>
-                  <span className="font-mono">{discountAmount.toFixed(2)}</span>
+                <div className="flex justify-between items-center py-0.5 text-rose-700">
+                  <span className="font-bold">خصم الفاتورة ({discountVal}%):</span>
+                  <span className="font-mono font-black">{discountAmount.toFixed(2)} ج.م</span>
                 </div>
               )}
               {taxVal > 0 && (
-                <div className="flex justify-between items-center py-0.5">
-                  <span>المصروفات/الضريبة ({taxVal}%):</span>
-                  <span className="font-mono">{taxAmount.toFixed(2)}</span>
+                <div className="flex justify-between items-center py-0.5 text-blue-700">
+                  <span className="font-bold">المصروفات/الضريبة ({taxVal}%):</span>
+                  <span className="font-mono font-black">{taxAmount.toFixed(2)} ج.م</span>
                 </div>
               )}
-              <div className="flex justify-between items-center border-t-[1.5px] border-black mt-1 pt-1 text-sm">
-                <span>صافي القيمة / الإجمالي:</span>
-                <span className="font-mono font-black">{grandTotal.toFixed(2)} ج.م</span>
+              <div className="flex justify-between items-center border-t border-slate-200 pt-1.5 text-sm bg-emerald-50 -mx-3 -mb-1.5 px-3 py-2 rounded-b-lg border-b border-emerald-300">
+                <span className="font-black text-slate-900">صافي القيمة / الإجمالي:</span>
+                <span className="font-mono font-black text-emerald-700 text-base">{grandTotal.toFixed(2)} ج.م</span>
               </div>
-              <div className="flex justify-between items-center py-0.5">
-                <span>المبلغ المدفوع:</span>
+              <div className="flex justify-between items-center py-0.5 pt-1 text-slate-800">
+                <span className="font-bold">المبلغ المدفوع:</span>
                 <span className="font-mono text-emerald-800 font-black">{paidAmount.toFixed(2)} ج.م</span>
               </div>
               {remainingAmount > 0 && (
-                <div className="flex justify-between items-center py-0.5 text-rose-800">
-                  <span>المبلغ المتبقي:</span>
+                <div className="flex justify-between items-center py-0.5 text-amber-800">
+                  <span className="font-bold">المبلغ المتبقي:</span>
                   <span className="font-mono font-black">{remainingAmount.toFixed(2)} ج.م</span>
                 </div>
               )}
@@ -364,7 +387,7 @@ export const InvoiceCardTemplate: React.FC<InvoiceCardTemplateProps> = ({
 
         <div>
           {/* 5. تذييل داخل الفاتورة */}
-          <div className="border-t-[1.5px] border-black pt-1 mt-3 flex justify-between text-[11px] font-semibold w-full">
+          <div className="border-t border-slate-300 pt-1.5 mt-3 flex justify-between text-[11px] font-semibold w-full text-slate-600">
             <div>البضاعة المباعة ترجع وتستبدل خلال 14 يوماً بأصل الفاتورة</div>
             <div>صفحة رقم: 1/1</div>
           </div>

@@ -245,6 +245,22 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </div>
         )}
 
+        {/* قائمة أسعار الشركات والتصنيفات */}
+        {canAccessPage(currentUser, 'company_prices') && (
+          <div
+            onClick={() => onNavigate('company_prices')}
+            className={`min-h-[42px] px-4 py-2.5 cursor-pointer border-b border-white/5 transition flex justify-between items-center ${navItemClass(
+              'company_prices'
+            )}`}
+          >
+            <div className="flex items-center gap-2.5">
+              <Building2 className="w-4 h-4 shrink-0 text-purple-400" />
+              <span className="font-medium text-xs sm:text-sm">أسعار الشركات والتصنيفات</span>
+            </div>
+            <span className="bg-purple-500/20 text-purple-300 border border-purple-500/40 text-[10px] px-1.5 py-0.5 rounded font-bold">شركات</span>
+          </div>
+        )}
+
         {/* عروض الأسعار والطلبيات */}
         {canAccessPage(currentUser, 'quotes_orders') && (
           <div

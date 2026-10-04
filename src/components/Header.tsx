@@ -102,6 +102,9 @@ export function getCleanPageName(page?: string): string {
       return 'النسخ الاحتياطي';
     case 'owner_panel':
       return 'لوحة المالك';
+    case 'company_prices':
+    case 'company_catalog':
+      return 'قائمة أسعار الشركات والتصنيفات';
     default:
       if (page.startsWith('reports_')) return 'التقارير';
       return 'الرئيسية';

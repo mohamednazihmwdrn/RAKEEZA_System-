@@ -673,3 +673,119 @@ export function postPurchaseInvoice(
 
   return data;
 }
+
+/**
+ * 🗑️ حذف فاتورة مبيعات مع استرجاع حركة المخزون والقيود المحاسبية
+ */
+export function deleteSaleInvoice(appData: AppData, invoiceId: number | string): AppData {
+  const data: AppData = {
+    ...appData,
+    items: (appData.items || []).map((i) => ({ ...i, movements: [...(i.movements || [])] })),
+    customers: (appData.customers || []).map((c) => ({ ...c, transactions: [...(c.transactions || [])] })),
+    cashTransactions: [...(appData.cashTransactions || [])],
+    cashBox: { ...appData.cashBox },
+    journalEntries: [...(appData.journalEntries || [])],
+    salesInvoices: [...(appData.salesInvoices || [])],
+  };
+
+  const inv = data.salesInvoices.find((i) => i.id === invoiceId || String(i.id) === String(invoiceId));
+  if (!inv) return data;
+
+  const isReturn = inv.type.startsWith('return_');
+
+  // Rollback inventory
+  inv.items?.forEach((itm) => {
+    const stockItm = data.items.find((i) => (itm.itemId && i.id === itm.itemId) || i.name.trim() === itm.name.trim());
+    if (stockItm) {
+      const qtyDiff = isReturn ? -itm.qty : itm.qty;
+      stockItm.quantity = Math.max(0, (stockItm.quantity || 0) + qtyDiff);
+      stockItm.movements = (stockItm.movements || []).filter((m) => !m.note?.includes(String(inv.id)));
+    }
+  });
+
+  // Rollback cash box
+  if (inv.paidAmount && inv.paidAmount > 0) {
+    const methodKey = mapPaymentMethodToKey(inv.paymentMethod);
+    const amount = Number(inv.paidAmount);
+    if (isReturn) {
+      data.cashBox[methodKey] = (data.cashBox[methodKey] || 0) + amount;
+    } else {
+      data.cashBox[methodKey] = Math.max(0, (data.cashBox[methodKey] || 0) - amount);
+    }
+    data.cashTransactions = data.cashTransactions.filter((tx) => tx.invoiceId !== inv.id && !tx.note?.includes(String(inv.id)));
+  }
+
+  // Rollback customer ledger
+  const customer = data.customers.find((c) => c.name.trim() === (inv.customerName || '').trim());
+  if (customer && customer.transactions) {
+    customer.transactions = customer.transactions.filter((tx: any) => tx.invoiceId !== inv.id && !tx.reference?.includes(String(inv.id)));
+  }
+
+  // Rollback journal entry
+  data.journalEntries = data.journalEntries.filter(
+    (je) => je.entryNumber !== `JV-SAL-${inv.id}` && je.reference !== `SALE-INV-${inv.id}`
+  );
+
+  // Remove invoice
+  data.salesInvoices = data.salesInvoices.filter((i) => i.id !== inv.id && String(i.id) !== String(inv.id));
+
+  return data;
+}
+
+/**
+ * 🗑️ حذف فاتورة مشتريات مع استرجاع حركة المخزون والقيود المحاسبية
+ */
+export function deletePurchaseInvoice(appData: AppData, invoiceId: number | string): AppData {
+  const data: AppData = {
+    ...appData,
+    items: (appData.items || []).map((i) => ({ ...i, movements: [...(i.movements || [])] })),
+    suppliers: (appData.suppliers || []).map((s) => ({ ...s, transactions: [...(s.transactions || [])] })),
+    cashTransactions: [...(appData.cashTransactions || [])],
+    cashBox: { ...appData.cashBox },
+    journalEntries: [...(appData.journalEntries || [])],
+    purchaseInvoices: [...(appData.purchaseInvoices || [])],
+  };
+
+  const inv = data.purchaseInvoices.find((i) => i.id === invoiceId || String(i.id) === String(invoiceId));
+  if (!inv) return data;
+
+  const isReturn = inv.type.startsWith('return_');
+
+  // Rollback inventory
+  inv.items?.forEach((itm) => {
+    const stockItm = data.items.find((i) => (itm.itemId && i.id === itm.itemId) || i.name.trim() === itm.name.trim());
+    if (stockItm) {
+      const qtyDiff = isReturn ? itm.qty : -itm.qty;
+      stockItm.quantity = Math.max(0, (stockItm.quantity || 0) + qtyDiff);
+      stockItm.movements = (stockItm.movements || []).filter((m) => !m.note?.includes(String(inv.id)));
+    }
+  });
+
+  // Rollback cash box
+  if (inv.paidAmount && inv.paidAmount > 0) {
+    const methodKey = mapPaymentMethodToKey(inv.paymentMethod);
+    const amount = Number(inv.paidAmount);
+    if (isReturn) {
+      data.cashBox[methodKey] = Math.max(0, (data.cashBox[methodKey] || 0) - amount);
+    } else {
+      data.cashBox[methodKey] = (data.cashBox[methodKey] || 0) + amount;
+    }
+    data.cashTransactions = data.cashTransactions.filter((tx) => tx.invoiceId !== inv.id && !tx.note?.includes(String(inv.id)));
+  }
+
+  // Rollback supplier ledger
+  const supplier = data.suppliers.find((s) => s.name.trim() === (inv.supplierName || '').trim());
+  if (supplier && supplier.transactions) {
+    supplier.transactions = supplier.transactions.filter((tx: any) => tx.invoiceId !== inv.id && !tx.reference?.includes(String(inv.id)));
+  }
+
+  // Rollback journal entry
+  data.journalEntries = data.journalEntries.filter(
+    (je) => je.entryNumber !== `JV-PUR-${inv.id}` && je.reference !== `PUR-INV-${inv.id}`
+  );
+
+  // Remove invoice
+  data.purchaseInvoices = data.purchaseInvoices.filter((i) => i.id !== inv.id && String(i.id) !== String(inv.id));
+
+  return data;
+}

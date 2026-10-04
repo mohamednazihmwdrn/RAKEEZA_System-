@@ -151,11 +151,14 @@ export const SalesView: React.FC<SalesViewProps> = ({ appData, onUpdateData, sho
     );
   });
 
-  const openCreateModal = (type: 'nagdi' | 'ajel' | 'return_nagdi' | 'return_ajel') => {
+  const openCreateModal = (
+    type: 'nagdi' | 'ajel' | 'return_nagdi' | 'return_ajel',
+    pricingType: 'cash' | 'wholesale' = 'cash'
+  ) => {
     setEditingInvoiceId(null);
     setSelectedBranchId(appData.activeBranchId || appData.branches?.[0]?.id || 'main');
     setModalType(type);
-    setSalesPricingType('cash');
+    setSalesPricingType(pricingType);
     setSelectedItemId('');
     setIsPriceAutoFetched(false);
     setPriceWarning(null);
@@ -873,39 +876,105 @@ export const SalesView: React.FC<SalesViewProps> = ({ appData, onUpdateData, sho
     showToast('تم تصدير سجل المبيعات إلى ملف Excel بنجاح', 'success');
   };
 
+  const totalSalesAmount = (appData.salesInvoices || []).reduce((acc, i) => acc + (i.total || 0), 0);
+  const totalSalesPaid = (appData.salesInvoices || []).reduce((acc, i) => acc + (i.paidAmount || 0), 0);
+  const totalSalesRemaining = totalSalesAmount - totalSalesPaid;
+
   return (
     <div className="space-y-4">
+      {/* 🏛️ ترويسة قسم إدارة المبيعات والفواتير - ثيم أزرق ملكي مميز */}
+      <div className="bg-gradient-to-r from-blue-950 via-indigo-900 to-blue-800 text-white p-3 sm:p-4 rounded-xl shadow-sm border border-blue-700/50 flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-lg bg-blue-600/40 border border-blue-400/40 flex items-center justify-center shrink-0">
+            <DollarSign className="w-6 h-6 text-emerald-300" />
+          </div>
+          <div>
+            <h2 className="text-sm sm:text-base font-black tracking-wide flex items-center gap-2">
+              <span>إدارة فواتير المبيعات والإيرادات</span>
+              <span className="text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 px-2 py-0.5 rounded-full font-bold">
+                ركيزة ERP
+              </span>
+            </h2>
+            <p className="text-[11px] text-blue-200">
+              تسجيل ومتابعة فواتير البيع النقدي والجملة والآجل ومردودات المبيعات بدقة وسرعة
+            </p>
+          </div>
+        </div>
+
+        {/* Quick KPI badges */}
+        <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
+          <div className="bg-white/10 backdrop-blur-xs border border-white/15 px-2.5 py-1 rounded-lg flex flex-col items-center">
+            <span className="text-[9px] text-blue-200">عدد الفواتير</span>
+            <span className="text-xs font-black font-mono text-white">{appData.salesInvoices?.length || 0}</span>
+          </div>
+          <div className="bg-white/10 backdrop-blur-xs border border-white/15 px-2.5 py-1 rounded-lg flex flex-col items-center">
+            <span className="text-[9px] text-blue-200">إجمالي المبيعات</span>
+            <span className="text-xs font-black font-mono text-emerald-300">{totalSalesAmount.toLocaleString()} ج.م</span>
+          </div>
+          <div className="bg-white/10 backdrop-blur-xs border border-white/15 px-2.5 py-1 rounded-lg flex flex-col items-center">
+            <span className="text-[9px] text-blue-200">المحصل نقداً</span>
+            <span className="text-xs font-black font-mono text-blue-200">{totalSalesPaid.toLocaleString()} ج.م</span>
+          </div>
+          <div className="bg-white/10 backdrop-blur-xs border border-white/15 px-2.5 py-1 rounded-lg flex flex-col items-center">
+            <span className="text-[9px] text-blue-200">المتبقي ذمم</span>
+            <span className="text-xs font-black font-mono text-amber-300">{totalSalesRemaining.toLocaleString()} ج.م</span>
+          </div>
+        </div>
+      </div>
+
       {/* Action Bar */}
       <div className="bg-white p-3 sm:p-4 rounded-xl shadow-xs border border-slate-200/90 flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between">
         <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2">
+          {/* 1. بيع نقدي */}
           <button
-            onClick={() => openCreateModal('nagdi')}
-            className="min-h-[40px] bg-emerald-700 hover:bg-emerald-800 active:bg-emerald-900 text-white px-3 sm:px-4 py-2 rounded-lg text-xs md:text-sm font-semibold transition cursor-pointer flex items-center justify-center gap-1.5 shadow-xs"
+            onClick={() => openCreateModal('nagdi', 'cash')}
+            className="min-h-[40px] bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white px-3 sm:px-4 py-2 rounded-lg text-xs md:text-sm font-bold transition cursor-pointer flex items-center justify-center gap-1.5 shadow-xs border border-emerald-700 hover:scale-[1.02]"
+            title="فاتورة بيع نقدي قطاعي بسداد فوري"
           >
             <Plus className="w-4 h-4 shrink-0" />
-            <span>بيع نقدي</span>
+            <span>💵 بيع نقدي</span>
           </button>
+
+          {/* 2. بيع جملة */}
           <button
-            onClick={() => openCreateModal('ajel')}
-            className="min-h-[40px] bg-amber-600 hover:bg-amber-700 active:bg-amber-800 text-white px-3 sm:px-4 py-2 rounded-lg text-xs md:text-sm font-semibold transition cursor-pointer flex items-center justify-center gap-1.5 shadow-xs"
+            onClick={() => openCreateModal('nagdi', 'wholesale')}
+            className="min-h-[40px] bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white px-3 sm:px-4 py-2 rounded-lg text-xs md:text-sm font-bold transition cursor-pointer flex items-center justify-center gap-1.5 shadow-xs border border-indigo-700 hover:scale-[1.02]"
+            title="فاتورة بيع بأسعار الجملة المعتمدة"
           >
-            <Plus className="w-4 h-4 shrink-0" />
-            <span>بيع أجل</span>
+            <Tag className="w-4 h-4 shrink-0" />
+            <span>🏷️ بيع جملة</span>
           </button>
+
+          {/* 3. بيع أجل */}
           <button
-            onClick={() => openCreateModal('return_nagdi')}
-            className="min-h-[40px] bg-rose-600 hover:bg-rose-700 active:bg-rose-800 text-white px-3 sm:px-4 py-2 rounded-lg text-xs md:text-sm font-semibold transition cursor-pointer flex items-center justify-center gap-1.5 shadow-xs"
+            onClick={() => openCreateModal('ajel', 'cash')}
+            className="min-h-[40px] bg-amber-600 hover:bg-amber-700 active:bg-amber-800 text-white px-3 sm:px-4 py-2 rounded-lg text-xs md:text-sm font-bold transition cursor-pointer flex items-center justify-center gap-1.5 shadow-xs border border-amber-700 hover:scale-[1.02]"
+            title="فاتورة بيع آجل على حساب ومديونية العميل"
+          >
+            <Calendar className="w-4 h-4 shrink-0" />
+            <span>⏳ بيع أجل</span>
+          </button>
+
+          {/* 4. مرتجع نقدي */}
+          <button
+            onClick={() => openCreateModal('return_nagdi', 'cash')}
+            className="min-h-[40px] bg-rose-600 hover:bg-rose-700 active:bg-rose-800 text-white px-3 sm:px-4 py-2 rounded-lg text-xs md:text-sm font-bold transition cursor-pointer flex items-center justify-center gap-1.5 shadow-xs border border-rose-700 hover:scale-[1.02]"
+            title="مرتجع مبيعات نقدي وصرف نقدية للعميل"
           >
             <RotateCcw className="w-4 h-4 shrink-0" />
-            <span>مرتجع نقدي</span>
+            <span>↩ مرتجع نقدي</span>
           </button>
+
+          {/* 5. مرتجع أجل */}
           <button
-            onClick={() => openCreateModal('return_ajel')}
-            className="min-h-[40px] bg-slate-600 hover:bg-slate-700 active:bg-slate-800 text-white px-3 sm:px-4 py-2 rounded-lg text-xs md:text-sm font-semibold transition cursor-pointer flex items-center justify-center gap-1.5 shadow-xs"
+            onClick={() => openCreateModal('return_ajel', 'cash')}
+            className="min-h-[40px] bg-purple-700 hover:bg-purple-800 active:bg-purple-900 text-white px-3 sm:px-4 py-2 rounded-lg text-xs md:text-sm font-bold transition cursor-pointer flex items-center justify-center gap-1.5 shadow-xs border border-purple-800 hover:scale-[1.02]"
+            title="مرتجع مبيعات آجل وخصم من مديونية العميل"
           >
             <RotateCcw className="w-4 h-4 shrink-0" />
-            <span>مرتجع أجل</span>
+            <span>↩ مرتجع أجل</span>
           </button>
+
           <TableActionButtons
             onPrint={handlePrintSalesList}
             onExportExcel={handleExportSalesExcel}
@@ -1272,6 +1341,7 @@ export const SalesView: React.FC<SalesViewProps> = ({ appData, onUpdateData, sho
           }}
           mode="sale"
           invoiceType={modalType}
+          pricingType={salesPricingType}
           editingInvoice={editingInvoiceId !== null ? appData.salesInvoices.find((i) => i.id === editingInvoiceId) || null : null}
           appData={appData}
           onUpdateData={onUpdateData}
@@ -1295,6 +1365,7 @@ export const SalesView: React.FC<SalesViewProps> = ({ appData, onUpdateData, sho
         isOpen={activeModal === 'view'}
         title={`📋 تفاصيل الفاتورة #${selectedInvoice?.id}`}
         onClose={() => setActiveModal(null)}
+        maxWidth="max-w-5xl xl:max-w-6xl w-full"
       >
         {selectedInvoice && (
           <InvoiceCardTemplate

@@ -33,6 +33,7 @@ import { HrPayrollView } from './components/HrPayrollView';
 import { FixedAssetsView } from './components/FixedAssetsView';
 import { ChequesView } from './components/ChequesView';
 import { PriceManagementView } from './components/PriceManagementView';
+import { CompanyPriceCatalogView } from './components/CompanyPriceCatalogView';
 import { SalesRepsCommissionsView } from './components/SalesRepsCommissionsView';
 import { ManufacturingView } from './components/ManufacturingView';
 import { BankReconciliationView } from './components/BankReconciliationView';
@@ -943,6 +944,8 @@ export default function App() {
       pos: '⚡ نقطة البيع السريعة والكاشير (POS)',
       sales: '💰 إدارة المبيعات والفواتير',
       price_management: '🏷️ إدارة وتسعير المنتجات المركزية (Price Management)',
+      company_prices: '🏢 قائمة أسعار الشركات والتصنيفات (Company Prices & Catalog)',
+      company_catalog: '🏢 قائمة أسعار الشركات والتصنيفات (Company Prices & Catalog)',
       quotes_orders: '📑 عروض الأسعار والطلبيات (Quotations & Pipeline)',
       web_orders: '📥 طلبات الويب سايت والكتالوج الإلكتروني (Incoming Web Orders)',
       catalog_manager: '🛍️ إدارة منتجات وأسعار الكتالوج الإلكتروني (Catalog Products & Pricing)',
@@ -1028,7 +1031,17 @@ export default function App() {
       case 'sales':
         return <SalesView appData={appData} onUpdateData={updateData} showToast={showToast} onInspectItem={handleInspectItem} />;
       case 'price_management':
-        return <PriceManagementView appData={appData} onUpdateData={updateData} showToast={showToast} />;
+        return <PriceManagementView appData={appData} onUpdateData={updateData} showToast={showToast} onNavigate={handleNavigate} />;
+      case 'company_prices':
+      case 'company_catalog':
+        return (
+          <CompanyPriceCatalogView
+            appData={appData}
+            onUpdateData={updateData}
+            showToast={showToast}
+            onNavigate={handleNavigate}
+          />
+        );
       case 'quotes_orders':
         return (
           <QuotesOrdersView

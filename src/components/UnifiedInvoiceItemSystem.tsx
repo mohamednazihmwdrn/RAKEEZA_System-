@@ -591,16 +591,16 @@ export const UnifiedInvoiceItemSystem: React.FC<UnifiedInvoiceItemSystemProps> =
             <div className="hidden md:block overflow-x-auto max-h-[320px] border border-slate-300 rounded-lg">
               <table className="w-full border-collapse text-xs text-center border border-slate-300">
                 <thead>
-                  <tr className="bg-slate-100 text-slate-900 font-black sticky top-0 border-b-2 border-slate-300 z-10">
-                    <th className="py-3 px-2 text-center w-14 border border-slate-300 font-black text-black">كود</th>
-                    <th className="py-3 px-3 text-right border border-slate-300 font-black text-black">الصنف</th>
-                    <th className="py-3 px-2 text-center w-16 border border-slate-300 font-black text-black">الكمية</th>
-                    <th className="py-3 px-2 text-center w-24 border border-slate-300 font-black text-black">السعر</th>
-                    <th className="py-3 px-2 text-center w-20 border border-slate-300 font-black text-black">الخصم</th>
-                    <th className="py-3 px-2 text-center w-20 border border-slate-300 font-black text-black">الضريبة</th>
-                    <th className="py-3 px-3 text-right border border-slate-300 font-black text-black">البيان / التفاصيل</th>
-                    <th className="py-3 px-3 text-center w-24 border border-slate-300 font-black text-black">الإجمالي</th>
-                    <th className="py-3 px-2 text-center w-20 border border-slate-300 font-black text-black">إجراء</th>
+                  <tr className="bg-slate-100 text-slate-800 font-bold sticky top-0 border-b-2 border-slate-300 z-10">
+                    <th className="py-3 px-2 text-center w-14 border border-slate-300 font-bold text-slate-700">كود</th>
+                    <th className="py-3 px-3 text-right border border-slate-300 font-black text-slate-900">اسم الصنف</th>
+                    <th className="py-3 px-2 text-center w-16 border border-slate-300 font-bold text-slate-800">الكمية</th>
+                    <th className="py-3 px-2 text-center w-24 border border-slate-300 font-bold text-slate-800">السعر</th>
+                    <th className="py-3 px-2 text-center w-20 border border-slate-300 font-bold text-slate-800">الخصم</th>
+                    <th className="py-3 px-2 text-center w-20 border border-slate-300 font-bold text-slate-800">الضريبة</th>
+                    <th className="py-3 px-3 text-right border border-slate-300 font-bold text-slate-800">الوصف</th>
+                    <th className="py-3 px-3 text-center w-24 border border-slate-300 font-black text-slate-900">الإجمالي</th>
+                    <th className="py-3 px-2 text-center w-20 border border-slate-300 font-bold text-slate-800">إجراء</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200 bg-white">
