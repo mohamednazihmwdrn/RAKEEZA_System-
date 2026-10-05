@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { AppData, SaleInvoice, PurchaseInvoice, Item, Customer, Supplier } from '../types';
 import { calculateCustomerBalance, calculateSupplierBalance } from '../utils/accounting';
 import { postSaleInvoice, postPurchaseInvoice, mapPaymentMethodToKey } from '../utils/posting';
@@ -17,6 +17,7 @@ export interface RakeezaInvoiceWorkspaceProps {
 }
 
 export interface WorkspaceItemRow {
+  rowId: string;
   code: string;
   name: string;
   spec: string;
@@ -210,7 +211,8 @@ export const RakeezaInvoiceWorkspace: React.FC<RakeezaInvoiceWorkspaceProps> = (
   // Items in Current Invoice
   const [invoiceItems, setInvoiceItems] = useState<WorkspaceItemRow[]>(() => {
     if (editingInvoice?.items && editingInvoice.items.length > 0) {
-      return editingInvoice.items.map((i) => ({
+      return editingInvoice.items.map((i, idx) => ({
+        rowId: (i as any).rowId || `row_${idx}_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
         code: i.code || '',
         name: i.name,
         spec: i.spec || '',
@@ -223,6 +225,12 @@ export const RakeezaInvoiceWorkspace: React.FC<RakeezaInvoiceWorkspaceProps> = (
     }
     return [];
   });
+
+  // 🎯 Multi-Selection & Long-Press state for items deletion
+  const [selectedRowIds, setSelectedRowIds] = useState<Set<string>>(new Set());
+  const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const isLongPressTriggeredRef = useRef<boolean>(false);
+  const pointerStartPosRef = useRef<{ x: number; y: number } | null>(null);
 
   // Options & Payments Modal State
   const [isOptionsModalOpen, setIsOptionsModalOpen] = useState(false);
@@ -260,13 +268,16 @@ export const RakeezaInvoiceWorkspace: React.FC<RakeezaInvoiceWorkspaceProps> = (
   const [lookupSearch, setLookupSearch] = useState('');
   const [selectedLookupCategory, setSelectedLookupCategory] = useState('all');
 
-  // Modify Single Invoice Item Modal State
+  // Modify Single Invoice Item Modal State (كارت التعديل التفصيلي)
   const [isModifyModalOpen, setIsModifyModalOpen] = useState(false);
   const [modifyIndex, setModifyIndex] = useState<number>(-1);
   const [modifyName, setModifyName] = useState('');
+  const [modifyCode, setModifyCode] = useState('');
   const [modifyQty, setModifyQty] = useState('');
   const [modifyPrice, setModifyPrice] = useState('');
   const [modifySpec, setModifySpec] = useState('');
+  const [modifyStock, setModifyStock] = useState<number | null>(null);
+  const [modifyCostPrice, setModifyCostPrice] = useState<number>(0);
 
   // Add Brand New Item Modal (إضافة صنف جديد للمخزون) State
   const [isNewItemModalOpen, setIsNewItemModalOpen] = useState(false);
@@ -495,6 +506,7 @@ export const RakeezaInvoiceWorkspace: React.FC<RakeezaInvoiceWorkspaceProps> = (
       return [
         ...prev,
         {
+          rowId: `row_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
           code: item.code || '',
           name: item.name,
           spec: '',
@@ -510,15 +522,23 @@ export const RakeezaInvoiceWorkspace: React.FC<RakeezaInvoiceWorkspaceProps> = (
     setIsLookupModalOpen(false);
   };
 
-  // Modify Item in Invoice Table
+  // Modify Item in Invoice Table (كارت التعديل التفصيلي للصنف)
   const openModifyModal = (index: number) => {
     const item = invoiceItems[index];
     if (!item) return;
     setModifyIndex(index);
     setModifyName(item.name);
+    setModifyCode(item.code || '');
     setModifyQty(String(item.qty));
     setModifyPrice(String(item.price));
     setModifySpec(item.spec || '');
+    setModifyCostPrice(item.costPrice || 0);
+
+    // Look up real-time stock from inventory
+    const dbItem = (appData.items || []).find(
+      (i) => (i.code && item.code && i.code === item.code) || (item.itemId && i.id === item.itemId) || i.name.trim() === item.name.trim()
+    );
+    setModifyStock(dbItem ? Number(dbItem.quantity ?? 0) : null);
     setIsModifyModalOpen(true);
   };
 
@@ -534,6 +554,7 @@ export const RakeezaInvoiceWorkspace: React.FC<RakeezaInvoiceWorkspaceProps> = (
       const copy = [...prev];
       copy[modifyIndex] = {
         ...copy[modifyIndex],
+        name: modifyName.trim() || copy[modifyIndex].name,
         qty,
         price,
         spec: modifySpec.trim(),
@@ -542,11 +563,135 @@ export const RakeezaInvoiceWorkspace: React.FC<RakeezaInvoiceWorkspaceProps> = (
       return copy;
     });
     setIsModifyModalOpen(false);
+    showToast('تم حفظ تعديلات الصنف بالفاتورة', 'success');
   };
 
-  // Remove Item
+  const deleteCurrentModifiedItem = () => {
+    if (modifyIndex < 0 || modifyIndex >= invoiceItems.length) return;
+    removeItemFromInvoice(modifyIndex);
+    setIsModifyModalOpen(false);
+    showToast('تم حذف الصنف من الفاتورة', 'info');
+  };
+
+  // Remove Single Item
   const removeItemFromInvoice = (index: number) => {
+    const target = invoiceItems[index];
+    if (target && selectedRowIds.has(target.rowId)) {
+      setSelectedRowIds((prev) => {
+        const next = new Set(prev);
+        next.delete(target.rowId);
+        return next;
+      });
+    }
     setInvoiceItems((prev) => prev.filter((_, idx) => idx !== index));
+  };
+
+  // 🎯 Long Press & Click Logic for Table Rows
+  const handlePointerDown = (rowId: string, e: React.PointerEvent) => {
+    // Only capture primary button
+    if (e.button !== 0 && e.pointerType === 'mouse') return;
+    isLongPressTriggeredRef.current = false;
+    pointerStartPosRef.current = { x: e.clientX, y: e.clientY };
+
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+    }
+
+    // 450ms press triggers multi-select
+    longPressTimerRef.current = setTimeout(() => {
+      isLongPressTriggeredRef.current = true;
+      setSelectedRowIds((prev) => {
+        const next = new Set(prev);
+        if (next.has(rowId)) {
+          next.delete(rowId);
+        } else {
+          next.add(rowId);
+        }
+        return next;
+      });
+      if (window.navigator?.vibrate) {
+        window.navigator.vibrate(50);
+      }
+    }, 450);
+  };
+
+  const handlePointerMove = (e: React.PointerEvent) => {
+    if (pointerStartPosRef.current) {
+      const dx = Math.abs(e.clientX - pointerStartPosRef.current.x);
+      const dy = Math.abs(e.clientY - pointerStartPosRef.current.y);
+      if (dx > 10 || dy > 10) {
+        if (longPressTimerRef.current) {
+          clearTimeout(longPressTimerRef.current);
+          longPressTimerRef.current = null;
+        }
+      }
+    }
+  };
+
+  const handlePointerUp = () => {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+  };
+
+  const handleRowClick = (index: number, rowId: string, e: React.MouseEvent) => {
+    if (isLongPressTriggeredRef.current) {
+      // Long press just happened, suppress the regular click
+      isLongPressTriggeredRef.current = false;
+      e.preventDefault();
+      e.stopPropagation();
+      return;
+    }
+
+    // If selection mode is active (any items are selected), clicking a row toggles selection
+    if (selectedRowIds.size > 0) {
+      setSelectedRowIds((prev) => {
+        const next = new Set(prev);
+        if (next.has(rowId)) {
+          next.delete(rowId);
+        } else {
+          next.add(rowId);
+        }
+        return next;
+      });
+      return;
+    }
+
+    // Normal Single Click opens "كارت التعديل التفصيلي"
+    openModifyModal(index);
+  };
+
+  const toggleSelectRow = (rowId: string, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    setSelectedRowIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(rowId)) {
+        next.delete(rowId);
+      } else {
+        next.add(rowId);
+      }
+      return next;
+    });
+  };
+
+  // Bulk Delete Selected Items
+  const handleDeleteSelected = () => {
+    if (selectedRowIds.size === 0) return;
+    const count = selectedRowIds.size;
+    if (!confirm(`هل أنت متأكد من حذف (${count}) صنف محدد من الفاتورة؟`)) return;
+    setInvoiceItems((prev) => prev.filter((item) => !selectedRowIds.has(item.rowId)));
+    setSelectedRowIds(new Set());
+    showToast(`🗑️ تم حذف (${count}) أصناف محددة بنجاح`, 'info');
+  };
+
+  // Select / Deselect All
+  const handleSelectAll = () => {
+    if (selectedRowIds.size === invoiceItems.length) {
+      setSelectedRowIds(new Set());
+    } else {
+      setSelectedRowIds(new Set(invoiceItems.map((i) => i.rowId)));
+    }
   };
 
   // Multi-Payment Rows in Options Modal
@@ -801,16 +946,16 @@ export const RakeezaInvoiceWorkspace: React.FC<RakeezaInvoiceWorkspaceProps> = (
     <div
       className={
         isMaximized
-          ? 'fixed inset-0 w-full h-full z-50 flex flex-col bg-white overflow-hidden select-none'
-          : 'fixed inset-0 w-full h-full bg-slate-900/70 backdrop-blur-2xs z-50 flex justify-center items-center p-1 sm:p-3 overflow-hidden select-none'
+          ? 'fixed inset-0 w-full min-h-screen h-full z-50 flex flex-col bg-white overflow-y-auto select-none'
+          : 'fixed inset-0 w-full min-h-screen z-50 flex justify-center items-start sm:items-center p-1 sm:p-2.5 md:p-4 bg-slate-900/75 backdrop-blur-2xs overflow-y-auto select-none'
       }
       dir="rtl"
     >
       <div
         className={
           isMaximized
-            ? 'w-full h-full bg-white flex flex-col relative overflow-hidden text-slate-800'
-            : 'w-full max-w-full sm:max-w-2xl md:max-w-4xl lg:max-w-5xl xl:max-w-[1440px] 2xl:max-w-[1680px] bg-white rounded-xl border border-slate-300 shadow-2xl flex flex-col h-full max-h-[96vh] relative overflow-hidden text-slate-800 transition-all'
+            ? 'w-full min-h-screen h-full bg-white flex flex-col relative text-slate-800'
+            : 'w-full max-w-7xl mx-auto my-auto bg-white rounded-xl border-2 border-slate-300 shadow-2xl flex flex-col min-h-[580px] sm:min-h-[85vh] relative text-slate-800 transition-all overflow-hidden'
         }
       >
         {/* Header Title with distinct colors */}
@@ -855,7 +1000,7 @@ export const RakeezaInvoiceWorkspace: React.FC<RakeezaInvoiceWorkspaceProps> = (
         )}
 
         {/* Main Content Area */}
-        <div className="p-2 sm:p-3 flex flex-col gap-2 flex-1 overflow-hidden">
+        <div className="p-2 sm:p-3 flex flex-col gap-2 flex-1 min-w-0">
           {/* Invoice Header Card - Responsive Grid that looks balanced on laptop, desktop and widescreen */}
           <div className="bg-slate-50 border border-slate-200 rounded-lg p-2.5 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 lg:grid-cols-12 gap-2 shrink-0">
             {/* رقم الفاتورة */}
@@ -1136,74 +1281,169 @@ export const RakeezaInvoiceWorkspace: React.FC<RakeezaInvoiceWorkspaceProps> = (
             </div>
           </div>
 
-          {/* Table Responsive of Items */}
-          <div className="w-full flex-1 overflow-auto border border-slate-300 rounded-lg bg-white shadow-xs">
+          {/* 🗑️ Bulk Selection & Delete Action Bar (يظهر عند التحديد أو الضغط المطول) */}
+          {selectedRowIds.size > 0 && (
+            <div className="bg-rose-50 border-2 border-rose-300 px-3 py-2 rounded-lg flex flex-wrap items-center justify-between gap-2 shrink-0 animate-fade-in shadow-xs">
+              <div className="flex items-center gap-2">
+                <span className="w-6 h-6 rounded-full bg-rose-600 text-white flex items-center justify-center text-xs font-black">
+                  {selectedRowIds.size}
+                </span>
+                <span className="text-xs font-black text-rose-950">
+                  تم تحديد {selectedRowIds.size} من أصل {invoiceItems.length} صنف (اضغط مطولاً على أي صنف لإضافته أو إلغائه)
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleDeleteSelected}
+                  className="px-3.5 py-1.5 bg-rose-600 hover:bg-rose-700 active:bg-rose-800 text-white rounded-md text-xs font-black cursor-pointer shadow-xs transition flex items-center gap-1.5"
+                  title="حذف جميع الأصناف المحددة"
+                >
+                  <span>🗑️</span>
+                  <span>حذف المحددة ({selectedRowIds.size})</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSelectAll}
+                  className="px-2.5 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-800 rounded-md text-xs font-bold cursor-pointer transition"
+                >
+                  {selectedRowIds.size === invoiceItems.length ? 'إلغاء تحديد الكل' : 'تحديد كل الأصناف'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSelectedRowIds(new Set())}
+                  className="px-2.5 py-1.5 bg-white border border-slate-300 hover:bg-slate-100 text-slate-700 rounded-md text-xs font-bold cursor-pointer transition"
+                >
+                  ✕ إلغاء التحديد
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Table Responsive of Items - توزيع دقيق للأعمدة ومنع التداخل */}
+          <div className="w-full flex-1 min-h-[220px] max-h-[48vh] overflow-x-auto overflow-y-auto border border-slate-300 rounded-lg bg-white shadow-xs">
             <table className="w-full border-collapse text-xs sm:text-sm text-center">
               <thead className="bg-slate-100 text-slate-800 font-bold sticky top-0 z-10 border-b border-slate-300">
                 <tr>
-                  <th className="p-2 sm:p-2.5 border border-slate-300 w-12 text-center font-bold">م</th>
-                  <th className="p-2 sm:p-2.5 border border-slate-300 w-28 sm:w-36 font-mono text-center font-bold">الباركود</th>
-                  <th className="p-2 sm:p-2.5 border border-slate-300 min-w-[200px] text-right font-black text-slate-900">اسم الصنف</th>
-                  <th className="p-2 sm:p-2.5 border border-slate-300 min-w-[160px] text-right font-bold text-slate-800">الوصف</th>
-                  <th className="p-2 sm:p-2.5 border border-slate-300 w-24 text-center font-bold text-slate-800">الكمية</th>
-                  <th className="p-2 sm:p-2.5 border border-slate-300 w-28 text-center font-bold text-slate-800">السعر</th>
-                  <th className="p-2 sm:p-2.5 border border-slate-300 w-32 text-center font-black text-slate-900">الإجمالي</th>
-                  <th className="p-2 sm:p-2.5 border border-slate-300 w-20 text-center font-bold text-slate-800">إجراء</th>
+                  <th className="p-2 border border-slate-300 w-9 sm:w-10 text-center font-bold">
+                    <input
+                      type="checkbox"
+                      checked={invoiceItems.length > 0 && selectedRowIds.size === invoiceItems.length}
+                      onChange={handleSelectAll}
+                      className="cursor-pointer rounded border-slate-300"
+                      title="تحديد كل الأصناف"
+                    />
+                  </th>
+                  <th className="p-2 border border-slate-300 w-9 sm:w-10 text-center font-bold text-slate-600">م</th>
+                  <th className="p-2 border border-slate-300 w-20 sm:w-24 font-mono text-center font-bold text-slate-700 text-xs">الباركود</th>
+                  {/* توسيع عمود اسم الصنف لضمان ظهوره بالكامل وبوضوح تام على الشاشة */}
+                  <th className="p-2 border border-slate-300 min-w-[280px] lg:min-w-[380px] text-right font-black text-slate-900">
+                    <span>اسم الصنف</span>
+                    <span className="text-[10px] text-slate-500 font-normal mr-1.5 hidden sm:inline">(نقر: تعديل | ضغط مطول: تحديد)</span>
+                  </th>
+                  {/* تقليل عرض عمود البيان */}
+                  <th className="p-2 border border-slate-300 w-28 sm:w-36 text-right font-bold text-slate-800">البيان</th>
+                  {/* تصغير عمود العدد */}
+                  <th className="p-2 border border-slate-300 w-14 sm:w-18 text-center font-bold text-slate-800">العدد</th>
+                  {/* تصغير عمود السعر */}
+                  <th className="p-2 border border-slate-300 w-18 sm:w-22 text-center font-bold text-slate-800">السعر</th>
+                  {/* تصغير عمود الإجمالي */}
+                  <th className="p-2 border border-slate-300 w-20 sm:w-26 text-center font-black text-slate-900">الإجمالي</th>
+                  <th className="p-2 border border-slate-300 w-14 sm:w-16 text-center font-bold text-slate-800">إجراء</th>
                 </tr>
               </thead>
               <tbody>
                 {invoiceItems.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="text-slate-400 p-10 text-center text-xs sm:text-sm bg-white">
+                    <td colSpan={9} className="text-slate-400 p-10 text-center text-xs sm:text-sm bg-white">
                       لم يتم إدراج أصناف بعد (استخدم البحث السريع أعلاه أو اضغط "دليل الأصناف الشامل")
                     </td>
                   </tr>
                 ) : (
-                  invoiceItems.map((item, index) => (
-                    <tr key={index} className="hover:bg-blue-50/50 border-b border-slate-200 transition-colors bg-white">
-                      <td className="p-2 sm:p-2.5 border border-slate-200 font-mono font-bold text-slate-700 bg-white">
-                        {index + 1}
-                      </td>
-                      <td className="p-2 sm:p-2.5 border border-slate-200 font-mono text-slate-700 text-xs bg-white">
-                        {item.code || '-'}
-                      </td>
-                      <td className="p-2 sm:p-2.5 border border-slate-200 text-right font-bold text-slate-900 bg-white">
-                        {item.name}
-                      </td>
-                      <td className="p-2 sm:p-2.5 border border-slate-200 text-right text-slate-600 truncate max-w-[200px] bg-white text-xs">
-                        {item.spec || '-'}
-                      </td>
-                      <td className="p-2 sm:p-2.5 border border-slate-200 font-mono font-bold text-slate-900 bg-white">
-                        {item.qty}
-                      </td>
-                      <td className="p-2 sm:p-2.5 border border-slate-200 font-mono font-bold text-slate-900 bg-white">
-                        {item.price.toFixed(2)}
-                      </td>
-                      <td className="p-2 sm:p-2.5 border border-slate-200 font-mono font-black text-slate-900 bg-white">
-                        {item.total.toFixed(2)}
-                      </td>
-                      <td className="p-2 sm:p-2.5 border border-slate-200 bg-white">
-                        <div className="inline-flex items-center justify-center gap-2">
-                          <button
-                            type="button"
-                            onClick={() => openModifyModal(index)}
-                            className="p-1 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded cursor-pointer transition"
-                            title="تعديل"
-                          >
-                            ✏️
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => removeItemFromInvoice(index)}
-                            className="p-1 text-rose-600 hover:text-rose-800 hover:bg-rose-50 rounded cursor-pointer transition"
-                            title="حذف"
-                          >
-                            🗑️
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))
+                  invoiceItems.map((item, index) => {
+                    const isSelected = selectedRowIds.has(item.rowId);
+                    return (
+                      <tr
+                        key={item.rowId}
+                        onPointerDown={(e) => handlePointerDown(item.rowId, e)}
+                        onPointerUp={handlePointerUp}
+                        onPointerLeave={handlePointerUp}
+                        onPointerMove={handlePointerMove}
+                        onClick={(e) => handleRowClick(index, item.rowId, e)}
+                        className={`border-b transition-colors cursor-pointer select-none ${
+                          isSelected
+                            ? 'bg-blue-100/90 border-blue-400 font-bold'
+                            : 'hover:bg-blue-50/70 border-slate-200 bg-white'
+                        }`}
+                        title="نقر فردي: فتح كارت التعديل التفصيلي | ضغط مطول: تحديد الصنف للحذف"
+                      >
+                        {/* مربع التحديد */}
+                        <td className="p-2 border border-slate-200 text-center" onClick={(e) => e.stopPropagation()}>
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={(e) => toggleSelectRow(item.rowId, e as any)}
+                            className="cursor-pointer rounded border-slate-300"
+                          />
+                        </td>
+                        {/* الرقم التسلسلي */}
+                        <td className="p-2 border border-slate-200 font-mono font-bold text-slate-600 text-xs">
+                          {index + 1}
+                        </td>
+                        {/* الباركود */}
+                        <td className="p-2 border border-slate-200 font-mono text-slate-700 text-xs">
+                          {item.code || '-'}
+                        </td>
+                        {/* اسم الصنف - كامل وبوضوح تام بدون اقتطاع */}
+                        <td className="p-2 border border-slate-200 text-right font-black text-slate-900 break-words leading-relaxed">
+                          <div className="flex items-center gap-1.5">
+                            {isSelected && <span className="text-blue-600 shrink-0">✓</span>}
+                            <span>{item.name}</span>
+                          </div>
+                        </td>
+                        {/* البيان - مقلل العرض مع إمكانية عرض التول تيب */}
+                        <td
+                          className="p-2 border border-slate-200 text-right text-slate-600 truncate max-w-[140px] text-xs font-normal"
+                          title={item.spec || ''}
+                        >
+                          {item.spec || '-'}
+                        </td>
+                        {/* العدد - مصغر */}
+                        <td className="p-2 border border-slate-200 font-mono font-bold text-slate-900 text-center">
+                          {item.qty}
+                        </td>
+                        {/* السعر - مصغر */}
+                        <td className="p-2 border border-slate-200 font-mono font-bold text-slate-900 text-center">
+                          {item.price.toFixed(2)}
+                        </td>
+                        {/* الإجمالي - مصغر */}
+                        <td className="p-2 border border-slate-200 font-mono font-black text-emerald-800 text-center">
+                          {item.total.toFixed(2)}
+                        </td>
+                        {/* إجراء */}
+                        <td className="p-1.5 border border-slate-200" onClick={(e) => e.stopPropagation()}>
+                          <div className="inline-flex items-center justify-center gap-1">
+                            <button
+                              type="button"
+                              onClick={() => openModifyModal(index)}
+                              className="p-1 text-blue-600 hover:text-blue-800 hover:bg-blue-100 rounded cursor-pointer transition"
+                              title="كارت التعديل التفصيلي"
+                            >
+                              ✏️
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => removeItemFromInvoice(index)}
+                              className="p-1 text-rose-600 hover:text-rose-800 hover:bg-rose-100 rounded cursor-pointer transition"
+                              title="حذف هذا الصنف"
+                            >
+                              🗑️
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
                 )}
               </tbody>
             </table>
@@ -1266,204 +1506,282 @@ export const RakeezaInvoiceWorkspace: React.FC<RakeezaInvoiceWorkspaceProps> = (
         </div>
       </div>
 
-      {/* ⚙️ نافذة الخيارات والمدفوعات (Options & Payments Modal) */}
+      {/* ⚙️ نافذة الإيرادات الإضافية والخصومات وطرق الدفع (Options, Revenue & Multi-Payment Modal) */}
       {isOptionsModalOpen && (
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-2">
-          <div className="bg-white w-full max-w-[400px] rounded-lg border border-slate-300 shadow-2xl flex flex-col overflow-hidden text-slate-800">
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-2xs z-[60] flex items-center justify-center p-2 sm:p-4 overflow-y-auto animate-fade-in">
+          <div className="bg-white w-full max-w-lg max-h-[90vh] rounded-xl border-2 border-slate-400 shadow-2xl flex flex-col overflow-hidden text-slate-800 my-auto">
+            {/* Header */}
             <div
-              className="text-white px-3 py-1.5 text-[10.5px] font-bold flex justify-between items-center"
-              style={{ backgroundColor: themeSecondary }}
+              className={`text-white px-4 py-2.5 text-xs sm:text-sm font-black flex justify-between items-center bg-gradient-to-r ${theme.headerBg} shadow-sm`}
             >
-              <span>⚙️ خصومات، ضرائب، إيرادات ودفع</span>
-              <span onClick={() => setIsOptionsModalOpen(false)} className="cursor-pointer text-sm font-black">
+              <div className="flex items-center gap-2">
+                <span>⚙️</span>
+                <span>نافذة الإيرادات الإضافية، الخصومات ووسائل الدفع</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsOptionsModalOpen(false)}
+                className="w-7 h-7 rounded-full hover:bg-white/20 active:bg-white/30 flex items-center justify-center text-white text-sm font-bold cursor-pointer transition"
+                title="إغلاق"
+              >
                 ✕
-              </span>
+              </button>
             </div>
 
-            <div className="p-3 flex flex-col gap-2.5 text-xs">
-              {/* الخصم الكلي */}
-              <div className="flex flex-col gap-1">
-                <div className="flex justify-between items-center">
-                  <label className="text-[9px] font-bold text-slate-700">خصم الفاتورة الكلية</label>
-                  <div className="flex border border-blue-600 rounded overflow-hidden h-[22px] w-[100px]">
-                    <button
-                      type="button"
-                      onClick={() => setInvDiscType('val')}
-                      className={`flex-1 text-[9px] font-bold ${invDiscType === 'val' ? 'bg-blue-600 text-white' : 'bg-white text-blue-600'}`}
-                    >
-                      ج.م
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setInvDiscType('percent')}
-                      className={`flex-1 text-[9px] font-bold ${invDiscType === 'percent' ? 'bg-blue-600 text-white' : 'bg-white text-blue-600'}`}
-                    >
-                      %
-                    </button>
+            {/* Body */}
+            <div className="p-3 sm:p-4 flex flex-col gap-3.5 text-xs overflow-y-auto">
+              {/* قسم 1: الإيرادات الإضافية والرسوم */}
+              <div className="bg-purple-50/70 border border-purple-200 rounded-lg p-3 flex flex-col gap-2">
+                <div className="flex items-center justify-between">
+                  <span className="font-black text-purple-950 text-xs flex items-center gap-1.5">
+                    <span>💰</span>
+                    <span>الإيرادات الإضافية والرسوم (شحن، تركيب، خدمات خاصة)</span>
+                  </span>
+                  <span className="text-[10px] text-purple-700 font-bold">تُضاف لصافي الفاتورة</span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <div className="flex flex-col gap-1">
+                    <label className="text-[10px] font-bold text-slate-700">اسم أو بيان الإيراد / الخدمة</label>
+                    <input
+                      type="text"
+                      value={extraIncomeName}
+                      onChange={(e) => setExtraIncomeName(e.target.value)}
+                      placeholder="مثال: مصاريف شحن ونقل، تركيب، صيانة..."
+                      className="border border-slate-300 rounded-md px-2.5 py-1.5 text-xs text-slate-900 bg-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <label className="text-[10px] font-bold text-slate-700">مبلغ الإيراد (ج.م)</label>
+                    <div className="relative">
+                      <input
+                        type="number"
+                        step="any"
+                        value={extraIncomeVal}
+                        onChange={(e) => setExtraIncomeVal(e.target.value)}
+                        placeholder="0.00"
+                        className="w-full border border-slate-300 rounded-md px-2.5 pl-10 py-1.5 text-xs font-mono font-bold text-slate-900 bg-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                      />
+                      <span className="absolute left-2.5 top-1.5 text-[10px] text-slate-500 font-bold">ج.م</span>
+                    </div>
                   </div>
                 </div>
-                <input
-                  type="number"
-                  value={globalInvDisc}
-                  onChange={(e) => setGlobalInvDisc(e.target.value)}
-                  placeholder="أدخل قيمة أو نسبة الخصم..."
-                  className="w-full border border-slate-300 rounded px-2 text-[10px] h-[26px]"
-                />
               </div>
 
-              {/* الضريبة الكلية */}
-              <div className="flex flex-col gap-1">
-                <div className="flex justify-between items-center">
-                  <label className="text-[9px] font-bold text-slate-700">ضريبة الفاتورة الكلية</label>
-                  <div className="flex border border-blue-600 rounded overflow-hidden h-[22px] w-[100px]">
-                    <button
-                      type="button"
-                      onClick={() => setInvTaxType('percent')}
-                      className={`flex-1 text-[9px] font-bold ${invTaxType === 'percent' ? 'bg-blue-600 text-white' : 'bg-white text-blue-600'}`}
-                    >
-                      %
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setInvTaxType('val')}
-                      className={`flex-1 text-[9px] font-bold ${invTaxType === 'val' ? 'bg-blue-600 text-white' : 'bg-white text-blue-600'}`}
-                    >
-                      ج.م
-                    </button>
+              {/* قسم 2: الخصومات والضرائب */}
+              <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 flex flex-col gap-3">
+                <span className="font-black text-slate-800 text-xs flex items-center gap-1.5">
+                  <span>🏷️</span>
+                  <span>الخصم والضريبة على إجمالي الفاتورة</span>
+                </span>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {/* الخصم الكلي */}
+                  <div className="flex flex-col gap-1">
+                    <div className="flex justify-between items-center">
+                      <label className="text-[10px] font-bold text-slate-700">خصم الفاتورة</label>
+                      <div className="flex border border-blue-600 rounded overflow-hidden h-[22px] w-[86px]">
+                        <button
+                          type="button"
+                          onClick={() => setInvDiscType('val')}
+                          className={`flex-1 text-[9px] font-bold cursor-pointer transition ${
+                            invDiscType === 'val' ? 'bg-blue-600 text-white' : 'bg-white text-blue-600'
+                          }`}
+                        >
+                          ج.م
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setInvDiscType('percent')}
+                          className={`flex-1 text-[9px] font-bold cursor-pointer transition ${
+                            invDiscType === 'percent' ? 'bg-blue-600 text-white' : 'bg-white text-blue-600'
+                          }`}
+                        >
+                          %
+                        </button>
+                      </div>
+                    </div>
+                    <input
+                      type="number"
+                      step="any"
+                      value={globalInvDisc}
+                      onChange={(e) => setGlobalInvDisc(e.target.value)}
+                      placeholder="أدخل قيمة أو نسبة الخصم..."
+                      className="border border-slate-300 rounded-md px-2.5 py-1.5 text-xs font-mono font-bold text-slate-900 bg-white"
+                    />
+                  </div>
+
+                  {/* الضريبة الكلية */}
+                  <div className="flex flex-col gap-1">
+                    <div className="flex justify-between items-center">
+                      <label className="text-[10px] font-bold text-slate-700">ضريبة القيمة المضافة</label>
+                      <div className="flex border border-blue-600 rounded overflow-hidden h-[22px] w-[86px]">
+                        <button
+                          type="button"
+                          onClick={() => setInvTaxType('percent')}
+                          className={`flex-1 text-[9px] font-bold cursor-pointer transition ${
+                            invTaxType === 'percent' ? 'bg-blue-600 text-white' : 'bg-white text-blue-600'
+                          }`}
+                        >
+                          %
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setInvTaxType('val')}
+                          className={`flex-1 text-[9px] font-bold cursor-pointer transition ${
+                            invTaxType === 'val' ? 'bg-blue-600 text-white' : 'bg-white text-blue-600'
+                          }`}
+                        >
+                          ج.م
+                        </button>
+                      </div>
+                    </div>
+                    <input
+                      type="number"
+                      step="any"
+                      value={globalInvTax}
+                      onChange={(e) => setGlobalInvTax(e.target.value)}
+                      placeholder="أدخل قيمة أو نسبة الضريبة..."
+                      className="border border-slate-300 rounded-md px-2.5 py-1.5 text-xs font-mono font-bold text-slate-900 bg-white"
+                    />
                   </div>
                 </div>
-                <input
-                  type="number"
-                  value={globalInvTax}
-                  onChange={(e) => setGlobalInvTax(e.target.value)}
-                  placeholder="أدخل قيمة أو نسبة الضريبة..."
-                  className="w-full border border-slate-300 rounded px-2 text-[10px] h-[26px]"
-                />
               </div>
 
-              {/* إيراد إضافي */}
-              <div className="grid grid-cols-2 gap-2">
-                <div className="flex flex-col gap-1">
-                  <label className="text-[9px] font-bold text-slate-700">اسم الإيراد / الخدمة</label>
-                  <input
-                    type="text"
-                    value={extraIncomeName}
-                    onChange={(e) => setExtraIncomeName(e.target.value)}
-                    placeholder="شحن، تركيب، الخ..."
-                    className="border border-slate-300 rounded px-2 text-[9.5px] h-[25px]"
-                  />
-                </div>
-                <div className="flex flex-col gap-1">
-                  <label className="text-[9px] font-bold text-slate-700">مبلغ الإيراد</label>
-                  <input
-                    type="number"
-                    value={extraIncomeVal}
-                    onChange={(e) => setExtraIncomeVal(e.target.value)}
-                    placeholder="0.00"
-                    className="border border-slate-300 rounded px-2 text-[9.5px] h-[25px]"
-                  />
-                </div>
-              </div>
-
-              {/* طرق الدفع المتعددة */}
-              <div className="flex flex-col gap-1 border-t border-slate-200 pt-2">
-                <div className="flex justify-between items-center mb-1">
-                  <label className="text-[9px] font-black text-slate-700">طرق الدفع المتعددة</label>
+              {/* قسم 3: وسائل الدفع والتحصيل المتعددة */}
+              <div className="bg-emerald-50/70 border border-emerald-200 rounded-lg p-3 flex flex-col gap-2">
+                <div className="flex justify-between items-center">
+                  <span className="font-black text-emerald-950 text-xs flex items-center gap-1.5">
+                    <span>💳</span>
+                    <span>وسائل التحصيل والدفع المتعددة</span>
+                  </span>
                   <button
                     type="button"
                     onClick={() => addPaymentRow('نقدي / كاش', totals.net)}
-                    className="px-2 py-0.5 text-[8.5px] font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded cursor-pointer"
+                    className="px-2.5 py-1 text-[10px] font-black text-white bg-emerald-700 hover:bg-emerald-800 rounded-md cursor-pointer transition flex items-center gap-1 shadow-xs"
                   >
-                    + إضافة دفع
+                    <span>+</span>
+                    <span>إضافة وسيلة دفع</span>
                   </button>
                 </div>
-                <div className="flex flex-col gap-1 max-h-[100px] overflow-y-auto">
-                  {paymentRows.map((r) => (
-                    <div key={r.id} className="flex gap-1 items-center">
-                      <select
-                        value={r.method}
-                        onChange={(e) => updatePaymentRow(r.id, 'method', e.target.value)}
-                        className="h-[24px] w-[100px] text-[9.5px] border border-slate-300 rounded px-1"
-                      >
-                        <option value="نقدي / كاش">نقدي</option>
-                        <option value="انستاباي Instapay">انستاباي</option>
-                        <option value="فودافون كاش">فودافون كاش</option>
-                        <option value="فيزا / كارت">فيزا</option>
-                      </select>
-                      <input
-                        type="number"
-                        value={r.amount || ''}
-                        onChange={(e) => updatePaymentRow(r.id, 'amount', e.target.value)}
-                        className="h-[24px] flex-1 text-[9.5px] border border-slate-300 rounded px-1 font-mono"
-                        placeholder="المبلغ..."
-                      />
-                      <button
-                        type="button"
-                        onClick={() => removePaymentRow(r.id)}
-                        className="text-rose-600 hover:text-rose-800 text-xs px-1 cursor-pointer"
-                      >
-                        ✕
-                      </button>
+
+                <div className="flex flex-col gap-1.5 max-h-[140px] overflow-y-auto">
+                  {paymentRows.length === 0 ? (
+                    <div className="text-slate-500 text-[11px] text-center py-2">
+                      لا توجد أسطر دفع محددة (سيتم احتساب الدفع نقداً تلقائياً عند الحفظ للفاتورة النقدية)
                     </div>
-                  ))}
+                  ) : (
+                    paymentRows.map((r) => (
+                      <div key={r.id} className="flex gap-2 items-center bg-white border border-slate-200 p-1.5 rounded-md">
+                        <select
+                          value={r.method}
+                          onChange={(e) => updatePaymentRow(r.id, 'method', e.target.value)}
+                          className="h-[28px] w-[130px] text-xs font-bold border border-slate-300 rounded px-1.5 bg-white text-slate-800"
+                        >
+                          <option value="نقدي / كاش">💵 نقدي / كاش</option>
+                          <option value="انستاباي Instapay">⚡ إنستاباي Instapay</option>
+                          <option value="فودافون كاش">📱 فودافون كاش</option>
+                          <option value="فيزا / كارت">💳 فيزا / شبكة</option>
+                          <option value="حساب بنكي">🏦 حساب بنكي</option>
+                        </select>
+                        <div className="relative flex-1">
+                          <input
+                            type="number"
+                            step="any"
+                            value={r.amount || ''}
+                            onChange={(e) => updatePaymentRow(r.id, 'amount', e.target.value)}
+                            className="h-[28px] w-full text-xs font-mono font-bold border border-slate-300 rounded px-2 text-slate-900"
+                            placeholder="المبلغ المدفوع..."
+                          />
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => removePaymentRow(r.id)}
+                          className="w-7 h-[28px] text-rose-600 hover:bg-rose-50 rounded flex items-center justify-center font-bold text-xs cursor-pointer"
+                          title="حذف هذا الدفع"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    ))
+                  )}
                 </div>
+              </div>
+
+              {/* Net Summary and Save */}
+              <div className="flex items-center justify-between bg-slate-100 border border-slate-300 px-3 py-2 rounded-lg font-bold">
+                <span className="text-slate-700">الصافي بعد التعديل:</span>
+                <span className="text-emerald-700 text-sm font-mono font-black">{totals.net.toFixed(2)} ج.م</span>
               </div>
 
               <button
                 type="button"
                 onClick={() => setIsOptionsModalOpen(false)}
-                className="w-full py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-[10px] font-bold cursor-pointer transition mt-1"
+                className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white rounded-lg text-xs sm:text-sm font-bold cursor-pointer transition shadow-xs flex items-center justify-center gap-1.5"
               >
-                ✓ تم وحفظ الخيارات
+                <span>✓</span>
+                <span>تأكيد وحفظ التعديلات</span>
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* 📦 نافذة دليل الأصناف (Lookup Modal - Quick Add) */}
+      {/* 📦 نافذة دليل الأصناف الشامل (Lookup Modal - Centered & Responsive) */}
       {isLookupModalOpen && (
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-2">
-          <div className="bg-slate-200 w-[98vw] max-w-[850px] h-[92vh] rounded-md border-2 border-slate-500 shadow-2xl flex flex-col overflow-hidden text-slate-800">
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-2xs z-[60] flex items-center justify-center p-2 sm:p-4 overflow-y-auto animate-fade-in">
+          <div className="bg-slate-100 w-full max-w-4xl max-h-[90vh] min-h-[500px] rounded-xl border-2 border-slate-400 shadow-2xl flex flex-col overflow-hidden text-slate-800 my-auto">
+            {/* Header */}
             <div
-              className="text-white px-3 py-1.5 text-[10.5px] font-bold flex justify-between items-center shrink-0"
-              style={{ backgroundColor: themePrimary }}
+              className={`text-white px-4 py-2.5 text-xs sm:text-sm font-black flex justify-between items-center shrink-0 shadow-sm bg-gradient-to-r ${theme.headerBg}`}
             >
-              <span>📦 دليل الأصناف (اختر صنفاً للإضافة السريعة)</span>
-              <span onClick={() => setIsLookupModalOpen(false)} className="cursor-pointer text-sm font-black">
+              <div className="flex items-center gap-2">
+                <span>📦</span>
+                <span>دليل الأصناف الشامل (اختر صنفاً للإضافة السريعة للفاتورة)</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsLookupModalOpen(false)}
+                className="w-7 h-7 rounded-full hover:bg-white/20 active:bg-white/30 flex items-center justify-center text-white text-sm font-bold cursor-pointer transition"
+                title="إغلاق"
+              >
                 ✕
-              </span>
+              </button>
             </div>
 
-            <div className="flex flex-1 p-1 gap-1 overflow-hidden">
+            {/* Content Area */}
+            <div className="flex flex-1 p-2 gap-2 overflow-hidden">
               {/* Categories Sidebar */}
-              <div className="w-[100px] bg-slate-50 border border-slate-400 rounded flex flex-col overflow-hidden shrink-0">
-                <div className="bg-slate-200 p-1 text-[8.5px] font-black border-b border-slate-300 flex flex-col items-center gap-1">
-                  <span>المجموعات</span>
+              <div className="w-[120px] sm:w-[150px] bg-white border border-slate-300 rounded-lg flex flex-col overflow-hidden shrink-0 shadow-xs">
+                <div className="bg-slate-100 p-2 text-xs font-black border-b border-slate-200 flex flex-col items-center gap-1.5">
+                  <span className="text-slate-800">التصنيفات</span>
                   <button
                     type="button"
                     onClick={openNewItemDialog}
-                    className="w-full bg-emerald-600 hover:bg-emerald-700 text-white rounded text-[8px] font-bold py-1 cursor-pointer"
+                    className="w-full bg-emerald-600 hover:bg-emerald-700 text-white rounded text-[10px] font-bold py-1.5 cursor-pointer shadow-xs transition"
                   >
                     + صنف جديد
                   </button>
                 </div>
-                <div className="flex-1 overflow-y-auto">
+                <div className="flex-1 overflow-y-auto divide-y divide-slate-100">
                   <div
                     onClick={() => setSelectedLookupCategory('all')}
-                    className={`p-1.5 text-[8.5px] font-bold border-b border-slate-200 cursor-pointer text-center ${
-                      selectedLookupCategory === 'all' ? 'bg-blue-600 text-white' : 'text-slate-800 hover:bg-slate-100'
+                    className={`p-2 text-xs font-bold cursor-pointer text-center transition ${
+                      selectedLookupCategory === 'all'
+                        ? 'bg-blue-600 text-white font-black'
+                        : 'text-slate-700 hover:bg-slate-50'
                     }`}
                   >
-                    الكل
+                    الكل ({appData.items?.length || 0})
                   </div>
                   {categoriesList.map((cat) => (
                     <div
                       key={cat}
                       onClick={() => setSelectedLookupCategory(cat)}
-                      className={`p-1.5 text-[8.5px] font-bold border-b border-slate-200 cursor-pointer text-center truncate ${
-                        selectedLookupCategory === cat ? 'bg-blue-600 text-white' : 'text-slate-800 hover:bg-slate-100'
+                      className={`p-2 text-xs font-bold cursor-pointer text-center truncate transition ${
+                        selectedLookupCategory === cat
+                          ? 'bg-blue-600 text-white font-black'
+                          : 'text-slate-700 hover:bg-slate-50'
                       }`}
+                      title={cat}
                     >
                       {cat}
                     </div>
@@ -1472,18 +1790,20 @@ export const RakeezaInvoiceWorkspace: React.FC<RakeezaInvoiceWorkspaceProps> = (
               </div>
 
               {/* Items Cards Panel */}
-              <div className="flex-1 bg-slate-50 border border-slate-400 rounded flex flex-col p-1 gap-1 overflow-hidden">
-                <div className="bg-white p-1 border border-slate-300 rounded flex items-center shrink-0">
+              <div className="flex-1 bg-white border border-slate-300 rounded-lg flex flex-col p-2 gap-2 overflow-hidden shadow-xs">
+                {/* Search Bar */}
+                <div className="bg-slate-50 p-2 border border-slate-300 rounded-lg flex items-center shrink-0">
                   <input
                     type="text"
                     value={lookupSearch}
                     onChange={(e) => setLookupSearch(e.target.value)}
-                    placeholder="بحث بالاسم أو الكود..."
-                    className="h-[24px] flex-1 text-[9.5px] border-none outline-none px-1"
+                    placeholder="🔍 ابحث في دليل الأصناف بالاسم، الكود، أو الباركود..."
+                    className="w-full text-xs font-semibold bg-transparent border-none outline-none px-1 text-slate-900"
                   />
                 </div>
 
-                <div className="flex-1 overflow-y-auto flex flex-col gap-1 p-0.5">
+                {/* Items Grid/List */}
+                <div className="flex-1 overflow-y-auto flex flex-col gap-1.5 p-0.5">
                   {(appData.items || [])
                     .filter((item) => {
                       if (selectedLookupCategory !== 'all' && item.category !== selectedLookupCategory) return false;
@@ -1498,33 +1818,42 @@ export const RakeezaInvoiceWorkspace: React.FC<RakeezaInvoiceWorkspaceProps> = (
                         <div
                           key={item.id}
                           onClick={() => quickAddItemToInvoice(item)}
-                          className={`bg-white border rounded p-1.5 flex flex-col gap-0.5 cursor-pointer shadow-xs hover:border-blue-600 transition ${
-                            isLow ? 'border-rose-400 bg-rose-50/20' : 'border-slate-300'
+                          className={`bg-white border rounded-lg p-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2 cursor-pointer shadow-xs hover:border-blue-600 hover:bg-blue-50/40 transition ${
+                            isLow ? 'border-rose-300 bg-rose-50/20' : 'border-slate-200'
                           }`}
                         >
-                          <div className="flex justify-between items-center font-bold text-[9.5px] border-b border-slate-100 pb-0.5">
-                            <span className="text-slate-900">
-                              {item.name} <small className="text-slate-500 font-normal">({item.category || 'عامة'})</small>
-                            </span>
-                            <span className="text-blue-600 text-[8.5px] font-mono">{item.code || item.id}</span>
+                          <div className="flex flex-col">
+                            <div className="flex items-center gap-2">
+                              <span className="font-black text-slate-900 text-xs sm:text-sm">{item.name}</span>
+                              <span className="text-[10px] text-slate-500 font-mono">({item.category || 'عامة'})</span>
+                            </div>
+                            <span className="text-blue-700 text-[10px] font-mono mt-0.5">كود / باركود: {item.code || item.id}</span>
                           </div>
-                          <div className="grid grid-cols-4 gap-1 text-[8px] text-center pt-0.5">
-                            <div className="bg-slate-50 p-0.5 rounded border border-slate-200">
-                              <span className="block text-[6.5px] text-slate-500">المتاح</span>
-                              <strong className={`font-mono ${isLow ? 'text-rose-600' : 'text-blue-600'}`}>{stock}</strong>
+
+                          <div className="flex items-center gap-2 text-xs font-mono shrink-0">
+                            <div className="bg-slate-50 px-2 py-1 rounded border border-slate-200 text-center">
+                              <span className="block text-[8px] text-slate-500 font-sans">المتاح</span>
+                              <strong className={`${isLow ? 'text-rose-600' : 'text-blue-700'}`}>{stock}</strong>
                             </div>
-                            <div className="bg-slate-50 p-0.5 rounded border border-slate-200">
-                              <span className="block text-[6.5px] text-slate-500">نقدي</span>
-                              <strong className="font-mono text-emerald-600">{Number(item.salePrice || item.price || 0).toFixed(2)}</strong>
+                            <div className="bg-emerald-50 px-2.5 py-1 rounded border border-emerald-200 text-center">
+                              <span className="block text-[8px] text-emerald-800 font-sans">سعر الفاتورة</span>
+                              <strong className="text-emerald-800 font-black">
+                                {Number(
+                                  currentInvoicePriceType === 'wholesale'
+                                    ? item.wholesalePrice || item.price || 0
+                                    : currentInvoicePriceType === 'buy' || !isSale
+                                    ? item.costPrice || item.purchasePrice || item.price || 0
+                                    : item.salePrice || item.price || 0
+                                ).toFixed(2)}{' '}
+                                ج.م
+                              </strong>
                             </div>
-                            <div className="bg-slate-50 p-0.5 rounded border border-slate-200">
-                              <span className="block text-[6.5px] text-slate-500">جملة</span>
-                              <strong className="font-mono text-amber-600">{Number(item.wholesalePrice || item.price || 0).toFixed(2)}</strong>
-                            </div>
-                            <div className="bg-slate-50 p-0.5 rounded border border-slate-200">
-                              <span className="block text-[6.5px] text-slate-500">شراء</span>
-                              <strong className="font-mono text-rose-600">{Number(item.costPrice || item.purchasePrice || item.price || 0).toFixed(2)}</strong>
-                            </div>
+                            <button
+                              type="button"
+                              className="px-2.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs font-bold transition shadow-xs"
+                            >
+                              + إضافة
+                            </button>
                           </div>
                         </div>
                       );
@@ -1536,109 +1865,213 @@ export const RakeezaInvoiceWorkspace: React.FC<RakeezaInvoiceWorkspaceProps> = (
         </div>
       )}
 
-      {/* ✏️ نافذة تعديل صنف في الفاتورة (Modify Item Modal) */}
+      {/* 📋 كارت التعديل التفصيلي للصنف في الفاتورة (Item Detailed Edit Card Modal - Centered & Responsive) */}
       {isModifyModalOpen && (
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-2">
-          <div className="bg-white w-full max-w-[360px] rounded-lg border border-slate-300 shadow-2xl flex flex-col overflow-hidden text-slate-800">
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-2xs z-[60] flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-fade-in">
+          <div className="bg-white w-full max-w-lg md:max-w-xl max-h-[92vh] rounded-xl border-2 border-slate-400 shadow-2xl flex flex-col overflow-hidden text-slate-800 my-auto">
+            {/* Header */}
             <div
-              className="text-white px-3 py-1.5 text-[10.5px] font-bold flex justify-between items-center"
-              style={{ backgroundColor: themePrimary }}
+              className={`text-white px-4 py-2.5 text-xs sm:text-sm font-black flex justify-between items-center bg-gradient-to-r ${theme.headerBg} shadow-sm`}
             >
-              <span>✏️ تعديل صنف في الفاتورة</span>
-              <span onClick={() => setIsModifyModalOpen(false)} className="cursor-pointer text-sm font-black">
-                ✕
-              </span>
-            </div>
-            <div className="p-3 flex flex-col gap-2">
-              <div className="flex flex-col gap-0.5">
-                <label className="text-[9px] font-bold text-slate-600">اسم الصنف</label>
-                <input
-                  type="text"
-                  value={modifyName}
-                  readOnly
-                  className="bg-slate-100 border border-slate-300 rounded px-2 text-[9.5px] h-[24px] font-bold text-slate-800"
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-2">
-                <div className="flex flex-col gap-0.5">
-                  <label className="text-[9px] font-bold text-slate-600">الكمية</label>
-                  <input
-                    type="number"
-                    value={modifyQty}
-                    onChange={(e) => setModifyQty(e.target.value)}
-                    className="border border-slate-300 rounded px-2 text-[9.5px] h-[24px] font-mono text-slate-800"
-                  />
-                </div>
-                <div className="flex flex-col gap-0.5">
-                  <label className="text-[9px] font-bold text-slate-600">السعر</label>
-                  <input
-                    type="number"
-                    value={modifyPrice}
-                    onChange={(e) => setModifyPrice(e.target.value)}
-                    className="border border-slate-300 rounded px-2 text-[9.5px] h-[24px] font-mono text-slate-800"
-                  />
-                </div>
-              </div>
-              <div className="flex flex-col gap-0.5">
-                <label className="text-[9px] font-bold text-slate-600">الوصف / البيان</label>
-                <input
-                  type="text"
-                  value={modifySpec}
-                  onChange={(e) => setModifySpec(e.target.value)}
-                  placeholder="ملاحظة خاصة بالصنف..."
-                  className="border border-slate-300 rounded px-2 text-[9.5px] h-[24px] text-slate-800"
-                />
+              <div className="flex items-center gap-2">
+                <span>📋</span>
+                <span>كارت التعديل التفصيلي للصنف</span>
               </div>
               <button
                 type="button"
-                onClick={saveModifiedItem}
-                className="w-full py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-[10px] font-bold cursor-pointer mt-1"
+                onClick={() => setIsModifyModalOpen(false)}
+                className="w-7 h-7 rounded-full hover:bg-white/20 active:bg-white/30 flex items-center justify-center text-white text-sm font-bold cursor-pointer transition"
+                title="إغلاق"
               >
-                ✓ حفظ التعديل والرجوع للفاتورة
+                ✕
               </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-3 sm:p-4 flex flex-col gap-3 overflow-y-auto">
+              {/* Item Info Card Banner */}
+              <div className="bg-slate-50 border border-slate-300 rounded-lg p-2.5 flex items-center justify-between">
+                <div>
+                  <div className="font-black text-slate-900 text-sm sm:text-base">{modifyName}</div>
+                  <div className="text-[11px] text-slate-500 font-mono mt-0.5">
+                    الباركود / الكود: {modifyCode || 'بدون باركود'}
+                  </div>
+                </div>
+                {modifyStock !== null && (
+                  <div className="text-left bg-white border border-slate-300 px-2.5 py-1 rounded-md shadow-xs">
+                    <span className="text-[10px] text-slate-500 block font-bold">المتاح بالمخزن</span>
+                    <span
+                      className={`text-xs font-black font-mono ${
+                        modifyStock <= 0 ? 'text-rose-600' : 'text-emerald-700'
+                      }`}
+                    >
+                      {modifyStock} وحدة
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              {/* Editable Fields Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                {/* اسم الصنف */}
+                <div className="col-span-full flex flex-col gap-1">
+                  <label className="text-[11px] font-bold text-slate-700">اسم الصنف في الفاتورة</label>
+                  <input
+                    type="text"
+                    value={modifyName}
+                    onChange={(e) => setModifyName(e.target.value)}
+                    className="border border-slate-300 rounded-lg px-3 py-1.5 text-xs sm:text-sm font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+
+                {/* الكمية مع أزرار الزيادة والنقصان السريعة */}
+                <div className="flex flex-col gap-1">
+                  <label className="text-[11px] font-bold text-slate-700">الكمية (العدد)</label>
+                  <div className="flex items-center">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const q = Math.max(1, (parseFloat(modifyQty) || 0) - 1);
+                        setModifyQty(String(q));
+                      }}
+                      className="w-9 h-[34px] bg-slate-200 hover:bg-slate-300 active:bg-slate-400 text-slate-800 font-black rounded-r-lg border border-slate-300 cursor-pointer flex items-center justify-center text-sm"
+                    >
+                      -
+                    </button>
+                    <input
+                      type="number"
+                      step="any"
+                      value={modifyQty}
+                      onChange={(e) => setModifyQty(e.target.value)}
+                      className="flex-1 h-[34px] text-center font-mono font-bold text-slate-900 border-y border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const q = (parseFloat(modifyQty) || 0) + 1;
+                        setModifyQty(String(q));
+                      }}
+                      className="w-9 h-[34px] bg-slate-200 hover:bg-slate-300 active:bg-slate-400 text-slate-800 font-black rounded-l-lg border border-slate-300 cursor-pointer flex items-center justify-center text-sm"
+                    >
+                      +
+                    </button>
+                  </div>
+                </div>
+
+                {/* السعر */}
+                <div className="flex flex-col gap-1">
+                  <label className="text-[11px] font-bold text-slate-700">سعر الوحدة (ج.م)</label>
+                  <div className="relative">
+                    <input
+                      type="number"
+                      step="any"
+                      value={modifyPrice}
+                      onChange={(e) => setModifyPrice(e.target.value)}
+                      className="w-full h-[34px] border border-slate-300 rounded-lg px-3 pl-12 text-sm font-mono font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                    <span className="absolute left-3 top-2 text-[10px] text-slate-500 font-bold">ج.م</span>
+                  </div>
+                </div>
+
+                {/* البيان / ملاحظات الصنف */}
+                <div className="col-span-full flex flex-col gap-1">
+                  <label className="text-[11px] font-bold text-slate-700">البيان / الوصف وملاحظات الصنف</label>
+                  <input
+                    type="text"
+                    value={modifySpec}
+                    onChange={(e) => setModifySpec(e.target.value)}
+                    placeholder="ملاحظات تشغيلية، مقاسات، ألوان، أو شروط خاصة بالصنف..."
+                    className="border border-slate-300 rounded-lg px-3 py-1.5 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+
+                {/* Total Preview Banner */}
+                <div className="col-span-full bg-emerald-50 border border-emerald-300 rounded-lg p-2.5 flex items-center justify-between">
+                  <span className="text-xs font-bold text-emerald-950">إجمالي هذا الصنف:</span>
+                  <div className="flex items-center gap-1 font-mono text-emerald-800">
+                    <span className="text-xs">({modifyQty || 0} × {modifyPrice || 0}) =</span>
+                    <strong className="text-base font-black">
+                      {((parseFloat(modifyQty) || 0) * (parseFloat(modifyPrice) || 0)).toFixed(2)} ج.م
+                    </strong>
+                  </div>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 pt-2 border-t border-slate-200">
+                <button
+                  type="button"
+                  onClick={deleteCurrentModifiedItem}
+                  className="px-3 py-2 bg-rose-50 hover:bg-rose-100 active:bg-rose-200 text-rose-700 border border-rose-300 rounded-lg text-xs font-bold cursor-pointer transition flex items-center justify-center gap-1"
+                >
+                  <span>🗑️</span>
+                  <span>حذف هذا الصنف</span>
+                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setIsModifyModalOpen(false)}
+                    className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-bold cursor-pointer transition flex-1 sm:flex-initial"
+                  >
+                    إلغاء
+                  </button>
+                  <button
+                    type="button"
+                    onClick={saveModifiedItem}
+                    className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white rounded-lg text-xs sm:text-sm font-bold cursor-pointer transition shadow-xs flex-1 sm:flex-initial flex items-center justify-center gap-1"
+                  >
+                    <span>✓</span>
+                    <span>حفظ التعديلات والرجوع</span>
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         </div>
       )}
 
-      {/* ➕ نافذة إضافة صنف جديد للمخزون (New Item Modal) */}
+      {/* ➕ نافذة إضافة صنف جديد للمخزون (New Item Modal - Centered & Responsive) */}
       {isNewItemModalOpen && (
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-2">
-          <div className="bg-white w-full max-w-[420px] rounded-lg border border-slate-300 shadow-2xl flex flex-col overflow-hidden text-slate-800">
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-2xs z-[60] flex items-center justify-center p-2 sm:p-4 overflow-y-auto animate-fade-in">
+          <div className="bg-white w-full max-w-lg max-h-[90vh] rounded-xl border-2 border-slate-400 shadow-2xl flex flex-col overflow-hidden text-slate-800 my-auto">
             <div
-              className="text-white px-3 py-1.5 text-[10.5px] font-bold flex justify-between items-center"
-              style={{ backgroundColor: themePrimary }}
+              className={`text-white px-4 py-2.5 text-xs sm:text-sm font-black flex justify-between items-center bg-gradient-to-r ${theme.headerBg} shadow-sm`}
             >
-              <span>إضافة صنف جديد للمخزون</span>
-              <span onClick={() => setIsNewItemModalOpen(false)} className="cursor-pointer text-sm font-black">
+              <span>➕ إضافة صنف جديد للمخزون وإدراجه بالفاتورة</span>
+              <button
+                type="button"
+                onClick={() => setIsNewItemModalOpen(false)}
+                className="w-7 h-7 rounded-full hover:bg-white/20 active:bg-white/30 flex items-center justify-center text-white text-sm font-bold cursor-pointer transition"
+              >
                 ✕
-              </span>
+              </button>
             </div>
-            <div className="p-3 flex flex-col gap-2 text-xs">
-              <div className="bg-blue-50 text-blue-800 p-1 rounded text-[8.5px] font-bold text-center">
-                إضافة مباشرة للمخزون وإدراجه بالفاتورة
+            <div className="p-3 sm:p-4 flex flex-col gap-3 text-xs overflow-y-auto">
+              <div className="bg-blue-50 text-blue-900 p-2 rounded-lg text-xs font-bold border border-blue-200">
+                💡 سيتم إنشاء الصنف في المخزن العام وتحديد أسعاره، ثم إضافته للفاتورة الحالية فوراً.
               </div>
-              <div className="grid grid-cols-2 gap-2">
-                <div className="col-span-2 flex flex-col gap-0.5">
-                  <label className="text-[9px] font-bold text-slate-600">اسم الصنف الجديد</label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="col-span-full flex flex-col gap-1">
+                  <label className="text-[11px] font-bold text-slate-700">اسم الصنف الجديد *</label>
                   <input
                     type="text"
                     value={newItemName}
                     onChange={(e) => setNewItemName(e.target.value)}
-                    className="border border-slate-300 rounded px-2 text-[9.5px] h-[24px]"
+                    placeholder="مثال: لاب توب ديل، شاشة توشيبا..."
+                    className="border border-slate-300 rounded-lg px-3 py-1.5 text-xs sm:text-sm font-bold text-slate-900"
                   />
                 </div>
-                <div className="col-span-2 flex flex-col gap-0.5">
-                  <label className="text-[9px] font-bold text-slate-600">كود الصنف (تلقائي)</label>
+                <div className="col-span-full flex flex-col gap-1">
+                  <label className="text-[11px] font-bold text-slate-700">كود / باركود الصنف (تلقائي)</label>
                   <input
                     type="text"
                     value={newItemCode}
                     readOnly
-                    className="bg-slate-100 border border-slate-300 rounded px-2 text-[9.5px] h-[24px] font-bold"
+                    className="bg-slate-100 border border-slate-300 rounded-lg px-3 py-1.5 text-xs font-mono font-bold text-slate-700"
                   />
                 </div>
-                <div className="flex flex-col gap-0.5">
-                  <label className="text-[9px] font-bold text-slate-600">سعر الشراء الأساسي</label>
+                <div className="flex flex-col gap-1">
+                  <label className="text-[11px] font-bold text-slate-700">سعر الشراء الأساسي (ج.م)</label>
                   <input
                     type="number"
                     value={newItemBuyPrice}
@@ -1650,15 +2083,16 @@ export const RakeezaInvoiceWorkspace: React.FC<RakeezaInvoiceWorkspaceProps> = (
                         parseFloat(newItemWholesaleMargin) || 0
                       );
                     }}
-                    className="border border-slate-300 rounded px-2 text-[9.5px] h-[24px]"
+                    placeholder="0.00"
+                    className="border border-slate-300 rounded-lg px-3 py-1.5 text-xs font-mono text-slate-900"
                   />
                 </div>
-                <div className="flex flex-col gap-0.5">
-                  <label className="text-[9px] font-bold text-slate-600">المجموعة</label>
+                <div className="flex flex-col gap-1">
+                  <label className="text-[11px] font-bold text-slate-700">المجموعة / التصنيف</label>
                   <select
                     value={newItemCategory}
                     onChange={(e) => setNewItemCategory(e.target.value)}
-                    className="border border-slate-300 rounded px-2 text-[9.5px] h-[24px]"
+                    className="border border-slate-300 rounded-lg px-3 py-1.5 text-xs text-slate-800"
                   >
                     {categoriesList.map((c) => (
                       <option key={c} value={c}>
@@ -1667,40 +2101,42 @@ export const RakeezaInvoiceWorkspace: React.FC<RakeezaInvoiceWorkspaceProps> = (
                     ))}
                   </select>
                 </div>
-                <div className="flex flex-col gap-0.5">
-                  <label className="text-[9px] font-bold text-slate-600">سعر البيع النقدي</label>
+                <div className="flex flex-col gap-1">
+                  <label className="text-[11px] font-bold text-slate-700">سعر البيع النقدي (قطاعي)</label>
                   <input
                     type="number"
                     value={newItemCashPriceManual}
                     onChange={(e) => setNewItemCashPriceManual(e.target.value)}
-                    className="border border-slate-300 rounded px-2 text-[9.5px] h-[24px]"
+                    placeholder="0.00"
+                    className="border border-slate-300 rounded-lg px-3 py-1.5 text-xs font-mono text-slate-900 font-bold"
                   />
                 </div>
-                <div className="flex flex-col gap-0.5">
-                  <label className="text-[9px] font-bold text-slate-600">سعر البيع جملة</label>
+                <div className="flex flex-col gap-1">
+                  <label className="text-[11px] font-bold text-slate-700">سعر البيع جملة</label>
                   <input
                     type="number"
                     value={newItemWholesalePriceManual}
                     onChange={(e) => setNewItemWholesalePriceManual(e.target.value)}
-                    className="border border-slate-300 rounded px-2 text-[9.5px] h-[24px]"
+                    placeholder="0.00"
+                    className="border border-slate-300 rounded-lg px-3 py-1.5 text-xs font-mono text-slate-900 font-bold"
                   />
                 </div>
-                <div className="col-span-2 flex flex-col gap-0.5">
-                  <label className="text-[9px] font-bold text-slate-600">الكمية بالمخزون</label>
+                <div className="col-span-full flex flex-col gap-1">
+                  <label className="text-[11px] font-bold text-slate-700">الكمية الابتدائية بالمخزون</label>
                   <input
                     type="number"
                     value={newItemStockQty}
                     onChange={(e) => setNewItemStockQty(e.target.value)}
-                    className="border border-slate-300 rounded px-2 text-[9.5px] h-[24px]"
+                    className="border border-slate-300 rounded-lg px-3 py-1.5 text-xs font-mono text-slate-900"
                   />
                 </div>
               </div>
               <button
                 type="button"
                 onClick={saveNewItemToInventory}
-                className="w-full py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-[10px] font-bold cursor-pointer mt-1"
+                className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs sm:text-sm font-bold cursor-pointer mt-2 shadow-xs transition"
               >
-                ✓ حفظ والرجوع للفاتورة
+                ✓ حفظ وإضافة للفاتورة مباشرة
               </button>
             </div>
           </div>
