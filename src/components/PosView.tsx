@@ -546,7 +546,7 @@ export const PosView: React.FC<PosViewProps> = ({ appData, onUpdateData, showToa
   };
 
   return (
-    <div className="space-y-4">
+    <div className="w-full max-w-7xl mx-auto flex flex-col space-y-4">
       {/* POS Screen Header */}
       <div className="bg-gradient-to-r from-[#1a237e] to-[#0d47a1] text-white p-4 rounded-2xl shadow-md flex flex-wrap justify-between items-center gap-3">
         <div className="flex items-center gap-2">

@@ -323,7 +323,7 @@ export const BackupView: React.FC<BackupViewProps> = ({ appData, onUpdateData, s
   };
 
   return (
-    <div className="space-y-6 animate-fade-in max-w-6xl mx-auto" dir="rtl">
+    <div className="w-full max-w-7xl mx-auto flex flex-col space-y-6 animate-fade-in" dir="rtl">
       {/* Header Banner */}
       <div className="bg-gradient-to-r from-[#1a237e] via-[#0d47a1] to-[#01579b] text-white p-6 rounded-3xl shadow-md flex flex-wrap justify-between items-center gap-4">
         <div className="space-y-1">

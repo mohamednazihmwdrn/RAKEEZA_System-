@@ -326,7 +326,7 @@ export const MonthlyProfitReportView: React.FC<MonthlyProfitReportViewProps> = (
   }, [monthlyData]);
 
   return (
-    <div dir="rtl" className="space-y-5 print:space-y-3">
+    <div dir="rtl" className="w-full max-w-7xl mx-auto flex flex-col space-y-5 print:space-y-3">
       {/* Header & Controls */}
       <div className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200 shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div>

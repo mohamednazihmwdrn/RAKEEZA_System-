@@ -75,7 +75,7 @@ export const AuditTrailView: React.FC<AuditTrailViewProps> = ({
   };
 
   return (
-    <div className="space-y-6">
+    <div className="w-full max-w-7xl mx-auto flex flex-col space-y-6">
       {/* Top Header */}
       <div className="bg-gradient-to-r from-[#263238] to-[#37474f] text-white p-5 rounded-2xl shadow-md flex flex-wrap justify-between items-center gap-4">
         <div>

@@ -361,7 +361,7 @@ export const CatalogManagerView: React.FC<CatalogManagerViewProps> = ({
   };
 
   return (
-    <div className="space-y-5 pb-16" dir="rtl">
+    <div className="w-full max-w-7xl mx-auto flex flex-col space-y-5 pb-16" dir="rtl">
       {/* Top Header Card */}
       <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white p-5 md:p-7 rounded-3xl shadow-md border border-indigo-900/60 relative overflow-hidden">
         <div className="absolute -left-10 -bottom-10 w-48 h-48 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />

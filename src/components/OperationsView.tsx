@@ -276,7 +276,7 @@ export const OperationsView: React.FC<OperationsViewProps> = ({
   const totalEquity = capital + netIncome;
 
   return (
-    <div className="space-y-6">
+    <div className="w-full max-w-7xl mx-auto flex flex-col space-y-6">
       {/* Top Module Tabs */}
       <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex flex-wrap justify-between items-center gap-3">
         <div className="flex flex-wrap gap-2">

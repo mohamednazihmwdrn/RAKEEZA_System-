@@ -788,7 +788,7 @@ export const QuotesOrdersView: React.FC<QuotesOrdersViewProps> = ({
   const activeStats = activeTab === 'sale_quote' ? analyticsData.quotes : analyticsData.orders;
 
   return (
-    <div className="space-y-5">
+    <div className="w-full max-w-7xl mx-auto flex flex-col space-y-5">
       {/* 1. Header Toolbar & Navigation Tabs */}
       <div className="bg-white p-4 rounded-2xl shadow-xs border border-slate-200 flex flex-wrap justify-between items-center gap-3">
         <div className="flex flex-wrap items-center gap-2">

@@ -236,7 +236,7 @@ export const SerialWarrantyTrackingView: React.FC<SerialWarrantyTrackingViewProp
   };
 
   return (
-    <div className="space-y-6">
+    <div className="w-full max-w-7xl mx-auto flex flex-col space-y-6">
       {/* Top Banner Header */}
       <div className="bg-gradient-to-r from-[#0d47a1] via-[#1565c0] to-[#1a237e] text-white p-5 rounded-2xl shadow-md flex flex-wrap justify-between items-center gap-4">
         <div>

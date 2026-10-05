@@ -34,6 +34,7 @@ import { FixedAssetsView } from './components/FixedAssetsView';
 import { ChequesView } from './components/ChequesView';
 import { PriceManagementView } from './components/PriceManagementView';
 import { CompanyPriceCatalogView } from './components/CompanyPriceCatalogView';
+import { CloudUpdateBanner } from './components/CloudUpdateBanner';
 import { SalesRepsCommissionsView } from './components/SalesRepsCommissionsView';
 import { ManufacturingView } from './components/ManufacturingView';
 import { BankReconciliationView } from './components/BankReconciliationView';
@@ -1491,7 +1492,7 @@ export default function App() {
           isSidebarOpen ? 'md:mr-[290px]' : 'mr-0'
         }`}
       >
-        <div className="w-full max-w-[1720px] mx-auto min-w-0">
+        <div className="w-full max-w-7xl mx-auto min-w-0 flex flex-col">
           {/* Subscription Status Banner if expired or warning */}
           {session?.subscription?.isExpired && (
             <div className="mb-4 p-3.5 bg-amber-500/15 border-2 border-amber-500/40 rounded-2xl text-amber-950 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs animate-fade-in">
@@ -1570,30 +1571,35 @@ export default function App() {
 
       {/* System Footer & Developer Copyright */}
       <footer
-        className={`no-print py-3.5 px-4 sm:px-6 bg-white border-t border-slate-200 text-xs text-slate-600 transition-all duration-300 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-xs mb-0 ${
+        className={`no-print py-3.5 px-4 sm:px-6 bg-white border-t border-slate-200 text-xs text-slate-600 transition-all duration-300 shadow-xs mb-0 ${
           isSidebarOpen ? 'md:mr-[290px]' : 'mr-0'
         }`}
       >
-        <div className="flex items-center gap-2 text-center sm:text-right">
-          <span
-            onClick={handleFooterSecretClicks}
-            className="font-bold text-[#1a237e] text-sm cursor-pointer select-none hover:text-blue-800 transition"
-            title="منظومة ركيزة RAKEEZA ERP"
-          >
-            منظومة ركيزة | RAKEEZA ERP
-          </span>
-          <span className="text-slate-300">|</span>
-          <span>جميع الحقوق محفوظة © {new Date().getFullYear()}</span>
-        </div>
-        <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-3 font-semibold text-slate-700 bg-slate-100 px-3.5 py-1.5 rounded-full border border-slate-200 text-center">
-          <span>👨‍💻 تطوير: <strong className="text-[#0d47a1]">Mohamed Nazih</strong></span>
-          <span className="text-slate-300">|</span>
-          <span>📱 للتواصل: <strong className="text-emerald-700 font-mono text-sm" dir="ltr">01029190615</strong></span>
+        <div className="w-full max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
+          <div className="flex items-center gap-2 text-center sm:text-right">
+            <span
+              onClick={handleFooterSecretClicks}
+              className="font-bold text-[#1a237e] text-sm cursor-pointer select-none hover:text-blue-800 transition"
+              title="منظومة ركيزة RAKEEZA ERP"
+            >
+              منظومة ركيزة | RAKEEZA ERP
+            </span>
+            <span className="text-slate-300">|</span>
+            <span>جميع الحقوق محفوظة © {new Date().getFullYear()}</span>
+          </div>
+          <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-3 font-semibold text-slate-700 bg-slate-100 px-3.5 py-1.5 rounded-full border border-slate-200 text-center">
+            <span>👨‍💻 تطوير: <strong className="text-[#0d47a1]">Mohamed Nazih</strong></span>
+            <span className="text-slate-300">|</span>
+            <span>📱 للتواصل: <strong className="text-emerald-700 font-mono text-sm" dir="ltr">01029190615</strong></span>
+          </div>
         </div>
       </footer>
 
       {/* Toast Notification */}
       <Toast message={toastMessage} type={toastType} />
+
+      {/* Vercel / GitHub Cloud Auto-Update Notification Banner */}
+      <CloudUpdateBanner showToast={showToast} />
 
       {/* Share Catalog Modal */}
       <ShareCatalogModal

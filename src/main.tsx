@@ -10,7 +10,8 @@ if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
   const updateSW = registerSW({
     immediate: true,
     onNeedRefresh() {
-      // Instantly activate new service worker and reload the page to get the latest Vercel deployment
+      // Instantly dispatch event and activate new service worker to get the latest Vercel deployment
+      window.dispatchEvent(new CustomEvent('swUpdated'));
       updateSW(true);
     },
     onOfflineReady() {

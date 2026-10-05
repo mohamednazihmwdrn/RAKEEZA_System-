@@ -134,7 +134,7 @@ export const CashFlowClosingView: React.FC<CashFlowClosingViewProps> = ({
   };
 
   return (
-    <div className="space-y-6">
+    <div className="w-full max-w-7xl mx-auto flex flex-col space-y-6">
       {/* Top Banner */}
       <div className="bg-gradient-to-r from-[#004d40] via-[#00695c] to-[#00796b] text-white p-5 rounded-2xl shadow-md flex flex-wrap justify-between items-center gap-4">
         <div>

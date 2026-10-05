@@ -489,7 +489,7 @@ export const AccountsView: React.FC<AccountsViewProps> = ({ appData, onUpdateDat
   };
 
   return (
-    <div className="space-y-6">
+    <div className="w-full max-w-7xl mx-auto flex flex-col space-y-6">
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
         {/* Customers Section */}
         <div className="bg-white p-4 rounded-xl shadow-xs border border-slate-200/90 space-y-3">

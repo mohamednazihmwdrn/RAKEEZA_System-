@@ -867,7 +867,7 @@ export const InventoryStocktakingView: React.FC<InventoryStocktakingViewProps> =
   };
 
   return (
-    <div className="space-y-6">
+    <div className="w-full max-w-7xl mx-auto flex flex-col space-y-6">
       {/* Top Header & Metrics Banner */}
       <div className="bg-[#0f2756] text-white p-5 rounded-xl shadow-xs border border-slate-200 flex flex-wrap justify-between items-center gap-4">
         <div className="space-y-1">

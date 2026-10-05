@@ -94,6 +94,9 @@ export function getCleanPageName(page?: string): string {
       return 'التسوية البنكية';
     case 'audit_trail':
       return 'سجل التدقيق';
+    case 'company_prices':
+    case 'company_catalog':
+      return 'أسعار الشركات والتصنيفات';
     case 'settings':
       return 'الإعدادات';
     case 'users':

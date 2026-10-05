@@ -231,7 +231,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ appData, onUpdateDat
   const currentLogo = settings.logo || settings.logoUrl || '';
 
   return (
-    <div className="space-y-6 max-w-5xl mx-auto w-full overflow-x-hidden">
+    <div className="w-full max-w-7xl mx-auto flex flex-col space-y-6 overflow-x-hidden">
       {/* Top Action & Status Bar */}
       <div className="bg-white p-4 sm:p-5 rounded-2xl shadow-sm border border-slate-200 flex flex-wrap items-center justify-between gap-3">
         <div>

@@ -204,7 +204,7 @@ export const ItemsView: React.FC<ItemsViewProps> = ({
   };
 
   return (
-    <div className="space-y-4">
+    <div className="w-full max-w-7xl mx-auto flex flex-col space-y-4">
       {/* Search & Actions Bar */}
       <div className="bg-white p-3 sm:p-4 rounded-2xl shadow-xs flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between">
         <div className="flex flex-wrap gap-2">

@@ -485,7 +485,7 @@ export const YearEndClosingView: React.FC<YearEndClosingViewProps> = ({
   };
 
   return (
-    <div className="space-y-6">
+    <div className="w-full max-w-7xl mx-auto flex flex-col space-y-6">
       {/* Header Banner */}
       <div className="bg-gradient-to-r from-[#0d47a1] via-[#1a237e] to-[#311b92] text-white p-6 rounded-3xl shadow-xl flex flex-wrap justify-between items-center gap-4">
         <div className="space-y-1">

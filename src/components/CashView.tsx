@@ -472,7 +472,7 @@ export const CashView: React.FC<CashViewProps> = ({ appData, onUpdateData, showT
   };
 
   return (
-    <div className="space-y-4">
+    <div className="w-full max-w-7xl mx-auto flex flex-col space-y-4">
       {/* Action Bar & Filter */}
       <div className="bg-white p-3 sm:p-4 rounded-xl shadow-xs border border-slate-200/90 flex flex-col xl:flex-row gap-3 items-stretch xl:items-center justify-between">
         <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2">

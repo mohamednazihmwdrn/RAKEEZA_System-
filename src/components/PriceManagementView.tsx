@@ -496,7 +496,7 @@ export const PriceManagementView: React.FC<PriceManagementViewProps> = ({
   };
 
   return (
-    <div className="space-y-5 pb-12">
+    <div className="w-full max-w-7xl mx-auto flex flex-col space-y-5 pb-12">
       {/* 1. Header Banner & Architecture Explanation */}
       <div className="bg-gradient-to-r from-[#1a237e] via-[#283593] to-[#0d47a1] text-white p-5 rounded-2xl shadow-md flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>

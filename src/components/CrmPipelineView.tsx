@@ -262,7 +262,7 @@ export const CrmPipelineView: React.FC<CrmPipelineViewProps> = ({
   };
 
   return (
-    <div className="space-y-6">
+    <div className="w-full max-w-7xl mx-auto flex flex-col space-y-6">
       {/* Banner */}
       <div className="bg-gradient-to-r from-[#1a237e] via-[#0d47a1] to-[#1565c0] text-white p-5 rounded-2xl shadow-md flex flex-wrap justify-between items-center gap-4">
         <div>

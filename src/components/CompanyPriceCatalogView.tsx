@@ -525,7 +525,7 @@ export const CompanyPriceCatalogView: React.FC<CompanyPriceCatalogViewProps> = (
   };
 
   return (
-    <div className="w-full flex flex-col gap-3 text-slate-800" dir="rtl">
+    <div className="w-full max-w-7xl mx-auto flex flex-col gap-3 text-slate-800" dir="rtl">
       {/* 🏛️ الهيدر والبانر الرئيسي - تدرج أزرق داكن إلى كحلي ملكي مطابق للكود الأصلي */}
       <div className="bg-gradient-to-r from-slate-900 via-blue-950 to-blue-800 text-white p-3.5 sm:p-5 rounded-xl shadow-md border border-blue-700/40 no-print flex flex-col gap-3">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 border-b border-white/10 pb-2.5">

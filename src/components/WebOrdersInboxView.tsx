@@ -499,7 +499,7 @@ ${itemsSummary}
   };
 
   return (
-    <div className="space-y-5 pb-16 w-full max-w-full overflow-x-hidden" dir="rtl">
+    <div className="w-full max-w-7xl mx-auto flex flex-col space-y-5 pb-16 overflow-x-hidden" dir="rtl">
       {/* Top Banner Card with Auto-Print Controls */}
       <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-indigo-950 text-white p-5 md:p-7 rounded-3xl shadow-md border border-slate-700 relative overflow-hidden">
         <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />

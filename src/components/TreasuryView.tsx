@@ -348,7 +348,7 @@ export const TreasuryView: React.FC<TreasuryViewProps> = ({ appData, onUpdateDat
   });
 
   return (
-    <div className="space-y-6">
+    <div className="w-full max-w-7xl mx-auto flex flex-col space-y-6">
       {/* Action Toolbar */}
       <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex flex-wrap gap-3 items-center justify-between">
         <div>

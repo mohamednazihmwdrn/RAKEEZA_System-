@@ -382,7 +382,7 @@ export const HomeView: React.FC<HomeViewProps> = ({ appData, onNavigate }) => {
   };
 
   return (
-    <div className="w-full max-w-6xl mx-auto flex flex-col gap-2.5 pb-8 text-slate-800" dir="rtl">
+    <div className="w-full max-w-7xl mx-auto flex flex-col gap-2.5 pb-8 text-slate-800" dir="rtl">
       {/* الهيدر العلوي: اسم التطبيق على اليمين فقط وبدون أي عناصر أخرى */}
       <div className="bg-gradient-to-r from-blue-900 to-blue-600 text-white px-4 py-2.5 rounded-lg flex items-center justify-between text-xs sm:text-sm font-bold shadow-xs">
         <span className="tracking-wide">

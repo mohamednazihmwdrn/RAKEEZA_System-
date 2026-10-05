@@ -683,7 +683,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ pageId, onNavigate, on
   }
 
   return (
-    <div className="space-y-4">
+    <div className="w-full max-w-7xl mx-auto flex flex-col space-y-4">
       {/* Header bar */}
       <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex flex-wrap gap-3 items-center justify-between">
         <div className="flex items-center gap-3">

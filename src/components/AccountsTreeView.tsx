@@ -661,7 +661,7 @@ export const AccountsTreeView: React.FC<AccountsTreeViewProps> = ({
   const accountStats = computeAccountBalance(selectedAccount?.code || '1101');
 
   return (
-    <div className="space-y-6">
+    <div className="w-full max-w-7xl mx-auto flex flex-col space-y-6">
       {/* Top Header and Navigation Tabs */}
       <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex flex-wrap justify-between items-center gap-4">
         <div className="flex flex-wrap items-center gap-2">

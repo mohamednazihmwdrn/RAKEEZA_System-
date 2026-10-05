@@ -55,7 +55,7 @@ export const BiAnalyticsView: React.FC<BiAnalyticsViewProps> = ({ appData, onNav
     .slice(0, 5);
 
   return (
-    <div className="space-y-6">
+    <div className="w-full max-w-7xl mx-auto flex flex-col space-y-6">
       {/* Top Banner */}
       <div className="bg-gradient-to-r from-[#1a237e] via-[#283593] to-[#3949ab] text-white p-6 rounded-2xl shadow-lg flex flex-wrap justify-between items-center gap-4">
         <div>

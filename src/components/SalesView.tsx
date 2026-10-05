@@ -881,7 +881,7 @@ export const SalesView: React.FC<SalesViewProps> = ({ appData, onUpdateData, sho
   const totalSalesRemaining = totalSalesAmount - totalSalesPaid;
 
   return (
-    <div className="space-y-4">
+    <div className="w-full max-w-7xl mx-auto flex flex-col space-y-4">
       {/* 🏛️ ترويسة قسم إدارة المبيعات والفواتير - ثيم أزرق ملكي مميز */}
       <div className="bg-gradient-to-r from-blue-950 via-indigo-900 to-blue-800 text-white p-3 sm:p-4 rounded-xl shadow-sm border border-blue-700/50 flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
         <div className="flex items-center gap-3">

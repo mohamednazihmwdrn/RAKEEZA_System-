@@ -193,7 +193,7 @@ export const ChequesView: React.FC<ChequesViewProps> = ({
   };
 
   return (
-    <div className="space-y-6 animate-fade-in" dir="rtl">
+    <div className="w-full max-w-7xl mx-auto flex flex-col space-y-6 animate-fade-in" dir="rtl">
       {/* Top Header & Sub-nav */}
       <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex flex-wrap justify-between items-center gap-4">
         <div>

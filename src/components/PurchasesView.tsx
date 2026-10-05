@@ -729,7 +729,7 @@ export const PurchasesView: React.FC<PurchasesViewProps> = ({ appData, onUpdateD
   const totalPurchasesRemaining = totalPurchasesAmount - totalPurchasesPaid;
 
   return (
-    <div className="space-y-4">
+    <div className="w-full max-w-7xl mx-auto flex flex-col space-y-4">
       {/* 🏛️ ترويسة قسم إدارة المشتريات والتوريد - ثيم أخضر بترولي زمردي مميز وفارق بصرياً عن المبيعات */}
       <div className="bg-gradient-to-r from-teal-950 via-emerald-900 to-teal-800 text-white p-3 sm:p-4 rounded-xl shadow-sm border border-teal-700/50 flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
         <div className="flex items-center gap-3">
