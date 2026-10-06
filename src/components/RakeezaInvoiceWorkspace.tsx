@@ -49,111 +49,31 @@ export const RakeezaInvoiceWorkspace: React.FC<RakeezaInvoiceWorkspaceProps> = (
 
   const isSale = mode === 'sale';
 
-  // State Management
+  // 🏛️ Invoice Types & Pricing Type States
   const [selectedInvoiceType, setSelectedInvoiceType] = useState<'nagdi' | 'ajel' | 'return_nagdi' | 'return_ajel'>(
     editingInvoice?.type || initialInvoiceType || 'nagdi'
   );
 
   const isReturn = selectedInvoiceType.startsWith('return_');
 
-  // Pricing mode: 'cash' | 'wholesale' | 'buy'
   const [currentInvoicePriceType, setCurrentInvoicePriceType] = useState<'cash' | 'wholesale' | 'buy'>(
     pricingType || (mode === 'purchase' ? 'buy' : 'cash')
   );
 
-  // 🎨 Distinct Color Theming for Sales vs Purchases and invoice types
-  const theme = useMemo(() => {
-    if (isReturn) {
-      return {
-        headerBg: 'from-rose-900 via-rose-800 to-red-800',
-        primary: '#881337',
-        secondary: '#e11d48',
-        accent: '#be123c',
-        badge: isSale ? '↩ مرتجع مبيعات' : '↩ مرتجع مشتريات',
-        badgeColor: 'bg-rose-500 text-white',
-        bannerBg: 'bg-rose-50 border-rose-200 text-rose-900',
-        cardBorder: 'border-rose-300',
-      };
-    }
-    if (isSale) {
-      if (currentInvoicePriceType === 'wholesale') {
-        return {
-          headerBg: 'from-indigo-950 via-indigo-900 to-purple-900',
-          primary: '#312e81',
-          secondary: '#4f46e5',
-          accent: '#10b981',
-          badge: '🏷️ بيع جملة (أسعار الجملة)',
-          badgeColor: 'bg-indigo-500 text-white',
-          bannerBg: 'bg-indigo-50 border-indigo-200 text-indigo-900',
-          cardBorder: 'border-indigo-300',
-        };
-      }
-      if (selectedInvoiceType === 'ajel') {
-        return {
-          headerBg: 'from-amber-950 via-amber-900 to-yellow-950',
-          primary: '#78350f',
-          secondary: '#d97706',
-          accent: '#059669',
-          badge: '⏳ بيع آجل (ذمم عملاء)',
-          badgeColor: 'bg-amber-400 text-slate-900 font-black',
-          bannerBg: 'bg-amber-50 border-amber-200 text-amber-900',
-          cardBorder: 'border-amber-300',
-        };
-      }
-      // Sale Cash
-      return {
-        headerBg: 'from-blue-950 via-blue-900 to-indigo-900',
-        primary: '#1e3a8a',
-        secondary: '#2563eb',
-        accent: '#16a34a',
-        badge: '💵 بيع نقدي (كاش)',
-        badgeColor: 'bg-emerald-500 text-white',
-        bannerBg: 'bg-blue-50 border-blue-200 text-blue-900',
-        cardBorder: 'border-blue-300',
-      };
-    } else {
-      // Purchases Mode
-      if (currentInvoicePriceType === 'wholesale') {
-        return {
-          headerBg: 'from-cyan-950 via-cyan-900 to-teal-950',
-          primary: '#155e75',
-          secondary: '#0891b2',
-          accent: '#059669',
-          badge: '📦 توريد وشراء جملة',
-          badgeColor: 'bg-cyan-500 text-white',
-          bannerBg: 'bg-cyan-50 border-cyan-200 text-cyan-900',
-          cardBorder: 'border-cyan-300',
-        };
-      }
-      if (selectedInvoiceType === 'ajel') {
-        return {
-          headerBg: 'from-amber-950 via-yellow-900 to-amber-900',
-          primary: '#713f12',
-          secondary: '#ca8a04',
-          accent: '#047857',
-          badge: '⏳ شراء آجل (مستحقات مورد)',
-          badgeColor: 'bg-amber-400 text-slate-900 font-black',
-          bannerBg: 'bg-amber-50 border-amber-200 text-amber-900',
-          cardBorder: 'border-amber-300',
-        };
-      }
-      // Purchase Cash
-      return {
-        headerBg: 'from-teal-950 via-teal-900 to-emerald-950',
-        primary: '#044e45',
-        secondary: '#0d9488',
-        accent: '#059669',
-        badge: '🛒 شراء نقدي للمنشأة',
-        badgeColor: 'bg-teal-500 text-white',
-        bannerBg: 'bg-teal-50 border-teal-200 text-teal-900',
-        cardBorder: 'border-teal-300',
-      };
-    }
-  }, [isSale, isReturn, selectedInvoiceType, currentInvoicePriceType]);
+  // Fullscreen / Window Maximized State
+  const [isMaximized, setIsMaximized] = useState(false);
 
-  const themePrimary = theme.primary;
-  const themeSecondary = theme.secondary;
-  const themeAccent = theme.accent;
+  // Live Time
+  const [liveTime, setLiveTime] = useState('00:00');
+  useEffect(() => {
+    const updateTime = () => {
+      const d = new Date();
+      setLiveTime(d.toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' }));
+    };
+    updateTime();
+    const interval = setInterval(updateTime, 1000);
+    return () => clearInterval(interval);
+  }, []);
 
   // Invoice Number & Timestamps
   const invoiceId = useMemo(() => {
@@ -181,27 +101,14 @@ export const RakeezaInvoiceWorkspace: React.FC<RakeezaInvoiceWorkspaceProps> = (
       `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
   );
 
-  // Live Clock in Header
-  const [isMaximized, setIsMaximized] = useState(false);
-  const [liveClock, setLiveClock] = useState<string>('00:00');
-  useEffect(() => {
-    const updateTime = () => {
-      const d = new Date();
-      setLiveClock(d.toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' }));
-    };
-    updateTime();
-    const interval = setInterval(updateTime, 1000);
-    return () => clearInterval(interval);
-  }, []);
-
   // Party State (Customer in Sales, Supplier in Purchases)
-  const [partyCode, setPartyCode] = useState<string>(
+  const [custCode, setCustCode] = useState<string>(
     isSale ? (editingInvoice as any)?.customerCode || '1' : (editingInvoice as any)?.supplierCode || '1'
   );
-  const [partyName, setPartyName] = useState<string>(
+  const [custName, setCustName] = useState<string>(
     isSale ? (editingInvoice as SaleInvoice)?.customerName || '' : (editingInvoice as PurchaseInvoice)?.supplierName || ''
   );
-  const [partyPhone, setPartyPhone] = useState<string>(editingInvoice?.phone || '');
+  const [custPhone, setCustPhone] = useState<string>(editingInvoice?.phone || '');
   const [jobSite, setJobSite] = useState<string>((editingInvoice as any)?.jobSite || editingInvoice?.notes || '');
 
   // Autocomplete Dropdowns State
@@ -209,7 +116,7 @@ export const RakeezaInvoiceWorkspace: React.FC<RakeezaInvoiceWorkspaceProps> = (
   const [showPhoneDropdown, setShowPhoneDropdown] = useState(false);
 
   // Items in Current Invoice
-  const [invoiceItems, setInvoiceItems] = useState<WorkspaceItemRow[]>(() => {
+  const [currentInvoiceItems, setCurrentInvoiceItems] = useState<WorkspaceItemRow[]>(() => {
     if (editingInvoice?.items && editingInvoice.items.length > 0) {
       return editingInvoice.items.map((i, idx) => ({
         rowId: (i as any).rowId || `row_${idx}_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
@@ -226,7 +133,7 @@ export const RakeezaInvoiceWorkspace: React.FC<RakeezaInvoiceWorkspaceProps> = (
     return [];
   });
 
-  // 🎯 Multi-Selection & Long-Press state for items deletion
+  // Multi-Selection State for Bulk Delete (Long-Press feature)
   const [selectedRowIds, setSelectedRowIds] = useState<Set<string>>(new Set());
   const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
   const isLongPressTriggeredRef = useRef<boolean>(false);
@@ -266,9 +173,9 @@ export const RakeezaInvoiceWorkspace: React.FC<RakeezaInvoiceWorkspaceProps> = (
   // Lookup Modal (دليل الأصناف) State
   const [isLookupModalOpen, setIsLookupModalOpen] = useState(false);
   const [lookupSearch, setLookupSearch] = useState('');
-  const [selectedLookupCategory, setSelectedLookupCategory] = useState('all');
+  const [selectedCategory, setSelectedCategory] = useState('all');
 
-  // Modify Single Invoice Item Modal State (كارت التعديل التفصيلي)
+  // Modify Single Invoice Item Modal State (كارت التعديل التفصيلي للصنف)
   const [isModifyModalOpen, setIsModifyModalOpen] = useState(false);
   const [modifyIndex, setModifyIndex] = useState<number>(-1);
   const [modifyName, setModifyName] = useState('');
@@ -277,21 +184,22 @@ export const RakeezaInvoiceWorkspace: React.FC<RakeezaInvoiceWorkspaceProps> = (
   const [modifyPrice, setModifyPrice] = useState('');
   const [modifySpec, setModifySpec] = useState('');
   const [modifyStock, setModifyStock] = useState<number | null>(null);
-  const [modifyCostPrice, setModifyCostPrice] = useState<number>(0);
 
   // Add Brand New Item Modal (إضافة صنف جديد للمخزون) State
   const [isNewItemModalOpen, setIsNewItemModalOpen] = useState(false);
-  const [newItemName, setNewItemName] = useState('');
-  const [newItemCode, setNewItemCode] = useState('');
-  const [newItemCategory, setNewItemCategory] = useState('');
-  const [newItemBuyPrice, setNewItemBuyPrice] = useState('');
-  const [newItemCashMargin, setNewItemCashMargin] = useState('');
-  const [newItemCashPriceManual, setNewItemCashPriceManual] = useState('');
-  const [newItemWholesaleMargin, setNewItemWholesaleMargin] = useState('');
-  const [newItemWholesalePriceManual, setNewItemWholesalePriceManual] = useState('');
-  const [newItemStockQty, setNewItemStockQty] = useState('');
+  const [newInputItemName, setNewInputItemName] = useState('');
+  const [newInputItemCode, setNewInputItemCode] = useState('');
+  const [editBuyPrice, setEditBuyPrice] = useState('');
+  const [editItemCategory, setEditItemCategory] = useState('');
+  const [editCashProfitMargin, setEditCashProfitMargin] = useState('');
+  const [editCashPriceManual, setEditCashPriceManual] = useState('');
+  const [editWholesaleProfitMargin, setEditWholesaleProfitMargin] = useState('');
+  const [editWholesalePriceManual, setEditWholesalePriceManual] = useState('');
+  const [editQty, setEditQty] = useState('');
+  const [lblCalcCashMargin, setLblCalcCashMargin] = useState('النسبة: 0%');
+  const [lblCalcWholesaleMargin, setLblCalcWholesaleMargin] = useState('النسبة: 0%');
 
-  // Categories List
+  // Categories List from database items
   const categoriesList = useMemo(() => {
     const set = new Set<string>();
     (appData.items || []).forEach((it) => {
@@ -300,11 +208,11 @@ export const RakeezaInvoiceWorkspace: React.FC<RakeezaInvoiceWorkspaceProps> = (
     return Array.from(set).filter(Boolean);
   }, [appData.items]);
 
-  // Active party balance and status
+  // Customer or Supplier Balance Information
   const partyBalanceInfo = useMemo(() => {
     if (isSale) {
       const customer = (appData.customers || []).find(
-        (c) => c.name.trim().toLowerCase() === partyName.trim().toLowerCase() || (c as any).code === partyCode
+        (c) => c.name.trim().toLowerCase() === custName.trim().toLowerCase() || (c as any).code === custCode
       );
       if (!customer) {
         return { typeText: 'نقدي', balanceVal: '0.00', color: '#16a34a' };
@@ -319,7 +227,7 @@ export const RakeezaInvoiceWorkspace: React.FC<RakeezaInvoiceWorkspaceProps> = (
       return { typeText: 'نقدي / مسدد', balanceVal: '0.00', color: '#2563eb' };
     } else {
       const supplier = (appData.suppliers || []).find(
-        (s) => s.name.trim().toLowerCase() === partyName.trim().toLowerCase() || (s as any).code === partyCode
+        (s) => s.name.trim().toLowerCase() === custName.trim().toLowerCase() || (s as any).code === custCode
       );
       if (!supplier) {
         return { typeText: 'نقدي', balanceVal: '0.00', color: '#16a34a' };
@@ -333,36 +241,35 @@ export const RakeezaInvoiceWorkspace: React.FC<RakeezaInvoiceWorkspaceProps> = (
       }
       return { typeText: 'نقدي / مسدد', balanceVal: '0.00', color: '#2563eb' };
     }
-  }, [isSale, partyName, partyCode, appData]);
+  }, [isSale, custName, custCode, appData]);
 
-  // Filtered Customers / Suppliers for Dropdowns
+  // Autocomplete Filtered Parties
   const filteredParties = useMemo(() => {
-    const list = isSale ? (appData.customers || []) : (appData.suppliers || []);
-    return list;
+    return isSale ? (appData.customers || []) : (appData.suppliers || []);
   }, [isSale, appData]);
 
-  const selectParty = (party: Customer | Supplier) => {
+  const selectCustomer = (party: Customer | Supplier) => {
     const code = (party as any).code || party.id;
-    setPartyCode(code);
-    setPartyName(party.name || '');
-    setPartyPhone(party.phone || '');
+    setCustCode(code);
+    setCustName(party.name || '');
+    setCustPhone(party.phone || '');
     setShowNameDropdown(false);
     setShowPhoneDropdown(false);
   };
 
-  const syncPartyByCode = (code: string) => {
-    setPartyCode(code);
+  const syncCustomerByCode = (code: string) => {
+    setCustCode(code);
     const matched = filteredParties.find((p) => ((p as any).code && (p as any).code === code.trim()) || p.id === code.trim());
     if (matched) {
-      setPartyName(matched.name || '');
-      setPartyPhone(matched.phone || '');
+      setCustName(matched.name || '');
+      setCustPhone(matched.phone || '');
     }
   };
 
   // Pricing switch logic (cash, wholesale, buy)
   const setInvoicePriceType = (type: 'cash' | 'wholesale' | 'buy') => {
     setCurrentInvoicePriceType(type);
-    setInvoiceItems((prev) =>
+    setCurrentInvoiceItems((prev) =>
       prev.map((row) => {
         const dbItem = (appData.items || []).find(
           (i) => i.code === row.code || i.id === row.itemId || i.name.trim() === row.name.trim()
@@ -392,7 +299,7 @@ export const RakeezaInvoiceWorkspace: React.FC<RakeezaInvoiceWorkspaceProps> = (
     let totalQty = 0;
     let subtotal = 0;
 
-    invoiceItems.forEach((i) => {
+    currentInvoiceItems.forEach((i) => {
       totalQty += Number(i.qty) || 0;
       subtotal += (Number(i.qty) || 0) * (Number(i.price) || 0);
     });
@@ -420,7 +327,6 @@ export const RakeezaInvoiceWorkspace: React.FC<RakeezaInvoiceWorkspaceProps> = (
       paymentRows.forEach((r) => {
         paid += Math.max(0, Number(r.amount) || 0);
       });
-      // If cash invoice and paid amount is 0, auto-settle as net
       if ((selectedInvoiceType === 'nagdi' || selectedInvoiceType === 'return_nagdi') && paid === 0 && net > 0) {
         paid = net;
       }
@@ -438,60 +344,24 @@ export const RakeezaInvoiceWorkspace: React.FC<RakeezaInvoiceWorkspaceProps> = (
       paid,
       remain,
     };
-  }, [invoiceItems, globalInvDisc, invDiscType, globalInvTax, invTaxType, extraIncomeVal, paymentRows, selectedInvoiceType]);
+  }, [currentInvoiceItems, globalInvDisc, invDiscType, globalInvTax, invTaxType, extraIncomeVal, paymentRows, selectedInvoiceType]);
 
-  // Quick Add / Barcode Handler
-  const handleQuickAddFromSearch = (item: any) => {
-    quickAddItemToInvoice(item);
-    setQuickSearchText('');
-    setShowQuickDropdown(false);
-  };
-
-  const handleQuickSearchEnter = () => {
-    const q = quickSearchText.trim().toLowerCase();
-    if (!q) return;
-    const items = appData.items || [];
-    // Exact barcode match first
-    const exactBarcode = items.find((i) => i.code && i.code.toLowerCase() === q);
-    if (exactBarcode) {
-      handleQuickAddFromSearch(exactBarcode);
-      return;
-    }
-    // Exact name match
-    const exactName = items.find((i) => i.name.toLowerCase() === q);
-    if (exactName) {
-      handleQuickAddFromSearch(exactName);
-      return;
-    }
-    // Partial matches
-    const matches = items.filter(
-      (i) => i.name.toLowerCase().includes(q) || (i.code && i.code.toLowerCase().includes(q))
-    );
-    if (matches.length === 1) {
-      handleQuickAddFromSearch(matches[0]);
-    } else if (matches.length > 1) {
-      setShowQuickDropdown(true);
-    } else {
-      showToast(`الصنف "${quickSearchText}" غير مسجل بقاعدة الأصناف`, 'warning');
-    }
-  };
-
-  // Add Item to Invoice from Lookup
+  // Add Item to Invoice from Lookup or Barcode
   const quickAddItemToInvoice = (item: any) => {
-    const stock = Number(item.quantity ?? 0);
+    const stock = Number(item.quantity ?? item.stock ?? 0);
     if (isSale && !isReturn && stock <= 0) {
       const proceed = confirm(`⚠️ تنبيه: رصيد الصنف (${item.name}) منتهٍ أو صفر بالمخزن. هل تريد المتابعة بالبيع بالسالب؟`);
       if (!proceed) return;
     }
 
-    let activePrice = Number(item.salePrice || item.price || 0);
+    let activePrice = Number(item.salePrice || item.cashPrice || item.price || 0);
     if (currentInvoicePriceType === 'wholesale') {
       activePrice = Number(item.wholesalePrice || item.price || 0);
     } else if (currentInvoicePriceType === 'buy' || !isSale) {
-      activePrice = Number(item.costPrice || item.purchasePrice || item.price || 0);
+      activePrice = Number(item.costPrice || item.purchasePrice || item.buyPrice || item.price || 0);
     }
 
-    setInvoiceItems((prev) => {
+    setCurrentInvoiceItems((prev) => {
       const existingIdx = prev.findIndex((i) => i.code === item.code && (!i.spec || i.spec === ''));
       if (existingIdx > -1) {
         const copy = [...prev];
@@ -514,7 +384,7 @@ export const RakeezaInvoiceWorkspace: React.FC<RakeezaInvoiceWorkspaceProps> = (
           price: activePrice,
           total: activePrice * 1,
           itemId: item.id,
-          costPrice: Number(item.costPrice || 0),
+          costPrice: Number(item.costPrice || item.buyPrice || 0),
         },
       ];
     });
@@ -522,9 +392,42 @@ export const RakeezaInvoiceWorkspace: React.FC<RakeezaInvoiceWorkspaceProps> = (
     setIsLookupModalOpen(false);
   };
 
-  // Modify Item in Invoice Table (كارت التعديل التفصيلي للصنف)
+  // Quick Barcode / Name Input Handler
+  const handleQuickSearchEnter = () => {
+    const q = quickSearchText.trim().toLowerCase();
+    if (!q) return;
+    const items = appData.items || [];
+    const exactBarcode = items.find((i) => i.code && i.code.toLowerCase() === q);
+    if (exactBarcode) {
+      quickAddItemToInvoice(exactBarcode);
+      setQuickSearchText('');
+      setShowQuickDropdown(false);
+      return;
+    }
+    const exactName = items.find((i) => i.name.toLowerCase() === q);
+    if (exactName) {
+      quickAddItemToInvoice(exactName);
+      setQuickSearchText('');
+      setShowQuickDropdown(false);
+      return;
+    }
+    const matches = items.filter(
+      (i) => i.name.toLowerCase().includes(q) || (i.code && i.code.toLowerCase().includes(q))
+    );
+    if (matches.length === 1) {
+      quickAddItemToInvoice(matches[0]);
+      setQuickSearchText('');
+      setShowQuickDropdown(false);
+    } else if (matches.length > 1) {
+      setShowQuickDropdown(true);
+    } else {
+      showToast(`الصنف "${quickSearchText}" غير مسجل بقاعدة الأصناف`, 'warning');
+    }
+  };
+
+  // Modify Single Invoice Item (كارت التعديل التفصيلي للصنف)
   const openModifyModal = (index: number) => {
-    const item = invoiceItems[index];
+    const item = currentInvoiceItems[index];
     if (!item) return;
     setModifyIndex(index);
     setModifyName(item.name);
@@ -532,25 +435,23 @@ export const RakeezaInvoiceWorkspace: React.FC<RakeezaInvoiceWorkspaceProps> = (
     setModifyQty(String(item.qty));
     setModifyPrice(String(item.price));
     setModifySpec(item.spec || '');
-    setModifyCostPrice(item.costPrice || 0);
 
-    // Look up real-time stock from inventory
     const dbItem = (appData.items || []).find(
       (i) => (i.code && item.code && i.code === item.code) || (item.itemId && i.id === item.itemId) || i.name.trim() === item.name.trim()
     );
-    setModifyStock(dbItem ? Number(dbItem.quantity ?? 0) : null);
+    setModifyStock(dbItem ? Number(dbItem.quantity ?? (dbItem as any).stock ?? 0) : null);
     setIsModifyModalOpen(true);
   };
 
   const saveModifiedItem = () => {
-    if (modifyIndex < 0 || modifyIndex >= invoiceItems.length) return;
+    if (modifyIndex < 0 || modifyIndex >= currentInvoiceItems.length) return;
     const qty = parseFloat(modifyQty) || 0;
     const price = parseFloat(modifyPrice) || 0;
     if (qty <= 0) {
       alert('الرجاء إدخال كمية صحيحة أكبر من صفر');
       return;
     }
-    setInvoiceItems((prev) => {
+    setCurrentInvoiceItems((prev) => {
       const copy = [...prev];
       copy[modifyIndex] = {
         ...copy[modifyIndex],
@@ -563,19 +464,12 @@ export const RakeezaInvoiceWorkspace: React.FC<RakeezaInvoiceWorkspaceProps> = (
       return copy;
     });
     setIsModifyModalOpen(false);
-    showToast('تم حفظ تعديلات الصنف بالفاتورة', 'success');
-  };
-
-  const deleteCurrentModifiedItem = () => {
-    if (modifyIndex < 0 || modifyIndex >= invoiceItems.length) return;
-    removeItemFromInvoice(modifyIndex);
-    setIsModifyModalOpen(false);
-    showToast('تم حذف الصنف من الفاتورة', 'info');
+    showToast('تم حفظ تعديل الصنف بالفاتورة', 'success');
   };
 
   // Remove Single Item
   const removeItemFromInvoice = (index: number) => {
-    const target = invoiceItems[index];
+    const target = currentInvoiceItems[index];
     if (target && selectedRowIds.has(target.rowId)) {
       setSelectedRowIds((prev) => {
         const next = new Set(prev);
@@ -583,12 +477,11 @@ export const RakeezaInvoiceWorkspace: React.FC<RakeezaInvoiceWorkspaceProps> = (
         return next;
       });
     }
-    setInvoiceItems((prev) => prev.filter((_, idx) => idx !== index));
+    setCurrentInvoiceItems((prev) => prev.filter((_, idx) => idx !== index));
   };
 
   // 🎯 Long Press & Click Logic for Table Rows
   const handlePointerDown = (rowId: string, e: React.PointerEvent) => {
-    // Only capture primary button
     if (e.button !== 0 && e.pointerType === 'mouse') return;
     isLongPressTriggeredRef.current = false;
     pointerStartPosRef.current = { x: e.clientX, y: e.clientY };
@@ -597,7 +490,6 @@ export const RakeezaInvoiceWorkspace: React.FC<RakeezaInvoiceWorkspaceProps> = (
       clearTimeout(longPressTimerRef.current);
     }
 
-    // 450ms press triggers multi-select
     longPressTimerRef.current = setTimeout(() => {
       isLongPressTriggeredRef.current = true;
       setSelectedRowIds((prev) => {
@@ -637,14 +529,12 @@ export const RakeezaInvoiceWorkspace: React.FC<RakeezaInvoiceWorkspaceProps> = (
 
   const handleRowClick = (index: number, rowId: string, e: React.MouseEvent) => {
     if (isLongPressTriggeredRef.current) {
-      // Long press just happened, suppress the regular click
       isLongPressTriggeredRef.current = false;
       e.preventDefault();
       e.stopPropagation();
       return;
     }
 
-    // If selection mode is active (any items are selected), clicking a row toggles selection
     if (selectedRowIds.size > 0) {
       setSelectedRowIds((prev) => {
         const next = new Set(prev);
@@ -680,21 +570,20 @@ export const RakeezaInvoiceWorkspace: React.FC<RakeezaInvoiceWorkspaceProps> = (
     if (selectedRowIds.size === 0) return;
     const count = selectedRowIds.size;
     if (!confirm(`هل أنت متأكد من حذف (${count}) صنف محدد من الفاتورة؟`)) return;
-    setInvoiceItems((prev) => prev.filter((item) => !selectedRowIds.has(item.rowId)));
+    setCurrentInvoiceItems((prev) => prev.filter((item) => !selectedRowIds.has(item.rowId)));
     setSelectedRowIds(new Set());
     showToast(`🗑️ تم حذف (${count}) أصناف محددة بنجاح`, 'info');
   };
 
-  // Select / Deselect All
   const handleSelectAll = () => {
-    if (selectedRowIds.size === invoiceItems.length) {
+    if (selectedRowIds.size === currentInvoiceItems.length) {
       setSelectedRowIds(new Set());
     } else {
-      setSelectedRowIds(new Set(invoiceItems.map((i) => i.rowId)));
+      setSelectedRowIds(new Set(currentInvoiceItems.map((i) => i.rowId)));
     }
   };
 
-  // Multi-Payment Rows in Options Modal
+  // Multi-Payment Rows
   const addPaymentRow = (method: string = 'نقدي / كاش', amount: number = 0) => {
     setPaymentRows((prev) => [
       ...prev,
@@ -712,52 +601,77 @@ export const RakeezaInvoiceWorkspace: React.FC<RakeezaInvoiceWorkspaceProps> = (
     );
   };
 
-  // Create Brand New Item Logic
+  // Add Brand New Item Dialog Logic & Margins Calculation
   const openNewItemDialog = () => {
     let maxCode = 0;
     (appData.items || []).forEach((i) => {
       const num = parseInt(String(i.code || '').replace(/\D/g, '')) || 0;
       if (num > maxCode) maxCode = num;
     });
-    setNewItemCode('1' + String(maxCode + 1).padStart(3, '0'));
-    setNewItemName('');
-    setNewItemCategory(categoriesList[0] || 'عامة');
-    setNewItemBuyPrice('');
-    setNewItemCashMargin('20');
-    setNewItemCashPriceManual('');
-    setNewItemWholesaleMargin('10');
-    setNewItemWholesalePriceManual('');
-    setNewItemStockQty('10');
+    setNewInputItemCode('1' + String(maxCode + 1).padStart(3, '0'));
+    setNewInputItemName('');
+    setEditItemCategory(categoriesList[0] || 'عامة');
+    setEditBuyPrice('');
+    setEditCashProfitMargin('20');
+    setEditCashPriceManual('');
+    setEditWholesaleProfitMargin('10');
+    setEditWholesalePriceManual('');
+    setEditQty('10');
+    setLblCalcCashMargin('النسبة: 20%');
+    setLblCalcWholesaleMargin('النسبة: 10%');
     setIsNewItemModalOpen(true);
   };
 
-  const handleCalculateMargins = (buyP: number, cashM: number, wholesaleM: number) => {
+  const calculatePricesFromMargin = (buyP: number, cashM: number, wholesaleM: number) => {
     if (buyP > 0) {
       if (cashM > 0) {
-        setNewItemCashPriceManual((buyP * (1 + cashM / 100)).toFixed(2));
+        setEditCashPriceManual((buyP * (1 + cashM / 100)).toFixed(2));
+        setLblCalcCashMargin(`النسبة: ${cashM}%`);
       }
       if (wholesaleM > 0) {
-        setNewItemWholesalePriceManual((buyP * (1 + wholesaleM / 100)).toFixed(2));
+        setEditWholesalePriceManual((buyP * (1 + wholesaleM / 100)).toFixed(2));
+        setLblCalcWholesaleMargin(`النسبة: ${wholesaleM}%`);
       }
     }
   };
 
-  const saveNewItemToInventory = () => {
-    const name = newItemName.trim();
+  const calculateMarginFromManualPrice = (type: 'cash' | 'wholesale') => {
+    const buyPrice = parseFloat(editBuyPrice) || 0;
+    if (buyPrice <= 0) return;
+
+    if (type === 'cash') {
+      const manualPrice = parseFloat(editCashPriceManual) || 0;
+      if (manualPrice > 0) {
+        const margin = ((manualPrice - buyPrice) / buyPrice) * 100;
+        setLblCalcCashMargin(`النسبة المحسوبة: ${margin.toFixed(1)}%`);
+        setEditCashProfitMargin(margin.toFixed(1));
+      }
+    } else if (type === 'wholesale') {
+      const manualPrice = parseFloat(editWholesalePriceManual) || 0;
+      if (manualPrice > 0) {
+        const margin = ((manualPrice - buyPrice) / buyPrice) * 100;
+        setLblCalcWholesaleMargin(`النسبة المحسوبة: ${margin.toFixed(1)}%`);
+        setEditWholesaleProfitMargin(margin.toFixed(1));
+      }
+    }
+  };
+
+  const saveNewItemData = () => {
+    const name = newInputItemName.trim();
     if (!name) {
-      alert('يرجى إدخال اسم الصنف الجديد');
+      alert('أدخل اسم الصنف الجديد');
       return;
     }
-    const buyPrice = parseFloat(newItemBuyPrice) || 0;
-    const cashPrice = parseFloat(newItemCashPriceManual) || (buyPrice > 0 ? buyPrice * 1.2 : 10);
-    const wholesalePrice = parseFloat(newItemWholesalePriceManual) || (cashPrice * 0.95);
-    const stock = parseFloat(newItemStockQty) || 0;
+    const buyPrice = parseFloat(editBuyPrice) || 0;
+    const cashPrice = parseFloat(editCashPriceManual) || (buyPrice > 0 ? buyPrice * 1.2 : 10);
+    const wholesalePrice = parseFloat(editWholesalePriceManual) || (cashPrice * 0.95);
+    const stock = parseFloat(editQty) || 0;
 
     const newItemObj: Item = {
       id: `it_${Date.now()}`,
-      code: newItemCode.trim(),
+      code: newInputItemCode.trim(),
       name,
-      category: newItemCategory || 'عامة',
+      category: editItemCategory || 'عامة',
       costPrice: buyPrice,
       purchasePrice: buyPrice,
       price: cashPrice,
@@ -781,23 +695,21 @@ export const RakeezaInvoiceWorkspace: React.FC<RakeezaInvoiceWorkspaceProps> = (
     setIsNewItemModalOpen(false);
     setIsLookupModalOpen(false);
 
-    // Quick add to invoice
     quickAddItemToInvoice(newItemObj);
     showToast(`✅ تم إنشاء الصنف [${name}] وإضافته للمخزون والفاتورة مباشرة`, 'success');
   };
 
-  // Save Invoice & Post Ledger
-  const handleSaveAndPostInvoice = () => {
-    if (invoiceItems.length === 0) {
+  // Save Invoice & Post Ledger (الترحيل المحاسبي وتحديث المخزون بدقة)
+  const saveInvoice = () => {
+    if (currentInvoiceItems.length === 0) {
       alert('الفاتورة فارغة! يرجى إدراج صنف واحد على الأقل من دليل الأصناف.');
       return;
     }
 
     const defaultPartyName = isSale
-      ? partyName.trim() || 'عميل نقدي'
-      : partyName.trim() || 'مورد عام';
+      ? custName.trim() || 'عميل نقدي'
+      : custName.trim() || 'مورد عام';
 
-    // Build finalized payments array
     let finalPayments = [...paymentRows];
     if (finalPayments.length === 0 || (finalPayments.length === 1 && (finalPayments[0].amount || 0) === 0)) {
       if (selectedInvoiceType === 'nagdi' || selectedInvoiceType === 'return_nagdi') {
@@ -817,9 +729,9 @@ export const RakeezaInvoiceWorkspace: React.FC<RakeezaInvoiceWorkspaceProps> = (
         type: selectedInvoiceType,
         salesType: currentInvoicePriceType === 'wholesale' ? 'wholesale' : 'cash',
         customerName: defaultPartyName,
-        phone: partyPhone,
+        phone: custPhone,
         notes: jobSite,
-        items: invoiceItems.map((i) => ({
+        items: currentInvoiceItems.map((i) => ({
           itemId: i.itemId || i.code,
           code: i.code,
           name: i.name,
@@ -865,9 +777,9 @@ export const RakeezaInvoiceWorkspace: React.FC<RakeezaInvoiceWorkspaceProps> = (
         time: invTime,
         type: selectedInvoiceType,
         supplierName: defaultPartyName,
-        phone: partyPhone,
+        phone: custPhone,
         notes: jobSite,
-        items: invoiceItems.map((i) => ({
+        items: currentInvoiceItems.map((i) => ({
           itemId: i.itemId || i.code,
           code: i.code,
           name: i.name,
@@ -910,8 +822,8 @@ export const RakeezaInvoiceWorkspace: React.FC<RakeezaInvoiceWorkspaceProps> = (
   // Direct Print Call
   const handlePrint = () => {
     const defaultPartyName = isSale
-      ? partyName.trim() || 'عميل نقدي'
-      : partyName.trim() || 'مورد عام';
+      ? custName.trim() || 'عميل نقدي'
+      : custName.trim() || 'مورد عام';
 
     const invObject: any = {
       id: invoiceId,
@@ -920,8 +832,8 @@ export const RakeezaInvoiceWorkspace: React.FC<RakeezaInvoiceWorkspaceProps> = (
       type: selectedInvoiceType,
       customerName: defaultPartyName,
       supplierName: defaultPartyName,
-      phone: partyPhone,
-      items: invoiceItems.map((i) => ({
+      phone: custPhone,
+      items: currentInvoiceItems.map((i) => ({
         name: i.name,
         qty: i.qty,
         price: i.price,
@@ -946,44 +858,295 @@ export const RakeezaInvoiceWorkspace: React.FC<RakeezaInvoiceWorkspaceProps> = (
     <div
       className={
         isMaximized
-          ? 'fixed inset-0 w-full min-h-screen h-full z-50 flex flex-col bg-white overflow-y-auto select-none'
-          : 'fixed inset-0 w-full min-h-screen z-50 flex justify-center items-start sm:items-center p-1 sm:p-2.5 md:p-4 bg-slate-900/75 backdrop-blur-2xs overflow-y-auto select-none'
+          ? 'fixed inset-0 w-full min-h-screen h-full z-50 flex flex-col bg-[#e2e8f0] overflow-y-auto select-none p-1 sm:p-2'
+          : 'fixed inset-0 w-full min-h-screen z-50 flex justify-center items-start sm:items-center p-1 sm:p-2.5 md:p-3 bg-slate-900/75 backdrop-blur-2xs overflow-y-auto select-none'
       }
       dir="rtl"
     >
-      <div
-        className={
-          isMaximized
-            ? 'w-full min-h-screen h-full bg-white flex flex-col relative text-slate-800'
-            : 'w-full max-w-7xl mx-auto my-auto bg-white rounded-xl border-2 border-slate-300 shadow-2xl flex flex-col min-h-[580px] sm:min-h-[85vh] relative text-slate-800 transition-all overflow-hidden'
+      <style>{`
+        :root {
+          --primary: #1e293b;
+          --secondary: #2563eb;
+          --accent: #16a34a;
+          --danger: #dc2626;
+          --warning: #d97706;
+          --bg: #e2e8f0;
+          --border: #cbd5e1;
+          --light: #f8fafc;
         }
+
+        .rakeeza-app-container {
+          width: 100%;
+          background: #fff;
+          border-radius: 6px;
+          border: 1px solid var(--border);
+          box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+          display: flex;
+          flex-direction: column;
+          position: relative;
+          overflow: hidden;
+          margin: auto;
+          min-height: 580px;
+        }
+
+        .header-title-box {
+          background: var(--primary);
+          color: #fff;
+          padding: 6px 10px;
+          font-size: 11px;
+          font-weight: bold;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          flex-shrink: 0;
+          border-bottom: 1px solid #334155;
+        }
+
+        .rakeeza-main-content {
+          padding: 5px;
+          display: flex;
+          flex-direction: column;
+          gap: 4px;
+          flex: 1;
+          min-width: 0;
+        }
+
+        .invoice-card-box {
+          background: #f8fafc;
+          border: 1px solid var(--border);
+          border-radius: 4px;
+          padding: 5px;
+          display: grid;
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+          gap: 3px;
+          flex-shrink: 0;
+        }
+
+        @media (min-width: 768px) {
+          .invoice-card-box {
+            grid-template-columns: repeat(6, minmax(0, 1fr));
+            gap: 4px;
+          }
+        }
+
+        .field-inline-box {
+          display: flex;
+          flex-direction: column;
+          gap: 1.5px;
+          min-width: 0;
+          position: relative;
+        }
+
+        .field-inline-box label {
+          font-size: 8.5px;
+          font-weight: bold;
+          color: #475569;
+        }
+
+        .rakeeza-input, .rakeeza-select {
+          padding: 2px 4px;
+          border: 1px solid var(--border);
+          border-radius: 3px;
+          font-size: 9.5px;
+          outline: none;
+          background: #fff;
+          width: 100%;
+          height: 24px;
+          color: #1e293b;
+        }
+
+        .rakeeza-input:focus, .rakeeza-select:focus {
+          border-color: var(--secondary);
+          box-shadow: 0 0 0 1px rgba(37, 99, 235, 0.2);
+        }
+
+        .top-actions-grid-box {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 4px;
+          flex-shrink: 0;
+        }
+
+        .btn-action-top-box {
+          width: 100%;
+          padding: 6px;
+          background: var(--secondary);
+          color: white;
+          border: none;
+          border-radius: 3px;
+          font-size: 10px;
+          font-weight: bold;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 4px;
+          transition: filter 0.15s;
+        }
+
+        .btn-action-top-box:hover {
+          filter: brightness(1.1);
+        }
+
+        .btn-action-alt-box {
+          background: #475569;
+        }
+
+        .table-responsive-box {
+          width: 100%;
+          flex: 1;
+          min-height: 200px;
+          max-height: 48vh;
+          overflow-y: auto;
+          overflow-x: auto;
+          border: 1px solid var(--border);
+          border-radius: 4px;
+          background: #fff;
+        }
+
+        .table-responsive-box table {
+          width: 100%;
+          border-collapse: collapse;
+          font-size: 9px;
+          text-align: center;
+        }
+
+        .table-responsive-box th, .table-responsive-box td {
+          padding: 3px 4px;
+          border: 1px solid var(--border);
+          vertical-align: middle;
+        }
+
+        .table-responsive-box th {
+          background: #f1f5f9;
+          color: var(--primary);
+          font-weight: bold;
+          position: sticky;
+          top: 0;
+          z-index: 2;
+        }
+
+        .bottom-fixed-area-box {
+          flex-shrink: 0;
+          display: flex;
+          flex-direction: column;
+          gap: 3px;
+          background: #fff;
+          padding: 4px 6px;
+          border-top: 1px solid var(--border);
+          position: sticky;
+          bottom: 0;
+          z-index: 10;
+        }
+
+        .summary-bar-box {
+          display: grid;
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+          gap: 2.5px;
+          background: #1e293b;
+          color: white;
+          padding: 4px;
+          border-radius: 4px;
+          text-align: center;
+        }
+
+        @media (min-width: 640px) {
+          .summary-bar-box {
+            grid-template-columns: repeat(6, minmax(0, 1fr));
+          }
+        }
+
+        .summary-item-box {
+          font-size: 8.5px;
+          background: rgba(255,255,255,0.08);
+          padding: 2.5px 3px;
+          border-radius: 3px;
+        }
+
+        .summary-item-box span {
+          font-weight: bold;
+          color: #4ade80;
+          display: block;
+          font-size: 9.5px;
+          font-family: monospace;
+        }
+
+        .summary-net-box {
+          grid-column: 1 / -1;
+          background: #166534 !important;
+          font-size: 10px !important;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 4px 10px;
+        }
+
+        .summary-net-box span {
+          color: #facc15 !important;
+          font-size: 12px !important;
+          font-weight: 900;
+        }
+
+        .btn-action-bar-box {
+          display: flex;
+          gap: 4px;
+        }
+
+        .btn-action-btn {
+          flex: 1;
+          padding: 6px;
+          border: none;
+          border-radius: 3px;
+          font-weight: bold;
+          font-size: 9.5px;
+          color: white;
+          cursor: pointer;
+          text-align: center;
+          transition: filter 0.15s;
+        }
+
+        .btn-action-btn:hover {
+          filter: brightness(1.1);
+        }
+      `}</style>
+
+      {/* Main Container - Responsive up to max-w-7xl on desktop or full-screen */}
+      <div
+        className={`rakeeza-app-container ${
+          isMaximized
+            ? 'w-full min-h-screen rounded-none border-0 shadow-none'
+            : 'max-w-4xl lg:max-w-5xl xl:max-w-6xl 2xl:max-w-7xl'
+        }`}
       >
-        {/* Header Title with distinct colors */}
-        <div
-          className={`text-white px-3 sm:px-4 py-2 text-xs sm:text-sm font-bold flex justify-between items-center shrink-0 shadow-md bg-gradient-to-r ${theme.headerBg}`}
-        >
+        {/* Header Title */}
+        <div className="header-title-box">
           <div className="flex items-center gap-2">
-            <span>
-              {isSale ? 'منظومة المبيعات والفواتير والمخزون - ركيزة' : 'منظومة المشتريات والتوريد والمخزون - ركيزة'}
-            </span>
-            <span className={`text-[10px] px-2 py-0.5 rounded-full font-black shadow-xs ${theme.badgeColor}`}>
-              {theme.badge}
+            <span>📄 {isSale ? 'نظام الفواتير والمخزون - ركيزة' : 'نظام المشتريات والتوريد - ركيزة'}</span>
+            <span
+              className={`text-[9px] px-2 py-0.5 rounded font-black ${
+                isReturn ? 'bg-rose-600 text-white' : 'bg-emerald-600 text-white'
+              }`}
+            >
+              {isReturn ? (isSale ? '↩ مرتجع مبيعات' : '↩ مرتجع مشتريات') : isSale ? '💵 فاتورة مبيعات' : '🛒 فاتورة مشتريات'}
             </span>
           </div>
+
           <div className="flex items-center gap-2 sm:gap-3">
-            <span className="text-[10px] sm:text-xs font-mono bg-black/20 px-2 py-0.5 rounded text-white/90">🕒 {liveClock}</span>
+            <span className="text-[9.5px] font-mono bg-black/25 px-2 py-0.5 rounded text-white/90">
+              🕒 {liveTime}
+            </span>
             <button
               type="button"
               onClick={() => setIsMaximized((prev) => !prev)}
-              className="w-7 h-7 rounded-full hover:bg-white/20 active:bg-white/30 flex items-center justify-center text-white text-xs font-black cursor-pointer transition"
-              title={isMaximized ? 'استعادة الحجم الطبيعي' : 'تكبير ملء الشاشة (Fullscreen)'}
+              className="w-6 h-6 rounded hover:bg-white/20 active:bg-white/30 flex items-center justify-center text-white text-xs font-bold cursor-pointer transition"
+              title={isMaximized ? 'استعادة الحجم الطبيعي' : 'تكبير الشاشة (Fullscreen)'}
             >
               {isMaximized ? '🗗' : '⛶'}
             </button>
             <button
               type="button"
               onClick={onClose}
-              className="w-7 h-7 rounded-full hover:bg-white/20 active:bg-white/30 flex items-center justify-center text-white text-sm font-bold cursor-pointer transition"
+              className="w-6 h-6 rounded hover:bg-white/20 active:bg-white/30 flex items-center justify-center text-white text-sm font-black cursor-pointer transition"
               title="إغلاق"
             >
               ✕
@@ -991,159 +1154,131 @@ export const RakeezaInvoiceWorkspace: React.FC<RakeezaInvoiceWorkspaceProps> = (
           </div>
         </div>
 
-        {/* Return Warning Banner if Return */}
-        {isReturn && (
-          <div className="bg-rose-100 border-b border-rose-300 text-rose-900 px-3 py-1.5 text-xs font-bold flex items-center justify-between shrink-0">
-            <span>⚠️ فاتورة مرتجع (سيتم عكس القيد المحاسبي وحركة المخزون ورصيد الحساب تلقائياً)</span>
-            <span className="font-mono bg-rose-200 px-2 py-0.5 rounded text-rose-950 font-black">إرجاع</span>
-          </div>
-        )}
-
-        {/* Main Content Area */}
-        <div className="p-2 sm:p-3 flex flex-col gap-2 flex-1 min-w-0">
-          {/* Invoice Header Card - Responsive Grid that looks balanced on laptop, desktop and widescreen */}
-          <div className="bg-slate-50 border border-slate-200 rounded-lg p-2.5 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 lg:grid-cols-12 gap-2 shrink-0">
-            {/* رقم الفاتورة */}
-            <div className="flex flex-col gap-0.5 col-span-1 lg:col-span-2 xl:col-span-1">
-              <label className="text-[9px] sm:text-[10px] font-bold text-slate-600">رقم الفاتورة</label>
-              <input
-                type="text"
-                value={invNum}
-                readOnly
-                className="bg-slate-100 border border-slate-300 rounded px-2 text-[10px] sm:text-xs h-[28px] font-bold text-slate-800"
-              />
+        {/* Main Content */}
+        <div className="rakeeza-main-content">
+          {/* Invoice Card Grid */}
+          <div className="invoice-card-box">
+            <div className="field-inline-box">
+              <label>رقم الفاتورة</label>
+              <input type="text" value={invNum} readOnly className="rakeeza-input bg-slate-100 font-bold" />
             </div>
-            {/* التاريخ */}
-            <div className="flex flex-col gap-0.5 col-span-1 lg:col-span-2 xl:col-span-2">
-              <label className="text-[9px] sm:text-[10px] font-bold text-slate-600">التاريخ</label>
+            <div className="field-inline-box">
+              <label>التاريخ</label>
               <input
                 type="date"
                 value={invDate}
                 onChange={(e) => setInvDate(e.target.value)}
-                className="bg-white border border-slate-300 rounded px-1.5 text-[10px] sm:text-xs h-[28px] font-mono text-slate-800"
+                className="rakeeza-input font-mono"
               />
             </div>
-            {/* الوقت */}
-            <div className="flex flex-col gap-0.5 col-span-1 lg:col-span-2 xl:col-span-1">
-              <label className="text-[9px] sm:text-[10px] font-bold text-slate-600">الوقت</label>
+            <div className="field-inline-box">
+              <label>الوقت</label>
               <input
                 type="time"
                 value={invTime}
                 onChange={(e) => setInvTime(e.target.value)}
-                className="bg-white border border-slate-300 rounded px-1.5 text-[10px] sm:text-xs h-[28px] font-mono text-slate-800"
+                className="rakeeza-input font-mono"
               />
             </div>
-
-            {/* Party Code */}
-            <div className="flex flex-col gap-0.5 col-span-1 lg:col-span-2 xl:col-span-2">
-              <label className="text-[9px] sm:text-[10px] font-bold text-slate-600">
-                {isSale ? 'كود العميل' : 'كود المورد'}
-              </label>
+            <div className="field-inline-box">
+              <label>{isSale ? 'كود العميل' : 'كود المورد'}</label>
               <input
                 type="text"
-                value={partyCode}
-                onChange={(e) => syncPartyByCode(e.target.value)}
+                value={custCode}
                 placeholder="الكود..."
-                className="bg-white border border-slate-300 rounded px-2 text-[10px] sm:text-xs h-[28px] font-mono text-slate-800"
+                onChange={(e) => syncCustomerByCode(e.target.value)}
+                className="rakeeza-input font-mono"
               />
             </div>
-
-            {/* Party Name with Autocomplete */}
-            <div className="flex flex-col gap-0.5 col-span-2 sm:col-span-2 md:col-span-2 lg:col-span-4 xl:col-span-3 relative">
-              <label className="text-[9px] sm:text-[10px] font-bold text-slate-600">
-                {isSale ? 'اسم العميل (بحث بالاسم)' : 'اسم المورد (بحث بالاسم)'}
-              </label>
+            <div className="field-inline-box relative col-span-2 sm:col-span-1 md:col-span-2">
+              <label>{isSale ? 'اسم العميل (بحث)' : 'اسم المورد (بحث)'}</label>
               <input
                 type="text"
-                value={partyName}
+                value={custName}
+                placeholder="اكتب للبحث..."
                 onChange={(e) => {
-                  setPartyName(e.target.value);
+                  setCustName(e.target.value);
                   setShowNameDropdown(true);
                 }}
                 onFocus={() => setShowNameDropdown(true)}
-                placeholder="اكتب للبحث عن العميل أو المورد..."
-                className="bg-white border border-slate-300 rounded px-2 text-[10px] sm:text-xs h-[28px] text-slate-800 font-bold"
+                className="rakeeza-input font-bold"
               />
               {showNameDropdown && (
-                <div className="absolute top-full right-0 left-0 bg-white border border-blue-500 rounded-lg max-h-[160px] overflow-y-auto z-50 shadow-xl mt-1">
+                <div className="absolute top-full right-0 left-0 bg-white border border-blue-500 rounded max-h-[130px] overflow-y-auto z-50 shadow-xl mt-1">
                   {filteredParties
                     .filter(
                       (p) =>
-                        !partyName ||
-                        p.name.toLowerCase().includes(partyName.toLowerCase()) ||
-                        ((p as any).code && String((p as any).code).toLowerCase().includes(partyName.toLowerCase()))
+                        !custName ||
+                        p.name.toLowerCase().includes(custName.toLowerCase()) ||
+                        ((p as any).code && String((p as any).code).toLowerCase().includes(custName.toLowerCase()))
                     )
                     .slice(0, 15)
                     .map((p) => (
                       <div
                         key={p.id}
-                        onClick={() => selectParty(p)}
-                        className="px-2.5 py-1.5 text-xs cursor-pointer hover:bg-blue-50 border-b border-slate-100 flex items-center justify-between"
+                        onClick={() => selectCustomer(p)}
+                        className="px-2 py-1.5 text-[9.5px] cursor-pointer hover:bg-blue-50 border-b border-slate-100 flex items-center justify-between"
                       >
                         <span className="font-bold text-slate-800">{p.name}</span>
-                        <span className="text-[10px] text-slate-500 font-mono">({(p as any).code || p.id})</span>
+                        <span className="text-[8px] text-slate-500 font-mono">({(p as any).code || p.id})</span>
                       </div>
                     ))}
                 </div>
               )}
             </div>
 
-            {/* Party Phone */}
-            <div className="flex flex-col gap-0.5 col-span-2 sm:col-span-2 md:col-span-2 lg:col-span-3 xl:col-span-3 relative">
-              <label className="text-[9px] sm:text-[10px] font-bold text-slate-600">رقم الهاتف (بحث برقم الهاتف)</label>
+            <div className="field-inline-box relative col-span-2 sm:col-span-1 md:col-span-2">
+              <label>رقم الهاتف (بحث)</label>
               <input
                 type="text"
-                value={partyPhone}
+                value={custPhone}
+                placeholder="ابحث برقم الهاتف..."
                 onChange={(e) => {
-                  setPartyPhone(e.target.value);
+                  setCustPhone(e.target.value);
                   setShowPhoneDropdown(true);
                 }}
                 onFocus={() => setShowPhoneDropdown(true)}
-                placeholder="ابحث برقم الهاتف..."
-                className="bg-white border border-slate-300 rounded px-2 text-[10px] sm:text-xs h-[28px] font-mono text-slate-800"
+                className="rakeeza-input font-mono"
               />
               {showPhoneDropdown && (
-                <div className="absolute top-full right-0 left-0 bg-white border border-blue-500 rounded-lg max-h-[160px] overflow-y-auto z-50 shadow-xl mt-1">
+                <div className="absolute top-full right-0 left-0 bg-white border border-blue-500 rounded max-h-[130px] overflow-y-auto z-50 shadow-xl mt-1">
                   {filteredParties
-                    .filter((p) => !partyPhone || (p.phone && p.phone.includes(partyPhone)))
+                    .filter((p) => !custPhone || (p.phone && p.phone.includes(custPhone)))
                     .slice(0, 15)
                     .map((p) => (
                       <div
                         key={p.id}
-                        onClick={() => selectParty(p)}
-                        className="px-2.5 py-1.5 text-xs cursor-pointer hover:bg-blue-50 border-b border-slate-100 flex items-center justify-between"
+                        onClick={() => selectCustomer(p)}
+                        className="px-2 py-1.5 text-[9.5px] cursor-pointer hover:bg-blue-50 border-b border-slate-100 flex items-center justify-between"
                       >
                         <span className="font-bold text-slate-800">{p.name}</span>
-                        <span className="text-[10px] text-slate-500 font-mono">{p.phone}</span>
+                        <span className="text-[8px] text-slate-500 font-mono">{p.phone}</span>
                       </div>
                     ))}
                 </div>
               )}
             </div>
 
-            {/* Job site / statement */}
-            <div className="flex flex-col gap-0.5 col-span-2 sm:col-span-3 md:col-span-4 lg:col-span-9 xl:col-span-9">
-              <label className="text-[9px] sm:text-[10px] font-bold text-slate-600">البيان / جهة العمل أو ملاحظات الفاتورة</label>
+            <div className="field-inline-box col-span-3 sm:col-span-3 md:col-span-4">
+              <label>البيان / جهة العمل أو الملاحظات</label>
               <input
                 type="text"
                 value={jobSite}
-                onChange={(e) => setJobSite(e.target.value)}
                 placeholder="بيان الفاتورة، موقع التسليم، أو أي شروط خاصة..."
-                className="bg-white border border-slate-300 rounded px-2 text-[10px] sm:text-xs h-[28px] text-slate-800"
+                onChange={(e) => setJobSite(e.target.value)}
+                className="rakeeza-input"
               />
             </div>
 
-            {/* Account Status and Balance Banner */}
-            <div className="col-span-full text-xs font-bold bg-amber-50/80 border border-amber-200 px-3 py-1.5 rounded-md flex flex-wrap justify-between items-center text-slate-800">
-              <span className="flex items-center gap-1.5">
+            {/* Account Balance Display Banner */}
+            <div className="col-span-3 sm:col-span-3 md:col-span-6 bg-yellow-50 border border-yellow-200 p-1.5 rounded flex items-center justify-between text-[9px] font-bold text-slate-800">
+              <span className="flex items-center gap-1">
                 <span>حالة الحساب:</span>
-                <strong className="px-2 py-0.5 rounded text-[11px]" style={{ color: partyBalanceInfo.color }}>
-                  {partyBalanceInfo.typeText}
-                </strong>
+                <strong style={{ color: partyBalanceInfo.color }}>{partyBalanceInfo.typeText}</strong>
               </span>
-              <span className="flex items-center gap-1.5">
-                <span>الرصيد المالي الحالي (له / عليه):</span>
-                <strong className="text-sm font-mono" style={{ color: partyBalanceInfo.color }}>
+              <span className="flex items-center gap-1">
+                <span>المبلغ (له / عليه):</span>
+                <strong style={{ color: partyBalanceInfo.color }} className="font-mono text-[10px]">
                   {partyBalanceInfo.balanceVal}
                 </strong>
                 <span>ج.م</span>
@@ -1151,29 +1286,29 @@ export const RakeezaInvoiceWorkspace: React.FC<RakeezaInvoiceWorkspaceProps> = (
             </div>
           </div>
 
-          {/* Pricing System and Quick Invoice Type Switcher Bar */}
-          <div className="bg-slate-50 border border-slate-200 px-3 py-2 rounded-lg flex flex-wrap items-center justify-between shrink-0 gap-2">
-            <div className="flex items-center gap-2">
-              <label className="text-slate-800 text-xs font-black">نظام التسعير المطبق:</label>
-              <div className="flex gap-1">
+          {/* Pricing Box & Invoice Payment Type Switcher */}
+          <div className="bg-[#fefce8] border border-[#fde047] p-1.5 rounded flex flex-wrap items-center justify-between shrink-0 gap-2">
+            <div className="flex items-center gap-1.5 flex-1">
+              <label className="text-[#854d0e] text-[9px] font-bold shrink-0">نظام تسعير الفاتورة:</label>
+              <div className="flex gap-1 flex-1 max-w-sm">
                 <button
                   type="button"
                   onClick={() => setInvoicePriceType('cash')}
-                  className={`px-3 py-1 rounded-md text-xs font-bold transition cursor-pointer shadow-xs ${
+                  className={`flex-1 py-1 rounded text-[8.5px] font-bold cursor-pointer transition ${
                     currentInvoicePriceType === 'cash'
-                      ? 'bg-emerald-600 text-white border border-emerald-700'
-                      : 'bg-white text-slate-700 border border-slate-300 hover:bg-slate-100'
+                      ? 'bg-[#16a34a] text-white border-0 font-black'
+                      : 'bg-white text-slate-700 border border-slate-300'
                   }`}
                 >
-                  💵 سعر نقدي (قطاعي)
+                  💵 سعر نقدي
                 </button>
                 <button
                   type="button"
                   onClick={() => setInvoicePriceType('wholesale')}
-                  className={`px-3 py-1 rounded-md text-xs font-bold transition cursor-pointer shadow-xs ${
+                  className={`flex-1 py-1 rounded text-[8.5px] font-bold cursor-pointer transition ${
                     currentInvoicePriceType === 'wholesale'
-                      ? 'bg-indigo-600 text-white border border-indigo-700'
-                      : 'bg-white text-slate-700 border border-slate-300 hover:bg-slate-100'
+                      ? 'bg-[#16a34a] text-white border-0 font-black'
+                      : 'bg-white text-slate-700 border border-slate-300'
                   }`}
                 >
                   🏷️ سعر جملة
@@ -1181,24 +1316,24 @@ export const RakeezaInvoiceWorkspace: React.FC<RakeezaInvoiceWorkspaceProps> = (
                 <button
                   type="button"
                   onClick={() => setInvoicePriceType('buy')}
-                  className={`px-3 py-1 rounded-md text-xs font-bold transition cursor-pointer shadow-xs ${
+                  className={`flex-1 py-1 rounded text-[8.5px] font-bold cursor-pointer transition ${
                     currentInvoicePriceType === 'buy'
-                      ? 'bg-teal-700 text-white border border-teal-800'
-                      : 'bg-white text-slate-700 border border-slate-300 hover:bg-slate-100'
+                      ? 'bg-[#16a34a] text-white border-0 font-black'
+                      : 'bg-white text-slate-700 border border-slate-300'
                   }`}
                 >
-                  🛒 سعر شراء / تكلفة
+                  🛒 سعر شراء
                 </button>
               </div>
             </div>
 
             {/* Quick Invoice Type Switcher */}
-            <div className="flex items-center gap-1.5">
-              <label className="text-slate-700 text-xs font-bold">نوع السداد:</label>
+            <div className="flex items-center gap-1 shrink-0">
+              <label className="text-slate-700 text-[8.5px] font-bold">نوع السداد:</label>
               <select
                 value={selectedInvoiceType}
                 onChange={(e) => setSelectedInvoiceType(e.target.value as any)}
-                className="bg-white border border-slate-300 rounded-md px-2 py-1 text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer shadow-xs"
+                className="h-[22px] bg-white border border-slate-300 rounded px-1.5 text-[8.5px] font-bold text-slate-800 cursor-pointer"
               >
                 <option value="nagdi">نقدي (كاش فوري)</option>
                 <option value="ajel">آجل (ذمم وحسابات)</option>
@@ -1208,10 +1343,29 @@ export const RakeezaInvoiceWorkspace: React.FC<RakeezaInvoiceWorkspaceProps> = (
             </div>
           </div>
 
-          {/* Quick Search / Barcode Scanner Row + Action Buttons */}
-          <div className="bg-slate-100 border border-slate-300 p-2 sm:p-2.5 rounded-lg flex flex-col sm:flex-row items-stretch sm:items-center gap-2 shrink-0">
-            {/* Quick Barcode / Name Input */}
-            <div className="relative flex-1">
+          {/* Top Actions Grid + Barcode Search Bar */}
+          <div className="flex flex-col gap-1.5 shrink-0">
+            <div className="top-actions-grid-box">
+              <button
+                type="button"
+                className="btn-action-top-box"
+                onClick={() => setIsLookupModalOpen(true)}
+              >
+                <span>📦</span>
+                <span>دليل الأصناف (إضافة سريعة)</span>
+              </button>
+              <button
+                type="button"
+                className="btn-action-top-box btn-action-alt-box"
+                onClick={() => setIsOptionsModalOpen(true)}
+              >
+                <span>⚙️</span>
+                <span>الخصم، الضريبة والدفع</span>
+              </button>
+            </div>
+
+            {/* Quick Barcode Scanner / Instant Name Search Input */}
+            <div className="relative w-full">
               <input
                 type="text"
                 placeholder="🔍 ابحث بالاسم أو امسح الباركود واضغط Enter لإدراج الصنف فوراً..."
@@ -1225,10 +1379,10 @@ export const RakeezaInvoiceWorkspace: React.FC<RakeezaInvoiceWorkspaceProps> = (
                     handleQuickSearchEnter();
                   }
                 }}
-                className="w-full bg-white border border-slate-300 rounded-md px-3 py-2 text-xs sm:text-sm text-slate-900 font-semibold focus:ring-2 focus:ring-blue-500 focus:outline-none shadow-xs"
+                className="w-full bg-white border border-slate-300 rounded px-2.5 py-1 text-[9.5px] font-semibold text-slate-900 focus:outline-none focus:border-blue-500 shadow-xs"
               />
               {showQuickDropdown && quickSearchText.trim() && (
-                <div className="absolute top-full right-0 left-0 bg-white border border-blue-500 rounded-lg max-h-[200px] overflow-y-auto z-50 shadow-2xl mt-1">
+                <div className="absolute top-full right-0 left-0 bg-white border border-blue-500 rounded max-h-[160px] overflow-y-auto z-50 shadow-xl mt-1">
                   {(appData.items || [])
                     .filter(
                       (i) =>
@@ -1239,65 +1393,50 @@ export const RakeezaInvoiceWorkspace: React.FC<RakeezaInvoiceWorkspaceProps> = (
                     .map((item) => (
                       <div
                         key={item.id}
-                        onClick={() => handleQuickAddFromSearch(item)}
-                        className="px-3 py-2 text-xs cursor-pointer hover:bg-blue-50 border-b border-slate-100 flex items-center justify-between"
+                        onClick={() => {
+                          quickAddItemToInvoice(item);
+                          setQuickSearchText('');
+                          setShowQuickDropdown(false);
+                        }}
+                        className="px-2.5 py-1.5 text-[9.5px] cursor-pointer hover:bg-blue-50 border-b border-slate-100 flex items-center justify-between"
                       >
                         <div className="flex flex-col">
                           <span className="font-bold text-slate-900">{item.name}</span>
-                          <span className="text-[10px] text-slate-500 font-mono">باركود: {item.code || '-'} | الرصيد: {item.quantity || 0}</span>
+                          <span className="text-[8px] text-slate-500 font-mono">باركود: {item.code || '-'} | الرصيد: {item.quantity || 0}</span>
                         </div>
-                        <div className="text-left font-mono font-bold text-emerald-700">
-                          {currentInvoicePriceType === 'wholesale'
-                            ? (item.wholesalePrice || item.price || 0)
-                            : currentInvoicePriceType === 'buy' || !isSale
-                            ? (item.costPrice || item.purchasePrice || item.price || 0)
-                            : (item.salePrice || item.price || 0)}{' '}
+                        <span className="font-mono font-bold text-emerald-700 text-xs">
+                          {Number(
+                            currentInvoicePriceType === 'wholesale'
+                              ? item.wholesalePrice || item.price || 0
+                              : currentInvoicePriceType === 'buy' || !isSale
+                              ? item.costPrice || item.purchasePrice || item.price || 0
+                              : item.salePrice || item.price || 0
+                          ).toFixed(2)}{' '}
                           ج.م
-                        </div>
+                        </span>
                       </div>
                     ))}
                 </div>
               )}
             </div>
-
-            <div className="flex items-center gap-2 shrink-0">
-              <button
-                type="button"
-                onClick={() => setIsLookupModalOpen(true)}
-                className="px-3 sm:px-4 py-2 text-white rounded-md text-xs sm:text-sm font-bold cursor-pointer flex items-center gap-1.5 shadow-xs transition hover:brightness-110"
-                style={{ backgroundColor: themeSecondary }}
-              >
-                <span>📦</span>
-                <span>دليل الأصناف الشامل</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setIsOptionsModalOpen(true)}
-                className="px-3 sm:px-4 py-2 bg-slate-700 hover:bg-slate-800 text-white rounded-md text-xs sm:text-sm font-bold cursor-pointer flex items-center gap-1.5 shadow-xs transition"
-              >
-                <span>⚙️</span>
-                <span>الخصم، الضريبة والدفع</span>
-              </button>
-            </div>
           </div>
 
-          {/* 🗑️ Bulk Selection & Delete Action Bar (يظهر عند التحديد أو الضغط المطول) */}
+          {/* 🗑️ Bulk Selection & Delete Action Bar (يظهر فوراً عند تحديد أصناف بالضغط المطول) */}
           {selectedRowIds.size > 0 && (
-            <div className="bg-rose-50 border-2 border-rose-300 px-3 py-2 rounded-lg flex flex-wrap items-center justify-between gap-2 shrink-0 animate-fade-in shadow-xs">
-              <div className="flex items-center gap-2">
-                <span className="w-6 h-6 rounded-full bg-rose-600 text-white flex items-center justify-center text-xs font-black">
+            <div className="bg-rose-50 border border-rose-300 px-2.5 py-1.5 rounded flex flex-wrap items-center justify-between gap-1.5 shrink-0 shadow-xs">
+              <div className="flex items-center gap-1.5">
+                <span className="w-5 h-5 rounded-full bg-rose-600 text-white flex items-center justify-center text-[10px] font-black">
                   {selectedRowIds.size}
                 </span>
-                <span className="text-xs font-black text-rose-950">
-                  تم تحديد {selectedRowIds.size} من أصل {invoiceItems.length} صنف (اضغط مطولاً على أي صنف لإضافته أو إلغائه)
+                <span className="text-[9.5px] font-black text-rose-950">
+                  تم تحديد {selectedRowIds.size} صنف (اضغط مطولاً على أي صنف لإلغائه أو إضافته)
                 </span>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5">
                 <button
                   type="button"
                   onClick={handleDeleteSelected}
-                  className="px-3.5 py-1.5 bg-rose-600 hover:bg-rose-700 active:bg-rose-800 text-white rounded-md text-xs font-black cursor-pointer shadow-xs transition flex items-center gap-1.5"
-                  title="حذف جميع الأصناف المحددة"
+                  className="px-2.5 py-1 bg-rose-600 hover:bg-rose-700 text-white rounded text-[9px] font-bold cursor-pointer transition shadow-xs flex items-center gap-1"
                 >
                   <span>🗑️</span>
                   <span>حذف المحددة ({selectedRowIds.size})</span>
@@ -1305,62 +1444,57 @@ export const RakeezaInvoiceWorkspace: React.FC<RakeezaInvoiceWorkspaceProps> = (
                 <button
                   type="button"
                   onClick={handleSelectAll}
-                  className="px-2.5 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-800 rounded-md text-xs font-bold cursor-pointer transition"
+                  className="px-2 py-1 bg-slate-200 hover:bg-slate-300 text-slate-800 rounded text-[9px] font-bold cursor-pointer transition"
                 >
-                  {selectedRowIds.size === invoiceItems.length ? 'إلغاء تحديد الكل' : 'تحديد كل الأصناف'}
+                  {selectedRowIds.size === currentInvoiceItems.length ? 'إلغاء تحديد الكل' : 'تحديد الكل'}
                 </button>
                 <button
                   type="button"
                   onClick={() => setSelectedRowIds(new Set())}
-                  className="px-2.5 py-1.5 bg-white border border-slate-300 hover:bg-slate-100 text-slate-700 rounded-md text-xs font-bold cursor-pointer transition"
+                  className="px-2 py-1 bg-white border border-slate-300 text-slate-700 rounded text-[9px] font-bold cursor-pointer transition"
                 >
-                  ✕ إلغاء التحديد
+                  ✕ إلغاء
                 </button>
               </div>
             </div>
           )}
 
-          {/* Table Responsive of Items - توزيع دقيق للأعمدة ومنع التداخل */}
-          <div className="w-full flex-1 min-h-[220px] max-h-[48vh] overflow-x-auto overflow-y-auto border border-slate-300 rounded-lg bg-white shadow-xs">
-            <table className="w-full border-collapse text-xs sm:text-sm text-center">
-              <thead className="bg-slate-100 text-slate-800 font-bold sticky top-0 z-10 border-b border-slate-300">
+          {/* Table Responsive of Items */}
+          <div className="table-responsive-box">
+            <table>
+              <thead>
                 <tr>
-                  <th className="p-2 border border-slate-300 w-9 sm:w-10 text-center font-bold">
+                  <th className="w-[30px]">
                     <input
                       type="checkbox"
-                      checked={invoiceItems.length > 0 && selectedRowIds.size === invoiceItems.length}
+                      checked={currentInvoiceItems.length > 0 && selectedRowIds.size === currentInvoiceItems.length}
                       onChange={handleSelectAll}
-                      className="cursor-pointer rounded border-slate-300"
+                      className="cursor-pointer"
                       title="تحديد كل الأصناف"
                     />
                   </th>
-                  <th className="p-2 border border-slate-300 w-9 sm:w-10 text-center font-bold text-slate-600">م</th>
-                  <th className="p-2 border border-slate-300 w-20 sm:w-24 font-mono text-center font-bold text-slate-700 text-xs">الباركود</th>
-                  {/* توسيع عمود اسم الصنف لضمان ظهوره بالكامل وبوضوح تام على الشاشة */}
-                  <th className="p-2 border border-slate-300 min-w-[280px] lg:min-w-[380px] text-right font-black text-slate-900">
-                    <span>اسم الصنف</span>
-                    <span className="text-[10px] text-slate-500 font-normal mr-1.5 hidden sm:inline">(نقر: تعديل | ضغط مطول: تحديد)</span>
+                  <th className="w-[30px]">م</th>
+                  <th className="w-[70px]">الباركود</th>
+                  <th className="text-right min-w-[140px] sm:min-w-[200px] font-black">
+                    <span>الصنف</span>
+                    <span className="text-[7.5px] text-slate-500 font-normal mr-1 hidden sm:inline">(نقر: تعديل | ضغط مطول: تحديد)</span>
                   </th>
-                  {/* تقليل عرض عمود البيان */}
-                  <th className="p-2 border border-slate-300 w-28 sm:w-36 text-right font-bold text-slate-800">البيان</th>
-                  {/* تصغير عمود العدد */}
-                  <th className="p-2 border border-slate-300 w-14 sm:w-18 text-center font-bold text-slate-800">العدد</th>
-                  {/* تصغير عمود السعر */}
-                  <th className="p-2 border border-slate-300 w-18 sm:w-22 text-center font-bold text-slate-800">السعر</th>
-                  {/* تصغير عمود الإجمالي */}
-                  <th className="p-2 border border-slate-300 w-20 sm:w-26 text-center font-black text-slate-900">الإجمالي</th>
-                  <th className="p-2 border border-slate-300 w-14 sm:w-16 text-center font-bold text-slate-800">إجراء</th>
+                  <th className="text-right w-[80px] sm:w-[120px]">الوصف</th>
+                  <th className="w-[45px] sm:w-[60px]">الكمية</th>
+                  <th className="w-[55px] sm:w-[70px]">السعر</th>
+                  <th className="w-[65px] sm:w-[85px] font-black">الإجمالي</th>
+                  <th className="w-[50px] sm:w-[70px]">إجراء</th>
                 </tr>
               </thead>
               <tbody>
-                {invoiceItems.length === 0 ? (
+                {currentInvoiceItems.length === 0 ? (
                   <tr>
-                    <td colSpan={9} className="text-slate-400 p-10 text-center text-xs sm:text-sm bg-white">
-                      لم يتم إدراج أصناف بعد (استخدم البحث السريع أعلاه أو اضغط "دليل الأصناف الشامل")
+                    <td colSpan={9} style={{ color: '#94a3b8', padding: '25px', textAlign: 'center' }}>
+                      لم يتم إدراج أصناف بعد (اضغط من دليل الأصناف للبيع السريع)
                     </td>
                   </tr>
                 ) : (
-                  invoiceItems.map((item, index) => {
+                  currentInvoiceItems.map((item, index) => {
                     const isSelected = selectedRowIds.has(item.rowId);
                     return (
                       <tr
@@ -1370,76 +1504,52 @@ export const RakeezaInvoiceWorkspace: React.FC<RakeezaInvoiceWorkspaceProps> = (
                         onPointerLeave={handlePointerUp}
                         onPointerMove={handlePointerMove}
                         onClick={(e) => handleRowClick(index, item.rowId, e)}
-                        className={`border-b transition-colors cursor-pointer select-none ${
+                        className={`transition-colors cursor-pointer select-none ${
                           isSelected
-                            ? 'bg-blue-100/90 border-blue-400 font-bold'
-                            : 'hover:bg-blue-50/70 border-slate-200 bg-white'
+                            ? 'bg-blue-100 font-bold'
+                            : 'hover:bg-[#f8fafc]'
                         }`}
                         title="نقر فردي: فتح كارت التعديل التفصيلي | ضغط مطول: تحديد الصنف للحذف"
                       >
-                        {/* مربع التحديد */}
-                        <td className="p-2 border border-slate-200 text-center" onClick={(e) => e.stopPropagation()}>
+                        <td onClick={(e) => e.stopPropagation()}>
                           <input
                             type="checkbox"
                             checked={isSelected}
                             onChange={(e) => toggleSelectRow(item.rowId, e as any)}
-                            className="cursor-pointer rounded border-slate-300"
+                            className="cursor-pointer"
                           />
                         </td>
-                        {/* الرقم التسلسلي */}
-                        <td className="p-2 border border-slate-200 font-mono font-bold text-slate-600 text-xs">
-                          {index + 1}
-                        </td>
-                        {/* الباركود */}
-                        <td className="p-2 border border-slate-200 font-mono text-slate-700 text-xs">
-                          {item.code || '-'}
-                        </td>
-                        {/* اسم الصنف - كامل وبوضوح تام بدون اقتطاع */}
-                        <td className="p-2 border border-slate-200 text-right font-black text-slate-900 break-words leading-relaxed">
-                          <div className="flex items-center gap-1.5">
-                            {isSelected && <span className="text-blue-600 shrink-0">✓</span>}
+                        <td className="font-mono text-slate-600 font-bold">{index + 1}</td>
+                        <td className="font-mono text-slate-600 text-[8.5px]">{item.code || '-'}</td>
+                        <td className="text-right font-black text-slate-900 break-words">
+                          <div className="flex items-center gap-1">
+                            {isSelected && <span className="text-blue-600 text-[9px]">✓</span>}
                             <span>{item.name}</span>
                           </div>
                         </td>
-                        {/* البيان - مقلل العرض مع إمكانية عرض التول تيب */}
-                        <td
-                          className="p-2 border border-slate-200 text-right text-slate-600 truncate max-w-[140px] text-xs font-normal"
-                          title={item.spec || ''}
-                        >
+                        <td className="text-right text-[#64748b] truncate max-w-[120px]" title={item.spec || ''}>
                           {item.spec || '-'}
                         </td>
-                        {/* العدد - مصغر */}
-                        <td className="p-2 border border-slate-200 font-mono font-bold text-slate-900 text-center">
-                          {item.qty}
-                        </td>
-                        {/* السعر - مصغر */}
-                        <td className="p-2 border border-slate-200 font-mono font-bold text-slate-900 text-center">
-                          {item.price.toFixed(2)}
-                        </td>
-                        {/* الإجمالي - مصغر */}
-                        <td className="p-2 border border-slate-200 font-mono font-black text-emerald-800 text-center">
-                          {item.total.toFixed(2)}
-                        </td>
-                        {/* إجراء */}
-                        <td className="p-1.5 border border-slate-200" onClick={(e) => e.stopPropagation()}>
-                          <div className="inline-flex items-center justify-center gap-1">
-                            <button
-                              type="button"
+                        <td className="font-mono font-bold text-slate-900">{item.qty}</td>
+                        <td className="font-mono font-bold text-slate-900">{item.price.toFixed(2)}</td>
+                        <td className="font-mono font-black text-emerald-800">{item.total.toFixed(2)}</td>
+                        <td onClick={(e) => e.stopPropagation()}>
+                          <span className="inline-flex gap-1.5 justify-center items-center">
+                            <span
+                              className="cursor-pointer p-0.5 text-blue-600 hover:text-blue-800"
+                              title="تعديل الصنف"
                               onClick={() => openModifyModal(index)}
-                              className="p-1 text-blue-600 hover:text-blue-800 hover:bg-blue-100 rounded cursor-pointer transition"
-                              title="كارت التعديل التفصيلي"
                             >
                               ✏️
-                            </button>
-                            <button
-                              type="button"
+                            </span>
+                            <span
+                              className="cursor-pointer p-0.5 text-rose-600 hover:text-rose-800"
+                              title="حذف"
                               onClick={() => removeItemFromInvoice(index)}
-                              className="p-1 text-rose-600 hover:text-rose-800 hover:bg-rose-100 rounded cursor-pointer transition"
-                              title="حذف هذا الصنف"
                             >
                               🗑️
-                            </button>
-                          </div>
+                            </span>
+                          </span>
                         </td>
                       </tr>
                     );
@@ -1450,55 +1560,47 @@ export const RakeezaInvoiceWorkspace: React.FC<RakeezaInvoiceWorkspaceProps> = (
           </div>
         </div>
 
-        {/* Bottom Fixed Area - Clean, Light & Zero Dark/Black Shading */}
-        <div className="shrink-0 flex flex-col gap-1.5 bg-slate-50 p-2 sm:p-3 border-t border-slate-200 sticky bottom-0 z-20">
-          {/* Summary Box - Clean White Cards with Crisp Borders */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2 bg-white border border-slate-300 p-2 sm:p-2.5 rounded-lg text-center shadow-xs">
-            <div className="bg-slate-50 border border-slate-200 p-1.5 sm:p-2 rounded-md flex flex-col items-center justify-center">
-              <span className="text-[10px] sm:text-xs font-bold text-slate-600">إجمالي الكميات</span>
-              <span className="font-bold text-slate-900 text-xs sm:text-base font-mono mt-0.5">{totals.totalQty.toFixed(2)}</span>
+        {/* Bottom Fixed Area */}
+        <div className="bottom-fixed-area-box">
+          <div className="summary-bar-box">
+            <div className="summary-item-box">
+              إجمالي الكميات: <span>{totals.totalQty.toFixed(2)}</span>
             </div>
-            <div className="bg-slate-50 border border-slate-200 p-1.5 sm:p-2 rounded-md flex flex-col items-center justify-center">
-              <span className="text-[10px] sm:text-xs font-bold text-slate-600">الخصومات</span>
-              <span className="font-bold text-rose-600 text-xs sm:text-base font-mono mt-0.5">{totals.discount.toFixed(2)}</span>
+            <div className="summary-item-box">
+              الخصومات: <span className="text-rose-400">{totals.discount.toFixed(2)}</span>
             </div>
-            <div className="bg-slate-50 border border-slate-200 p-1.5 sm:p-2 rounded-md flex flex-col items-center justify-center">
-              <span className="text-[10px] sm:text-xs font-bold text-slate-600">الضرائب</span>
-              <span className="font-bold text-blue-600 text-xs sm:text-base font-mono mt-0.5">{totals.tax.toFixed(2)}</span>
+            <div className="summary-item-box">
+              الضرائب: <span className="text-blue-400">{totals.tax.toFixed(2)}</span>
             </div>
-            <div className="bg-slate-50 border border-slate-200 p-1.5 sm:p-2 rounded-md flex flex-col items-center justify-center">
-              <span className="text-[10px] sm:text-xs font-bold text-slate-600">الإيراد / الرسوم</span>
-              <span className="font-bold text-purple-600 text-xs sm:text-base font-mono mt-0.5">{totals.extra.toFixed(2)}</span>
+            <div className="summary-item-box">
+              الإيراد: <span className="text-purple-400">{totals.extra.toFixed(2)}</span>
             </div>
-            <div className="bg-slate-50 border border-slate-200 p-1.5 sm:p-2 rounded-md flex flex-col items-center justify-center">
-              <span className="text-[10px] sm:text-xs font-bold text-slate-600">المدفوع</span>
-              <span className="font-bold text-emerald-700 text-xs sm:text-base font-mono mt-0.5">{totals.paid.toFixed(2)}</span>
+            <div className="summary-item-box">
+              المدفوع: <span style={{ color: '#60a5fa' }}>{totals.paid.toFixed(2)}</span>
             </div>
-            <div className="bg-slate-50 border border-slate-200 p-1.5 sm:p-2 rounded-md flex flex-col items-center justify-center">
-              <span className="text-[10px] sm:text-xs font-bold text-slate-600">المتبقي</span>
-              <span className="font-bold text-amber-700 text-xs sm:text-base font-mono mt-0.5">{totals.remain.toFixed(2)}</span>
+            <div className="summary-item-box">
+              المتبقي: <span style={{ color: '#f87171' }}>{totals.remain.toFixed(2)}</span>
             </div>
-            <div className="col-span-full bg-emerald-50 border border-emerald-400 p-2 sm:p-3 rounded-lg text-emerald-950 font-bold text-xs sm:text-sm md:text-base flex justify-between items-center px-4 sm:px-6 shadow-xs">
-              <span className="font-bold text-slate-900">الصافي النهائي للفاتورة:</span>
-              <span className="text-emerald-700 text-base sm:text-xl font-mono font-black">{totals.net.toFixed(2)} ج.م</span>
+            <div className="summary-net-box">
+              <span>الصافي النهائي للفاتورة:</span>
+              <span>{totals.net.toFixed(2)} ج.م</span>
             </div>
           </div>
 
-          {/* Action Button Bar */}
-          <div className="flex gap-2 mt-0.5">
+          <div className="btn-action-bar-box">
             <button
               type="button"
-              onClick={handleSaveAndPostInvoice}
-              className="flex-1 py-2 sm:py-2.5 rounded-lg text-xs sm:text-sm font-black text-white cursor-pointer shadow-md transition hover:brightness-110 flex items-center justify-center gap-1.5"
-              style={{ backgroundColor: themeAccent }}
+              className="btn-action-btn"
+              style={{ background: 'var(--accent)' }}
+              onClick={saveInvoice}
             >
-              <span>💾 حفظ وترحيل الحسابات والمخزن</span>
+              <span>💾 حفظ وترحيل الحسابات</span>
             </button>
             <button
               type="button"
+              className="btn-action-btn"
+              style={{ background: 'var(--secondary)' }}
               onClick={handlePrint}
-              className="py-2 sm:py-2.5 px-5 rounded-lg text-xs sm:text-sm font-bold text-white cursor-pointer shadow-md transition hover:brightness-110 flex items-center justify-center gap-1.5"
-              style={{ backgroundColor: themeSecondary }}
             >
               <span>🖨️ طباعة</span>
             </button>
@@ -1506,280 +1608,236 @@ export const RakeezaInvoiceWorkspace: React.FC<RakeezaInvoiceWorkspaceProps> = (
         </div>
       </div>
 
-      {/* ⚙️ نافذة الإيرادات الإضافية والخصومات وطرق الدفع (Options, Revenue & Multi-Payment Modal) */}
+      {/* نافذة الخيارات والمدفوعات (optionsModal) */}
       {isOptionsModalOpen && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-2xs z-[60] flex items-center justify-center p-2 sm:p-4 overflow-y-auto animate-fade-in">
-          <div className="bg-white w-full max-w-lg max-h-[90vh] rounded-xl border-2 border-slate-400 shadow-2xl flex flex-col overflow-hidden text-slate-800 my-auto">
-            {/* Header */}
+        <div
+          className="fixed inset-0 bg-black/65 z-[2000] flex justify-center items-center p-2"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setIsOptionsModalOpen(false);
+          }}
+        >
+          <div className="bg-white w-full max-w-[400px] rounded-lg overflow-hidden flex flex-col border border-slate-300 shadow-2xl my-auto">
             <div
-              className={`text-white px-4 py-2.5 text-xs sm:text-sm font-black flex justify-between items-center bg-gradient-to-r ${theme.headerBg} shadow-sm`}
+              className="text-white px-2.5 py-1.5 flex justify-between items-center text-[10.5px] font-bold"
+              style={{ background: 'var(--secondary)' }}
             >
-              <div className="flex items-center gap-2">
-                <span>⚙️</span>
-                <span>نافذة الإيرادات الإضافية، الخصومات ووسائل الدفع</span>
-              </div>
-              <button
-                type="button"
+              <span>⚙️ خصومات، ضرائب، إيرادات ودفع</span>
+              <span
+                style={{ cursor: 'pointer', fontSize: '18px' }}
                 onClick={() => setIsOptionsModalOpen(false)}
-                className="w-7 h-7 rounded-full hover:bg-white/20 active:bg-white/30 flex items-center justify-center text-white text-sm font-bold cursor-pointer transition"
-                title="إغلاق"
               >
-                ✕
-              </button>
+                &times;
+              </span>
             </div>
 
-            {/* Body */}
-            <div className="p-3 sm:p-4 flex flex-col gap-3.5 text-xs overflow-y-auto">
-              {/* قسم 1: الإيرادات الإضافية والرسوم */}
-              <div className="bg-purple-50/70 border border-purple-200 rounded-lg p-3 flex flex-col gap-2">
-                <div className="flex items-center justify-between">
-                  <span className="font-black text-purple-950 text-xs flex items-center gap-1.5">
-                    <span>💰</span>
-                    <span>الإيرادات الإضافية والرسوم (شحن، تركيب، خدمات خاصة)</span>
-                  </span>
-                  <span className="text-[10px] text-purple-700 font-bold">تُضاف لصافي الفاتورة</span>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  <div className="flex flex-col gap-1">
-                    <label className="text-[10px] font-bold text-slate-700">اسم أو بيان الإيراد / الخدمة</label>
-                    <input
-                      type="text"
-                      value={extraIncomeName}
-                      onChange={(e) => setExtraIncomeName(e.target.value)}
-                      placeholder="مثال: مصاريف شحن ونقل، تركيب، صيانة..."
-                      className="border border-slate-300 rounded-md px-2.5 py-1.5 text-xs text-slate-900 bg-white focus:outline-none focus:ring-2 focus:ring-purple-500"
-                    />
+            <div className="p-2.5 flex flex-col gap-2 text-xs">
+              {/* الخصم الكلي */}
+              <div className="flex flex-col gap-1">
+                <div className="flex justify-between items-center">
+                  <label className="text-[9px] font-bold text-slate-700">خصم الفاتورة الكلية</label>
+                  <div className="flex border-2 border-blue-600 rounded overflow-hidden h-[24px] w-[110px]">
+                    <button
+                      type="button"
+                      className={`flex-1 text-[9.5px] font-bold cursor-pointer border-0 ${
+                        invDiscType === 'val' ? 'bg-blue-600 text-white' : 'bg-white text-blue-600'
+                      }`}
+                      onClick={() => setInvDiscType('val')}
+                    >
+                      ج.م
+                    </button>
+                    <button
+                      type="button"
+                      className={`flex-1 text-[9.5px] font-bold cursor-pointer border-0 ${
+                        invDiscType === 'percent' ? 'bg-blue-600 text-white' : 'bg-white text-blue-600'
+                      }`}
+                      onClick={() => setInvDiscType('percent')}
+                    >
+                      %
+                    </button>
                   </div>
-                  <div className="flex flex-col gap-1">
-                    <label className="text-[10px] font-bold text-slate-700">مبلغ الإيراد (ج.م)</label>
-                    <div className="relative">
+                </div>
+                <input
+                  type="number"
+                  step="any"
+                  value={globalInvDisc}
+                  onChange={(e) => setGlobalInvDisc(e.target.value)}
+                  placeholder="أدخل قيمة أو نسبة الخصم..."
+                  className="w-full border border-slate-300 rounded px-2 text-[10px] h-[26px]"
+                />
+              </div>
+
+              {/* الضريبة الكلية */}
+              <div className="flex flex-col gap-1">
+                <div className="flex justify-between items-center">
+                  <label className="text-[9px] font-bold text-slate-700">ضريبة الفاتورة الكلية</label>
+                  <div className="flex border-2 border-blue-600 rounded overflow-hidden h-[24px] w-[110px]">
+                    <button
+                      type="button"
+                      className={`flex-1 text-[9.5px] font-bold cursor-pointer border-0 ${
+                        invTaxType === 'percent' ? 'bg-blue-600 text-white' : 'bg-white text-blue-600'
+                      }`}
+                      onClick={() => setInvTaxType('percent')}
+                    >
+                      %
+                    </button>
+                    <button
+                      type="button"
+                      className={`flex-1 text-[9.5px] font-bold cursor-pointer border-0 ${
+                        invTaxType === 'val' ? 'bg-blue-600 text-white' : 'bg-white text-blue-600'
+                      }`}
+                      onClick={() => setInvTaxType('val')}
+                    >
+                      ج.م
+                    </button>
+                  </div>
+                </div>
+                <input
+                  type="number"
+                  step="any"
+                  value={globalInvTax}
+                  onChange={(e) => setGlobalInvTax(e.target.value)}
+                  placeholder="أدخل قيمة أو نسبة الضريبة..."
+                  className="w-full border border-slate-300 rounded px-2 text-[10px] h-[26px]"
+                />
+              </div>
+
+              {/* الإيرادات الإضافية */}
+              <div className="grid grid-cols-2 gap-2">
+                <div className="flex flex-col gap-0.5">
+                  <label className="text-[9px] font-bold text-slate-700">اسم الإيراد</label>
+                  <input
+                    type="text"
+                    value={extraIncomeName}
+                    onChange={(e) => setExtraIncomeName(e.target.value)}
+                    placeholder="شحن، تركيب..."
+                    className="border border-slate-300 rounded px-2 text-[9.5px] h-[25px]"
+                  />
+                </div>
+                <div className="flex flex-col gap-0.5">
+                  <label className="text-[9px] font-bold text-slate-700">مبلغ الإيراد</label>
+                  <input
+                    type="number"
+                    step="any"
+                    value={extraIncomeVal}
+                    onChange={(e) => setExtraIncomeVal(e.target.value)}
+                    placeholder="0.00"
+                    className="border border-slate-300 rounded px-2 text-[9.5px] h-[25px]"
+                  />
+                </div>
+              </div>
+
+              {/* طرق الدفع المتعددة */}
+              <div className="flex flex-col gap-1 border-t border-slate-200 pt-2">
+                <div className="flex justify-between items-center mb-1">
+                  <label className="text-[9px] font-bold text-slate-700">طرق الدفع المتعددة</label>
+                  <button
+                    type="button"
+                    style={{ background: 'var(--accent)' }}
+                    className="text-white px-2 py-0.5 text-[8.5px] rounded font-bold cursor-pointer"
+                    onClick={() => addPaymentRow('نقدي / كاش', totals.net)}
+                  >
+                    + إضافة دفع
+                  </button>
+                </div>
+                <div className="flex flex-col gap-1 max-h-[100px] overflow-y-auto">
+                  {paymentRows.map((r) => (
+                    <div key={r.id} className="flex gap-1 items-center">
+                      <select
+                        value={r.method}
+                        onChange={(e) => updatePaymentRow(r.id, 'method', e.target.value)}
+                        className="h-[24px] w-[100px] text-[9.5px] border border-slate-300 rounded px-1"
+                      >
+                        <option value="نقدي / كاش">نقدي</option>
+                        <option value="انستاباي Instapay">انستاباي</option>
+                        <option value="فودافون كاش">فودافون كاش</option>
+                        <option value="فيزا / كارت">فيزا</option>
+                        <option value="حساب بنكي">حساب بنكي</option>
+                      </select>
                       <input
                         type="number"
                         step="any"
-                        value={extraIncomeVal}
-                        onChange={(e) => setExtraIncomeVal(e.target.value)}
-                        placeholder="0.00"
-                        className="w-full border border-slate-300 rounded-md px-2.5 pl-10 py-1.5 text-xs font-mono font-bold text-slate-900 bg-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                        value={r.amount || ''}
+                        onChange={(e) => updatePaymentRow(r.id, 'amount', e.target.value)}
+                        className="h-[24px] flex-1 text-[9.5px] border border-slate-300 rounded px-1 font-mono"
+                        placeholder="المبلغ..."
                       />
-                      <span className="absolute left-2.5 top-1.5 text-[10px] text-slate-500 font-bold">ج.م</span>
+                      <button
+                        type="button"
+                        onClick={() => removePaymentRow(r.id)}
+                        className="text-rose-600 hover:text-rose-800 text-xs px-1 cursor-pointer font-bold"
+                      >
+                        ✕
+                      </button>
                     </div>
-                  </div>
+                  ))}
                 </div>
-              </div>
-
-              {/* قسم 2: الخصومات والضرائب */}
-              <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 flex flex-col gap-3">
-                <span className="font-black text-slate-800 text-xs flex items-center gap-1.5">
-                  <span>🏷️</span>
-                  <span>الخصم والضريبة على إجمالي الفاتورة</span>
-                </span>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {/* الخصم الكلي */}
-                  <div className="flex flex-col gap-1">
-                    <div className="flex justify-between items-center">
-                      <label className="text-[10px] font-bold text-slate-700">خصم الفاتورة</label>
-                      <div className="flex border border-blue-600 rounded overflow-hidden h-[22px] w-[86px]">
-                        <button
-                          type="button"
-                          onClick={() => setInvDiscType('val')}
-                          className={`flex-1 text-[9px] font-bold cursor-pointer transition ${
-                            invDiscType === 'val' ? 'bg-blue-600 text-white' : 'bg-white text-blue-600'
-                          }`}
-                        >
-                          ج.م
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setInvDiscType('percent')}
-                          className={`flex-1 text-[9px] font-bold cursor-pointer transition ${
-                            invDiscType === 'percent' ? 'bg-blue-600 text-white' : 'bg-white text-blue-600'
-                          }`}
-                        >
-                          %
-                        </button>
-                      </div>
-                    </div>
-                    <input
-                      type="number"
-                      step="any"
-                      value={globalInvDisc}
-                      onChange={(e) => setGlobalInvDisc(e.target.value)}
-                      placeholder="أدخل قيمة أو نسبة الخصم..."
-                      className="border border-slate-300 rounded-md px-2.5 py-1.5 text-xs font-mono font-bold text-slate-900 bg-white"
-                    />
-                  </div>
-
-                  {/* الضريبة الكلية */}
-                  <div className="flex flex-col gap-1">
-                    <div className="flex justify-between items-center">
-                      <label className="text-[10px] font-bold text-slate-700">ضريبة القيمة المضافة</label>
-                      <div className="flex border border-blue-600 rounded overflow-hidden h-[22px] w-[86px]">
-                        <button
-                          type="button"
-                          onClick={() => setInvTaxType('percent')}
-                          className={`flex-1 text-[9px] font-bold cursor-pointer transition ${
-                            invTaxType === 'percent' ? 'bg-blue-600 text-white' : 'bg-white text-blue-600'
-                          }`}
-                        >
-                          %
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setInvTaxType('val')}
-                          className={`flex-1 text-[9px] font-bold cursor-pointer transition ${
-                            invTaxType === 'val' ? 'bg-blue-600 text-white' : 'bg-white text-blue-600'
-                          }`}
-                        >
-                          ج.م
-                        </button>
-                      </div>
-                    </div>
-                    <input
-                      type="number"
-                      step="any"
-                      value={globalInvTax}
-                      onChange={(e) => setGlobalInvTax(e.target.value)}
-                      placeholder="أدخل قيمة أو نسبة الضريبة..."
-                      className="border border-slate-300 rounded-md px-2.5 py-1.5 text-xs font-mono font-bold text-slate-900 bg-white"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* قسم 3: وسائل الدفع والتحصيل المتعددة */}
-              <div className="bg-emerald-50/70 border border-emerald-200 rounded-lg p-3 flex flex-col gap-2">
-                <div className="flex justify-between items-center">
-                  <span className="font-black text-emerald-950 text-xs flex items-center gap-1.5">
-                    <span>💳</span>
-                    <span>وسائل التحصيل والدفع المتعددة</span>
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => addPaymentRow('نقدي / كاش', totals.net)}
-                    className="px-2.5 py-1 text-[10px] font-black text-white bg-emerald-700 hover:bg-emerald-800 rounded-md cursor-pointer transition flex items-center gap-1 shadow-xs"
-                  >
-                    <span>+</span>
-                    <span>إضافة وسيلة دفع</span>
-                  </button>
-                </div>
-
-                <div className="flex flex-col gap-1.5 max-h-[140px] overflow-y-auto">
-                  {paymentRows.length === 0 ? (
-                    <div className="text-slate-500 text-[11px] text-center py-2">
-                      لا توجد أسطر دفع محددة (سيتم احتساب الدفع نقداً تلقائياً عند الحفظ للفاتورة النقدية)
-                    </div>
-                  ) : (
-                    paymentRows.map((r) => (
-                      <div key={r.id} className="flex gap-2 items-center bg-white border border-slate-200 p-1.5 rounded-md">
-                        <select
-                          value={r.method}
-                          onChange={(e) => updatePaymentRow(r.id, 'method', e.target.value)}
-                          className="h-[28px] w-[130px] text-xs font-bold border border-slate-300 rounded px-1.5 bg-white text-slate-800"
-                        >
-                          <option value="نقدي / كاش">💵 نقدي / كاش</option>
-                          <option value="انستاباي Instapay">⚡ إنستاباي Instapay</option>
-                          <option value="فودافون كاش">📱 فودافون كاش</option>
-                          <option value="فيزا / كارت">💳 فيزا / شبكة</option>
-                          <option value="حساب بنكي">🏦 حساب بنكي</option>
-                        </select>
-                        <div className="relative flex-1">
-                          <input
-                            type="number"
-                            step="any"
-                            value={r.amount || ''}
-                            onChange={(e) => updatePaymentRow(r.id, 'amount', e.target.value)}
-                            className="h-[28px] w-full text-xs font-mono font-bold border border-slate-300 rounded px-2 text-slate-900"
-                            placeholder="المبلغ المدفوع..."
-                          />
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => removePaymentRow(r.id)}
-                          className="w-7 h-[28px] text-rose-600 hover:bg-rose-50 rounded flex items-center justify-center font-bold text-xs cursor-pointer"
-                          title="حذف هذا الدفع"
-                        >
-                          ✕
-                        </button>
-                      </div>
-                    ))
-                  )}
-                </div>
-              </div>
-
-              {/* Net Summary and Save */}
-              <div className="flex items-center justify-between bg-slate-100 border border-slate-300 px-3 py-2 rounded-lg font-bold">
-                <span className="text-slate-700">الصافي بعد التعديل:</span>
-                <span className="text-emerald-700 text-sm font-mono font-black">{totals.net.toFixed(2)} ج.م</span>
               </div>
 
               <button
                 type="button"
+                className="w-full text-white py-2 rounded text-[10px] font-bold cursor-pointer mt-1"
+                style={{ background: 'var(--accent)' }}
                 onClick={() => setIsOptionsModalOpen(false)}
-                className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white rounded-lg text-xs sm:text-sm font-bold cursor-pointer transition shadow-xs flex items-center justify-center gap-1.5"
               >
-                <span>✓</span>
-                <span>تأكيد وحفظ التعديلات</span>
+                ✓ تم وحفظ الخيارات
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* 📦 نافذة دليل الأصناف الشامل (Lookup Modal - Centered & Responsive) */}
+      {/* دليل الأصناف (lookupModal) */}
       {isLookupModalOpen && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-2xs z-[60] flex items-center justify-center p-2 sm:p-4 overflow-y-auto animate-fade-in">
-          <div className="bg-slate-100 w-full max-w-4xl max-h-[90vh] min-h-[500px] rounded-xl border-2 border-slate-400 shadow-2xl flex flex-col overflow-hidden text-slate-800 my-auto">
-            {/* Header */}
+        <div
+          className="fixed inset-0 bg-black/65 z-[2000] flex justify-center items-center p-2"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setIsLookupModalOpen(false);
+          }}
+        >
+          <div className="bg-[#e5e7eb] w-[98vw] max-w-4xl h-[94vh] rounded-md flex flex-col border-2 border-[#64748b] overflow-hidden my-auto shadow-2xl">
             <div
-              className={`text-white px-4 py-2.5 text-xs sm:text-sm font-black flex justify-between items-center shrink-0 shadow-sm bg-gradient-to-r ${theme.headerBg}`}
+              className="text-white px-3 py-1.5 flex justify-between items-center text-[10.5px] font-bold shrink-0"
+              style={{ background: 'var(--primary)' }}
             >
-              <div className="flex items-center gap-2">
-                <span>📦</span>
-                <span>دليل الأصناف الشامل (اختر صنفاً للإضافة السريعة للفاتورة)</span>
-              </div>
-              <button
-                type="button"
+              <span>📦 دليل الأصناف (اختر صنفاً للإضافة السريعة)</span>
+              <span
+                style={{ cursor: 'pointer', fontSize: '18px' }}
                 onClick={() => setIsLookupModalOpen(false)}
-                className="w-7 h-7 rounded-full hover:bg-white/20 active:bg-white/30 flex items-center justify-center text-white text-sm font-bold cursor-pointer transition"
-                title="إغلاق"
               >
-                ✕
-              </button>
+                &times;
+              </span>
             </div>
 
-            {/* Content Area */}
-            <div className="flex flex-1 p-2 gap-2 overflow-hidden">
+            <div className="flex flex-1 p-1 gap-1 overflow-hidden">
               {/* Categories Sidebar */}
-              <div className="w-[120px] sm:w-[150px] bg-white border border-slate-300 rounded-lg flex flex-col overflow-hidden shrink-0 shadow-xs">
-                <div className="bg-slate-100 p-2 text-xs font-black border-b border-slate-200 flex flex-col items-center gap-1.5">
-                  <span className="text-slate-800">التصنيفات</span>
+              <div className="w-[85px] sm:w-[100px] bg-[#f8fafc] border border-[#94a3b8] rounded flex flex-col overflow-hidden shrink-0">
+                <div className="bg-[#f1f5f9] p-1 text-[8px] font-bold border-b border-[#cbd5e1] flex flex-col items-center gap-1">
+                  <span>المجموعات</span>
                   <button
                     type="button"
                     onClick={openNewItemDialog}
-                    className="w-full bg-emerald-600 hover:bg-emerald-700 text-white rounded text-[10px] font-bold py-1.5 cursor-pointer shadow-xs transition"
+                    style={{ background: 'var(--accent)' }}
+                    className="text-white rounded px-1.5 py-1 text-[8px] font-bold cursor-pointer w-full"
+                    title="إضافة صنف جديد"
                   >
                     + صنف جديد
                   </button>
                 </div>
-                <div className="flex-1 overflow-y-auto divide-y divide-slate-100">
+                <div className="flex-1 overflow-y-auto">
                   <div
-                    onClick={() => setSelectedLookupCategory('all')}
-                    className={`p-2 text-xs font-bold cursor-pointer text-center transition ${
-                      selectedLookupCategory === 'all'
-                        ? 'bg-blue-600 text-white font-black'
-                        : 'text-slate-700 hover:bg-slate-50'
+                    onClick={() => setSelectedCategory('all')}
+                    className={`p-1.5 text-[8px] font-bold border-b border-[#e2e8f0] cursor-pointer text-center ${
+                      selectedCategory === 'all' ? 'bg-[#0284c7] text-white' : 'text-[#1e293b] hover:bg-slate-100'
                     }`}
                   >
-                    الكل ({appData.items?.length || 0})
+                    الكل
                   </div>
                   {categoriesList.map((cat) => (
                     <div
                       key={cat}
-                      onClick={() => setSelectedLookupCategory(cat)}
-                      className={`p-2 text-xs font-bold cursor-pointer text-center truncate transition ${
-                        selectedLookupCategory === cat
-                          ? 'bg-blue-600 text-white font-black'
-                          : 'text-slate-700 hover:bg-slate-50'
+                      onClick={() => setSelectedCategory(cat)}
+                      className={`p-1.5 text-[8px] font-bold border-b border-[#e2e8f0] cursor-pointer text-center truncate ${
+                        selectedCategory === cat ? 'bg-[#0284c7] text-white' : 'text-[#1e293b] hover:bg-slate-100'
                       }`}
                       title={cat}
                     >
@@ -1789,71 +1847,62 @@ export const RakeezaInvoiceWorkspace: React.FC<RakeezaInvoiceWorkspaceProps> = (
                 </div>
               </div>
 
-              {/* Items Cards Panel */}
-              <div className="flex-1 bg-white border border-slate-300 rounded-lg flex flex-col p-2 gap-2 overflow-hidden shadow-xs">
-                {/* Search Bar */}
-                <div className="bg-slate-50 p-2 border border-slate-300 rounded-lg flex items-center shrink-0">
+              {/* Items Panel */}
+              <div className="flex-1 bg-[#f8fafc] border border-[#94a3b8] rounded flex flex-col p-1 gap-1 overflow-hidden">
+                <div className="bg-white p-1 border border-[#cbd5e1] rounded flex items-center shrink-0">
                   <input
                     type="text"
                     value={lookupSearch}
                     onChange={(e) => setLookupSearch(e.target.value)}
-                    placeholder="🔍 ابحث في دليل الأصناف بالاسم، الكود، أو الباركود..."
-                    className="w-full text-xs font-semibold bg-transparent border-none outline-none px-1 text-slate-900"
+                    placeholder="بحث بالاسم أو الكود..."
+                    className="h-[24px] flex-1 text-[9.5px] border-none outline-none px-1"
                   />
                 </div>
 
-                {/* Items Grid/List */}
-                <div className="flex-1 overflow-y-auto flex flex-col gap-1.5 p-0.5">
+                <div className="flex-1 overflow-y-auto flex flex-col gap-1 p-0.5">
                   {(appData.items || [])
                     .filter((item) => {
-                      if (selectedLookupCategory !== 'all' && item.category !== selectedLookupCategory) return false;
+                      if (selectedCategory !== 'all' && item.category !== selectedCategory) return false;
                       if (!lookupSearch) return true;
                       const q = lookupSearch.toLowerCase().trim();
                       return item.name.toLowerCase().includes(q) || (item.code && item.code.toLowerCase().includes(q));
                     })
                     .map((item) => {
-                      const stock = Number(item.quantity ?? 0);
-                      const isLow = stock <= 0;
+                      const stock = Number(item.quantity ?? (item as any).stock ?? 0);
+                      const isZeroOrLess = stock <= 0;
                       return (
                         <div
                           key={item.id}
                           onClick={() => quickAddItemToInvoice(item)}
-                          className={`bg-white border rounded-lg p-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2 cursor-pointer shadow-xs hover:border-blue-600 hover:bg-blue-50/40 transition ${
-                            isLow ? 'border-rose-300 bg-rose-50/20' : 'border-slate-200'
+                          className={`bg-white border rounded p-1.5 flex flex-col gap-0.5 cursor-pointer shadow-xs hover:border-blue-600 transition ${
+                            isZeroOrLess ? 'border-rose-400 bg-rose-50/20' : 'border-[#cbd5e1]'
                           }`}
                         >
-                          <div className="flex flex-col">
-                            <div className="flex items-center gap-2">
-                              <span className="font-black text-slate-900 text-xs sm:text-sm">{item.name}</span>
-                              <span className="text-[10px] text-slate-500 font-mono">({item.category || 'عامة'})</span>
-                            </div>
-                            <span className="text-blue-700 text-[10px] font-mono mt-0.5">كود / باركود: {item.code || item.id}</span>
+                          <div className="flex justify-between items-center font-bold text-[9.5px] border-b border-[#f1f5f9] pb-0.5">
+                            <span className="text-[#1e293b]">
+                              {item.name} <small style={{ color: isZeroOrLess ? '#dc2626' : '#64748b', fontWeight: 'normal' }}>({item.category || 'عامة'})</small>
+                            </span>
+                            <span style={{ color: '#0284c7', fontSize: '8.5px' }} className="font-mono">{item.code || item.id}</span>
                           </div>
-
-                          <div className="flex items-center gap-2 text-xs font-mono shrink-0">
-                            <div className="bg-slate-50 px-2 py-1 rounded border border-slate-200 text-center">
-                              <span className="block text-[8px] text-slate-500 font-sans">المتاح</span>
-                              <strong className={`${isLow ? 'text-rose-600' : 'text-blue-700'}`}>{stock}</strong>
-                            </div>
-                            <div className="bg-emerald-50 px-2.5 py-1 rounded border border-emerald-200 text-center">
-                              <span className="block text-[8px] text-emerald-800 font-sans">سعر الفاتورة</span>
-                              <strong className="text-emerald-800 font-black">
-                                {Number(
-                                  currentInvoicePriceType === 'wholesale'
-                                    ? item.wholesalePrice || item.price || 0
-                                    : currentInvoicePriceType === 'buy' || !isSale
-                                    ? item.costPrice || item.purchasePrice || item.price || 0
-                                    : item.salePrice || item.price || 0
-                                ).toFixed(2)}{' '}
-                                ج.م
+                          <div className="grid grid-cols-4 gap-1 text-[8px] text-center pt-0.5">
+                            <div className={`p-0.5 rounded border ${isZeroOrLess ? 'bg-[#fff5f5] border-[#fca5a5]' : 'bg-[#f8fafc] border-[#e2e8f0]'}`}>
+                              <span className="block text-[6px] text-[#64748b]">المتاح</span>
+                              <strong style={{ color: stock < 0 ? '#dc2626' : (stock === 0 ? '#d97706' : '#0284c7'), fontSize: '9px' }}>
+                                {stock}
                               </strong>
                             </div>
-                            <button
-                              type="button"
-                              className="px-2.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs font-bold transition shadow-xs"
-                            >
-                              + إضافة
-                            </button>
+                            <div className="bg-[#f8fafc] p-0.5 rounded border border-[#e2e8f0]">
+                              <span className="block text-[6px] text-[#64748b]">نقدي</span>
+                              <strong style={{ color: '#16a34a' }}>{Number(item.salePrice || item.price || 0).toFixed(2)}</strong>
+                            </div>
+                            <div className="bg-[#f8fafc] p-0.5 rounded border border-[#e2e8f0]">
+                              <span className="block text-[6px] text-[#64748b]">جملة</span>
+                              <strong style={{ color: '#d97706' }}>{Number(item.wholesalePrice || item.price || 0).toFixed(2)}</strong>
+                            </div>
+                            <div className="bg-[#f8fafc] p-0.5 rounded border border-[#e2e8f0]">
+                              <span className="block text-[6px] text-[#64748b]">شراء</span>
+                              <strong style={{ color: '#dc2626' }}>{Number(item.costPrice || item.purchasePrice || item.price || 0).toFixed(2)}</strong>
+                            </div>
                           </div>
                         </div>
                       );
@@ -1865,234 +1914,74 @@ export const RakeezaInvoiceWorkspace: React.FC<RakeezaInvoiceWorkspaceProps> = (
         </div>
       )}
 
-      {/* 📋 كارت التعديل التفصيلي للصنف في الفاتورة (Item Detailed Edit Card Modal - Centered & Responsive) */}
-      {isModifyModalOpen && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-2xs z-[60] flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-fade-in">
-          <div className="bg-white w-full max-w-lg md:max-w-xl max-h-[92vh] rounded-xl border-2 border-slate-400 shadow-2xl flex flex-col overflow-hidden text-slate-800 my-auto">
-            {/* Header */}
-            <div
-              className={`text-white px-4 py-2.5 text-xs sm:text-sm font-black flex justify-between items-center bg-gradient-to-r ${theme.headerBg} shadow-sm`}
-            >
-              <div className="flex items-center gap-2">
-                <span>📋</span>
-                <span>كارت التعديل التفصيلي للصنف</span>
-              </div>
-              <button
-                type="button"
-                onClick={() => setIsModifyModalOpen(false)}
-                className="w-7 h-7 rounded-full hover:bg-white/20 active:bg-white/30 flex items-center justify-center text-white text-sm font-bold cursor-pointer transition"
-                title="إغلاق"
-              >
-                ✕
-              </button>
-            </div>
-
-            {/* Modal Body */}
-            <div className="p-3 sm:p-4 flex flex-col gap-3 overflow-y-auto">
-              {/* Item Info Card Banner */}
-              <div className="bg-slate-50 border border-slate-300 rounded-lg p-2.5 flex items-center justify-between">
-                <div>
-                  <div className="font-black text-slate-900 text-sm sm:text-base">{modifyName}</div>
-                  <div className="text-[11px] text-slate-500 font-mono mt-0.5">
-                    الباركود / الكود: {modifyCode || 'بدون باركود'}
-                  </div>
-                </div>
-                {modifyStock !== null && (
-                  <div className="text-left bg-white border border-slate-300 px-2.5 py-1 rounded-md shadow-xs">
-                    <span className="text-[10px] text-slate-500 block font-bold">المتاح بالمخزن</span>
-                    <span
-                      className={`text-xs font-black font-mono ${
-                        modifyStock <= 0 ? 'text-rose-600' : 'text-emerald-700'
-                      }`}
-                    >
-                      {modifyStock} وحدة
-                    </span>
-                  </div>
-                )}
-              </div>
-
-              {/* Editable Fields Grid */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-                {/* اسم الصنف */}
-                <div className="col-span-full flex flex-col gap-1">
-                  <label className="text-[11px] font-bold text-slate-700">اسم الصنف في الفاتورة</label>
-                  <input
-                    type="text"
-                    value={modifyName}
-                    onChange={(e) => setModifyName(e.target.value)}
-                    className="border border-slate-300 rounded-lg px-3 py-1.5 text-xs sm:text-sm font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-
-                {/* الكمية مع أزرار الزيادة والنقصان السريعة */}
-                <div className="flex flex-col gap-1">
-                  <label className="text-[11px] font-bold text-slate-700">الكمية (العدد)</label>
-                  <div className="flex items-center">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const q = Math.max(1, (parseFloat(modifyQty) || 0) - 1);
-                        setModifyQty(String(q));
-                      }}
-                      className="w-9 h-[34px] bg-slate-200 hover:bg-slate-300 active:bg-slate-400 text-slate-800 font-black rounded-r-lg border border-slate-300 cursor-pointer flex items-center justify-center text-sm"
-                    >
-                      -
-                    </button>
-                    <input
-                      type="number"
-                      step="any"
-                      value={modifyQty}
-                      onChange={(e) => setModifyQty(e.target.value)}
-                      className="flex-1 h-[34px] text-center font-mono font-bold text-slate-900 border-y border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const q = (parseFloat(modifyQty) || 0) + 1;
-                        setModifyQty(String(q));
-                      }}
-                      className="w-9 h-[34px] bg-slate-200 hover:bg-slate-300 active:bg-slate-400 text-slate-800 font-black rounded-l-lg border border-slate-300 cursor-pointer flex items-center justify-center text-sm"
-                    >
-                      +
-                    </button>
-                  </div>
-                </div>
-
-                {/* السعر */}
-                <div className="flex flex-col gap-1">
-                  <label className="text-[11px] font-bold text-slate-700">سعر الوحدة (ج.م)</label>
-                  <div className="relative">
-                    <input
-                      type="number"
-                      step="any"
-                      value={modifyPrice}
-                      onChange={(e) => setModifyPrice(e.target.value)}
-                      className="w-full h-[34px] border border-slate-300 rounded-lg px-3 pl-12 text-sm font-mono font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                    <span className="absolute left-3 top-2 text-[10px] text-slate-500 font-bold">ج.م</span>
-                  </div>
-                </div>
-
-                {/* البيان / ملاحظات الصنف */}
-                <div className="col-span-full flex flex-col gap-1">
-                  <label className="text-[11px] font-bold text-slate-700">البيان / الوصف وملاحظات الصنف</label>
-                  <input
-                    type="text"
-                    value={modifySpec}
-                    onChange={(e) => setModifySpec(e.target.value)}
-                    placeholder="ملاحظات تشغيلية، مقاسات، ألوان، أو شروط خاصة بالصنف..."
-                    className="border border-slate-300 rounded-lg px-3 py-1.5 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-
-                {/* Total Preview Banner */}
-                <div className="col-span-full bg-emerald-50 border border-emerald-300 rounded-lg p-2.5 flex items-center justify-between">
-                  <span className="text-xs font-bold text-emerald-950">إجمالي هذا الصنف:</span>
-                  <div className="flex items-center gap-1 font-mono text-emerald-800">
-                    <span className="text-xs">({modifyQty || 0} × {modifyPrice || 0}) =</span>
-                    <strong className="text-base font-black">
-                      {((parseFloat(modifyQty) || 0) * (parseFloat(modifyPrice) || 0)).toFixed(2)} ج.م
-                    </strong>
-                  </div>
-                </div>
-              </div>
-
-              {/* Action Buttons */}
-              <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 pt-2 border-t border-slate-200">
-                <button
-                  type="button"
-                  onClick={deleteCurrentModifiedItem}
-                  className="px-3 py-2 bg-rose-50 hover:bg-rose-100 active:bg-rose-200 text-rose-700 border border-rose-300 rounded-lg text-xs font-bold cursor-pointer transition flex items-center justify-center gap-1"
-                >
-                  <span>🗑️</span>
-                  <span>حذف هذا الصنف</span>
-                </button>
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setIsModifyModalOpen(false)}
-                    className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-bold cursor-pointer transition flex-1 sm:flex-initial"
-                  >
-                    إلغاء
-                  </button>
-                  <button
-                    type="button"
-                    onClick={saveModifiedItem}
-                    className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white rounded-lg text-xs sm:text-sm font-bold cursor-pointer transition shadow-xs flex-1 sm:flex-initial flex items-center justify-center gap-1"
-                  >
-                    <span>✓</span>
-                    <span>حفظ التعديلات والرجوع</span>
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ➕ نافذة إضافة صنف جديد للمخزون (New Item Modal - Centered & Responsive) */}
+      {/* نافذة إضافة صنف جديد للمخزون (editItemModal) */}
       {isNewItemModalOpen && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-2xs z-[60] flex items-center justify-center p-2 sm:p-4 overflow-y-auto animate-fade-in">
-          <div className="bg-white w-full max-w-lg max-h-[90vh] rounded-xl border-2 border-slate-400 shadow-2xl flex flex-col overflow-hidden text-slate-800 my-auto">
+        <div
+          className="fixed inset-0 bg-black/65 z-[2000] flex justify-center items-center p-2"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setIsNewItemModalOpen(false);
+          }}
+        >
+          <div className="bg-white w-full max-w-[400px] rounded-lg overflow-hidden flex flex-col border border-slate-300 shadow-2xl my-auto">
             <div
-              className={`text-white px-4 py-2.5 text-xs sm:text-sm font-black flex justify-between items-center bg-gradient-to-r ${theme.headerBg} shadow-sm`}
+              className="text-white px-2.5 py-1.5 flex justify-between items-center text-[10.5px] font-bold"
+              style={{ background: 'var(--secondary)' }}
             >
-              <span>➕ إضافة صنف جديد للمخزون وإدراجه بالفاتورة</span>
-              <button
-                type="button"
+              <span>إضافة صنف جديد للمخزون</span>
+              <span
+                style={{ cursor: 'pointer', fontSize: '18px' }}
                 onClick={() => setIsNewItemModalOpen(false)}
-                className="w-7 h-7 rounded-full hover:bg-white/20 active:bg-white/30 flex items-center justify-center text-white text-sm font-bold cursor-pointer transition"
               >
-                ✕
-              </button>
+                &times;
+              </span>
             </div>
-            <div className="p-3 sm:p-4 flex flex-col gap-3 text-xs overflow-y-auto">
-              <div className="bg-blue-50 text-blue-900 p-2 rounded-lg text-xs font-bold border border-blue-200">
-                💡 سيتم إنشاء الصنف في المخزن العام وتحديد أسعاره، ثم إضافته للفاتورة الحالية فوراً.
+            <div className="p-2 flex flex-col gap-1.5 text-xs">
+              <div style={{ background: '#eff6ff', padding: '3px 6px', borderRadius: '3px', color: '#1d4ed8', fontWeight: 'bold', fontSize: '8.5px' }}>
+                إضافة مباشرة للمخزون وإدراجه بالفاتورة
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="col-span-full flex flex-col gap-1">
-                  <label className="text-[11px] font-bold text-slate-700">اسم الصنف الجديد *</label>
+              <div className="grid grid-cols-2 gap-1">
+                <div className="col-span-2 flex flex-col gap-0.5">
+                  <label className="text-[8.5px] font-bold text-slate-700">اسم الصنف الجديد</label>
                   <input
                     type="text"
-                    value={newItemName}
-                    onChange={(e) => setNewItemName(e.target.value)}
-                    placeholder="مثال: لاب توب ديل، شاشة توشيبا..."
-                    className="border border-slate-300 rounded-lg px-3 py-1.5 text-xs sm:text-sm font-bold text-slate-900"
+                    value={newInputItemName}
+                    onChange={(e) => setNewInputItemName(e.target.value)}
+                    className="h-[24px] border border-slate-300 rounded px-1.5 text-[9.5px]"
                   />
                 </div>
-                <div className="col-span-full flex flex-col gap-1">
-                  <label className="text-[11px] font-bold text-slate-700">كود / باركود الصنف (تلقائي)</label>
+                <div className="col-span-2 flex flex-col gap-0.5">
+                  <label className="text-[8.5px] font-bold text-slate-700">كود الصنف (تلقائي)</label>
                   <input
                     type="text"
-                    value={newItemCode}
+                    value={newInputItemCode}
                     readOnly
-                    className="bg-slate-100 border border-slate-300 rounded-lg px-3 py-1.5 text-xs font-mono font-bold text-slate-700"
+                    style={{ background: '#f1f5f9', fontWeight: 'bold' }}
+                    className="h-[24px] border border-slate-300 rounded px-1.5 text-[9.5px]"
                   />
                 </div>
-                <div className="flex flex-col gap-1">
-                  <label className="text-[11px] font-bold text-slate-700">سعر الشراء الأساسي (ج.م)</label>
+                <div className="flex flex-col gap-0.5">
+                  <label className="text-[8.5px] font-bold text-slate-700">سعر الشراء الأساسي</label>
                   <input
                     type="number"
-                    value={newItemBuyPrice}
+                    step="any"
+                    value={editBuyPrice}
                     onChange={(e) => {
-                      setNewItemBuyPrice(e.target.value);
-                      handleCalculateMargins(
+                      setEditBuyPrice(e.target.value);
+                      calculatePricesFromMargin(
                         parseFloat(e.target.value) || 0,
-                        parseFloat(newItemCashMargin) || 0,
-                        parseFloat(newItemWholesaleMargin) || 0
+                        parseFloat(editCashProfitMargin) || 0,
+                        parseFloat(editWholesaleProfitMargin) || 0
                       );
                     }}
-                    placeholder="0.00"
-                    className="border border-slate-300 rounded-lg px-3 py-1.5 text-xs font-mono text-slate-900"
+                    className="h-[24px] border border-slate-300 rounded px-1.5 text-[9.5px]"
                   />
                 </div>
-                <div className="flex flex-col gap-1">
-                  <label className="text-[11px] font-bold text-slate-700">المجموعة / التصنيف</label>
+                <div className="flex flex-col gap-0.5">
+                  <label className="text-[8.5px] font-bold text-slate-700">المجموعة</label>
                   <select
-                    value={newItemCategory}
-                    onChange={(e) => setNewItemCategory(e.target.value)}
-                    className="border border-slate-300 rounded-lg px-3 py-1.5 text-xs text-slate-800"
+                    value={editItemCategory}
+                    onChange={(e) => setEditItemCategory(e.target.value)}
+                    className="h-[24px] border border-slate-300 rounded px-1 text-[9.5px]"
                   >
                     {categoriesList.map((c) => (
                       <option key={c} value={c}>
@@ -2101,43 +1990,200 @@ export const RakeezaInvoiceWorkspace: React.FC<RakeezaInvoiceWorkspaceProps> = (
                     ))}
                   </select>
                 </div>
-                <div className="flex flex-col gap-1">
-                  <label className="text-[11px] font-bold text-slate-700">سعر البيع النقدي (قطاعي)</label>
-                  <input
-                    type="number"
-                    value={newItemCashPriceManual}
-                    onChange={(e) => setNewItemCashPriceManual(e.target.value)}
-                    placeholder="0.00"
-                    className="border border-slate-300 rounded-lg px-3 py-1.5 text-xs font-mono text-slate-900 font-bold"
-                  />
+                <div className="flex flex-col gap-0.5">
+                  <label className="text-[8.5px] font-bold text-slate-700">ربح القطاعي (% أو ج.م)</label>
+                  <div className="flex gap-1">
+                    <input
+                      type="number"
+                      step="any"
+                      placeholder="%"
+                      value={editCashProfitMargin}
+                      onChange={(e) => {
+                        setEditCashProfitMargin(e.target.value);
+                        calculatePricesFromMargin(
+                          parseFloat(editBuyPrice) || 0,
+                          parseFloat(e.target.value) || 0,
+                          parseFloat(editWholesaleProfitMargin) || 0
+                        );
+                      }}
+                      className="h-[24px] flex-1 border border-slate-300 rounded px-1 text-[9px]"
+                    />
+                    <input
+                      type="number"
+                      step="any"
+                      placeholder="ج.م"
+                      value={editCashPriceManual}
+                      onChange={(e) => {
+                        setEditCashPriceManual(e.target.value);
+                        calculateMarginFromManualPrice('cash');
+                      }}
+                      className="h-[24px] flex-1 border border-slate-300 rounded px-1 text-[9px]"
+                    />
+                  </div>
+                  <span style={{ fontSize: '7px', color: '#16a34a', fontWeight: 'bold' }}>{lblCalcCashMargin}</span>
                 </div>
-                <div className="flex flex-col gap-1">
-                  <label className="text-[11px] font-bold text-slate-700">سعر البيع جملة</label>
-                  <input
-                    type="number"
-                    value={newItemWholesalePriceManual}
-                    onChange={(e) => setNewItemWholesalePriceManual(e.target.value)}
-                    placeholder="0.00"
-                    className="border border-slate-300 rounded-lg px-3 py-1.5 text-xs font-mono text-slate-900 font-bold"
-                  />
+                <div className="flex flex-col gap-0.5">
+                  <label className="text-[8.5px] font-bold text-slate-700">ربح الجملة (% أو ج.م)</label>
+                  <div className="flex gap-1">
+                    <input
+                      type="number"
+                      step="any"
+                      placeholder="%"
+                      value={editWholesaleProfitMargin}
+                      onChange={(e) => {
+                        setEditWholesaleProfitMargin(e.target.value);
+                        calculatePricesFromMargin(
+                          parseFloat(editBuyPrice) || 0,
+                          parseFloat(editCashProfitMargin) || 0,
+                          parseFloat(e.target.value) || 0
+                        );
+                      }}
+                      className="h-[24px] flex-1 border border-slate-300 rounded px-1 text-[9px]"
+                    />
+                    <input
+                      type="number"
+                      step="any"
+                      placeholder="ج.م"
+                      value={editWholesalePriceManual}
+                      onChange={(e) => {
+                        setEditWholesalePriceManual(e.target.value);
+                        calculateMarginFromManualPrice('wholesale');
+                      }}
+                      className="h-[24px] flex-1 border border-slate-300 rounded px-1 text-[9px]"
+                    />
+                  </div>
+                  <span style={{ fontSize: '7px', color: '#d97706', fontWeight: 'bold' }}>{lblCalcWholesaleMargin}</span>
                 </div>
-                <div className="col-span-full flex flex-col gap-1">
-                  <label className="text-[11px] font-bold text-slate-700">الكمية الابتدائية بالمخزون</label>
+                <div className="col-span-2 flex flex-col gap-0.5">
+                  <label className="text-[8.5px] font-bold text-slate-700">الكمية بالمخزون</label>
                   <input
                     type="number"
-                    value={newItemStockQty}
-                    onChange={(e) => setNewItemStockQty(e.target.value)}
-                    className="border border-slate-300 rounded-lg px-3 py-1.5 text-xs font-mono text-slate-900"
+                    step="any"
+                    value={editQty}
+                    onChange={(e) => setEditQty(e.target.value)}
+                    className="h-[24px] border border-slate-300 rounded px-1.5 text-[9.5px]"
                   />
                 </div>
               </div>
+
               <button
                 type="button"
-                onClick={saveNewItemToInventory}
-                className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs sm:text-sm font-bold cursor-pointer mt-2 shadow-xs transition"
+                style={{ background: 'var(--accent)', marginTop: '4px' }}
+                className="w-full text-white py-2 rounded text-[10px] font-bold cursor-pointer"
+                onClick={saveNewItemData}
               >
-                ✓ حفظ وإضافة للفاتورة مباشرة
+                <i className="fa-solid fa-check"></i> حفظ والرجوع للفاتورة
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* نافذة تعديل بيانات البند داخل الفاتورة (modifyInvoiceItemModal) */}
+      {isModifyModalOpen && (
+        <div
+          className="fixed inset-0 bg-black/65 z-[2000] flex justify-center items-center p-2"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setIsModifyModalOpen(false);
+          }}
+        >
+          <div className="bg-white w-full max-w-[400px] rounded-lg overflow-hidden flex flex-col border border-slate-300 shadow-2xl my-auto">
+            <div
+              className="text-white px-2.5 py-1.5 flex justify-between items-center text-[10.5px] font-bold"
+              style={{ background: 'var(--secondary)' }}
+            >
+              <span>✏️ تعديل صنف في الفاتورة</span>
+              <span
+                style={{ cursor: 'pointer', fontSize: '18px' }}
+                onClick={() => setIsModifyModalOpen(false)}
+              >
+                &times;
+              </span>
+            </div>
+            <div className="p-2.5 flex flex-col gap-2 text-xs">
+              <div className="flex flex-col gap-0.5">
+                <div className="flex justify-between items-center">
+                  <label className="text-[9px] font-bold text-slate-700">اسم الصنف</label>
+                  {modifyStock !== null && (
+                    <span className="text-[8.5px] text-slate-500 font-mono">
+                      رصيد المخزن: <strong className={modifyStock <= 0 ? 'text-rose-600' : 'text-blue-600'}>{modifyStock}</strong>
+                    </span>
+                  )}
+                </div>
+                <input
+                  type="text"
+                  value={modifyName}
+                  readOnly
+                  style={{ background: '#f1f5f9' }}
+                  className="h-[24px] border border-slate-300 rounded px-1.5 text-[9.5px] font-bold text-slate-800"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div className="flex flex-col gap-0.5">
+                  <label className="text-[9px] font-bold text-slate-700">الكمية</label>
+                  <input
+                    type="number"
+                    step="any"
+                    min="0.01"
+                    value={modifyQty}
+                    onChange={(e) => setModifyQty(e.target.value)}
+                    className="h-[24px] border border-slate-300 rounded px-1.5 text-[9.5px] font-mono text-slate-900 font-bold"
+                  />
+                </div>
+                <div className="flex flex-col gap-0.5">
+                  <label className="text-[9px] font-bold text-slate-700">سعر البيع (ج.م)</label>
+                  <input
+                    type="number"
+                    step="any"
+                    min="0"
+                    value={modifyPrice}
+                    onChange={(e) => setModifyPrice(e.target.value)}
+                    className="h-[24px] border border-slate-300 rounded px-1.5 text-[9.5px] font-mono text-slate-900 font-bold"
+                  />
+                </div>
+              </div>
+              <div className="flex flex-col gap-0.5">
+                <label className="text-[9px] font-bold text-slate-700">الوصف / البيان</label>
+                <input
+                  type="text"
+                  value={modifySpec}
+                  onChange={(e) => setModifySpec(e.target.value)}
+                  placeholder="ملاحظات أو مواصفات خاصة..."
+                  className="h-[24px] border border-slate-300 rounded px-1.5 text-[9.5px] text-slate-800"
+                />
+              </div>
+
+              {/* Total preview */}
+              <div className="bg-slate-50 border border-slate-200 p-1.5 rounded flex justify-between items-center text-[10px] font-bold text-slate-800">
+                <span>الإجمالي المحسوب:</span>
+                <span className="font-mono text-emerald-700 font-black text-xs">
+                  {((parseFloat(modifyQty) || 0) * (parseFloat(modifyPrice) || 0)).toFixed(2)} ج.م
+                </span>
+              </div>
+
+              <div className="flex gap-1.5 mt-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (modifyIndex > -1) {
+                      removeItemFromInvoice(modifyIndex);
+                      setIsModifyModalOpen(false);
+                      showToast('تم حذف الصنف من الفاتورة', 'info');
+                    }
+                  }}
+                  className="px-2 py-1.5 bg-rose-50 text-rose-700 border border-rose-300 rounded text-[9.5px] font-bold cursor-pointer hover:bg-rose-100"
+                >
+                  🗑️ حذف
+                </button>
+                <button
+                  type="button"
+                  style={{ background: 'var(--accent)' }}
+                  className="flex-1 text-white py-1.5 rounded text-[10px] font-bold cursor-pointer"
+                  onClick={saveModifiedItem}
+                >
+                  ✓ حفظ التعديل والرجوع للفاتورة
+                </button>
+              </div>
             </div>
           </div>
         </div>

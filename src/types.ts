@@ -108,11 +108,14 @@ export interface User {
 
 export interface Customer {
   id: string;
+  code?: string;
   companyId?: string;
   branchId?: string;
   name: string;
   phone: string;
   balance: number;
+  openingBalance?: number;
+  balanceType?: 'debtor' | 'creditor' | 'balanced';
   taxNumber?: string;
   commercialReg?: string;
   address?: string;
@@ -134,11 +137,14 @@ export interface Customer {
 
 export interface Supplier {
   id: string;
+  code?: string;
   companyId?: string;
   branchId?: string;
   name: string;
   phone: string;
   balance: number;
+  openingBalance?: number;
+  balanceType?: 'creditor' | 'debtor' | 'balanced';
   taxNumber?: string;
   commercialReg?: string;
   address?: string;
@@ -349,15 +355,20 @@ export interface PurchaseInvoice {
 export interface CashTransaction {
   id: number;
   syncId?: string;
+  voucherNo?: string;
   companyId?: string;
   branchId?: string;
   date: string;
+  time?: string;
   type: 'receive' | 'pay' | 'deposit' | 'withdraw';
   method: 'drawer' | 'vodafone' | 'instapay' | 'bank';
   amount: number;
   note: string;
   customerName?: string;
   supplierName?: string;
+  expenseCategory?: string;
+  recipientName?: string;
+  payerName?: string;
   invoiceId?: number;
   status?: string;
   createdAt?: string;

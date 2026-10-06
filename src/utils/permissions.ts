@@ -226,7 +226,11 @@ export const PAGE_PERMISSION_MAP: Record<string, string[]> = {
   catalog: [], // Public store view
   purchases: ['purchases_view', 'purchases_create', 'purchases_edit'],
   cash: ['treasury_view', 'cash_receipt', 'cash_payment'],
+  receipts: ['receipts_view', 'cash_receipt', 'treasury_view'],
+  payments: ['payments_view', 'cash_payment', 'treasury_view'],
   accounts: ['customers_manage', 'customers_view', 'suppliers_manage', 'suppliers_view', 'accounts_view'],
+  customers: ['customers_view', 'customers_create', 'customers_edit', 'customers_manage', 'accounts_view'],
+  suppliers: ['suppliers_view', 'suppliers_create', 'suppliers_edit', 'suppliers_manage', 'accounts_view'],
   accounts_tree: ['accounts_view'],
   branches: ['company_settings', 'warehouses_manage'],
   e_invoicing: ['e_invoicing', 'company_settings'],

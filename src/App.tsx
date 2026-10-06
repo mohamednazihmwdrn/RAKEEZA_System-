@@ -952,8 +952,12 @@ export default function App() {
       catalog_manager: '🛍️ إدارة منتجات وأسعار الكتالوج الإلكتروني (Catalog Products & Pricing)',
       catalog: '🛍️ كتالوج المنتجات والمتجر الإلكتروني للعملاء (B2B / B2C Catalog)',
       purchases: '🛒 إدارة المشتريات والتوريدات',
-      cash: '💵 سندات القبض والصرف',
+      cash: '💵 سندات القبض والصرف والخزينة',
+      receipts: '📥 سندات القبض والتحصيل (Receipt Vouchers)',
+      payments: '📤 سندات الصرف والمصروفات (Payment & Expense Vouchers)',
       accounts: '📋 حسابات العملاء والموردين',
+      customers: '👥 إدارة وحسابات العملاء (Customers Management)',
+      suppliers: '🏢 إدارة وحسابات الموردين (Suppliers Management)',
       accounts_tree: '🌳 دليل الحسابات الشجري ومراكز التكلفة',
       items: '📦 إدارة الأصناف والمخزون',
       item_movement: '📦 سجل حركة الأصناف',
@@ -1093,9 +1097,17 @@ export default function App() {
       case 'purchases':
         return <PurchasesView appData={appData} onUpdateData={updateData} showToast={showToast} onInspectItem={handleInspectItem} />;
       case 'cash':
-        return <CashView appData={appData} onUpdateData={updateData} showToast={showToast} onInspectItem={handleInspectItem} />;
+        return <CashView appData={appData} onUpdateData={updateData} showToast={showToast} onInspectItem={handleInspectItem} initialTab="all" />;
+      case 'receipts':
+        return <CashView appData={appData} onUpdateData={updateData} showToast={showToast} onInspectItem={handleInspectItem} initialTab="receipt" />;
+      case 'payments':
+        return <CashView appData={appData} onUpdateData={updateData} showToast={showToast} onInspectItem={handleInspectItem} initialTab="pay" />;
       case 'accounts':
-        return <AccountsView appData={appData} onUpdateData={updateData} showToast={showToast} />;
+        return <AccountsView appData={appData} onUpdateData={updateData} showToast={showToast} initialTab="customers" onNavigate={handleNavigate} />;
+      case 'customers':
+        return <AccountsView appData={appData} onUpdateData={updateData} showToast={showToast} initialTab="customers" onNavigate={handleNavigate} />;
+      case 'suppliers':
+        return <AccountsView appData={appData} onUpdateData={updateData} showToast={showToast} initialTab="suppliers" onNavigate={handleNavigate} />;
       case 'accounts_tree':
         return <AccountsTreeView appData={appData} onUpdateData={updateData} showToast={showToast} />;
       case 'branches':

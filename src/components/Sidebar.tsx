@@ -12,6 +12,8 @@ import {
   Package,
   Wallet,
   Users,
+  ArrowDownLeft,
+  ArrowUpRight,
   CreditCard,
   UserCheck,
   Briefcase,
@@ -345,12 +347,41 @@ export const Sidebar: React.FC<SidebarProps> = ({
         {canAccessPage(currentUser, 'accounts') && (
           <div
             onClick={() => onNavigate('accounts')}
-            className={`min-h-[42px] px-4 py-2.5 cursor-pointer border-b border-white/5 transition flex items-center gap-2.5 ${navItemClass(
+            className={`min-h-[42px] px-4 py-2.5 cursor-pointer border-b border-white/5 transition flex items-center justify-between ${navItemClass(
               'accounts'
             )}`}
           >
-            <Users className="w-4 h-4 shrink-0 text-blue-300" />
-            <span className="font-medium text-xs sm:text-sm">حسابات العملاء والموردين</span>
+            <div className="flex items-center gap-2.5">
+              <Users className="w-4 h-4 shrink-0 text-blue-300" />
+              <span className="font-medium text-xs sm:text-sm">حسابات العملاء والموردين</span>
+            </div>
+            <span className="bg-blue-500/20 text-blue-300 border border-blue-500/40 text-[10px] px-1.5 py-0.5 rounded font-bold">دليل</span>
+          </div>
+        )}
+
+        {/* العملاء */}
+        {canAccessPage(currentUser, 'customers') && (
+          <div
+            onClick={() => onNavigate('customers')}
+            className={`min-h-[38px] pr-8 pl-4 py-2 cursor-pointer border-b border-white/5 transition flex items-center gap-2 ${navItemClass(
+              'customers'
+            )}`}
+          >
+            <Users className="w-3.5 h-3.5 shrink-0 text-blue-400" />
+            <span className="font-medium text-xs">إدارة العملاء</span>
+          </div>
+        )}
+
+        {/* الموردين */}
+        {canAccessPage(currentUser, 'suppliers') && (
+          <div
+            onClick={() => onNavigate('suppliers')}
+            className={`min-h-[38px] pr-8 pl-4 py-2 cursor-pointer border-b border-white/5 transition flex items-center gap-2 ${navItemClass(
+              'suppliers'
+            )}`}
+          >
+            <Building2 className="w-3.5 h-3.5 shrink-0 text-indigo-400" />
+            <span className="font-medium text-xs">إدارة الموردين</span>
           </div>
         )}
 
@@ -359,12 +390,41 @@ export const Sidebar: React.FC<SidebarProps> = ({
         {canAccessPage(currentUser, 'cash') && (
           <div
             onClick={() => onNavigate('cash')}
-            className={`min-h-[42px] px-4 py-2.5 cursor-pointer border-b border-white/5 transition flex items-center gap-2.5 ${navItemClass(
+            className={`min-h-[42px] px-4 py-2.5 cursor-pointer border-b border-white/5 transition flex items-center justify-between ${navItemClass(
               'cash'
             )}`}
           >
-            <Wallet className="w-4 h-4 shrink-0 text-emerald-400" />
-            <span className="font-medium text-xs sm:text-sm">سندات القبض والصرف والخزينة</span>
+            <div className="flex items-center gap-2.5">
+              <Wallet className="w-4 h-4 shrink-0 text-emerald-400" />
+              <span className="font-medium text-xs sm:text-sm">سندات القبض والصرف والخزينة</span>
+            </div>
+            <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[10px] px-1.5 py-0.5 rounded font-bold">خزينة</span>
+          </div>
+        )}
+
+        {/* سندات القبض */}
+        {canAccessPage(currentUser, 'receipts') && (
+          <div
+            onClick={() => onNavigate('receipts')}
+            className={`min-h-[38px] pr-8 pl-4 py-2 cursor-pointer border-b border-white/5 transition flex items-center gap-2 ${navItemClass(
+              'receipts'
+            )}`}
+          >
+            <ArrowDownLeft className="w-3.5 h-3.5 shrink-0 text-emerald-400" />
+            <span className="font-medium text-xs">سندات القبض (التحصيل)</span>
+          </div>
+        )}
+
+        {/* سندات الصرف */}
+        {canAccessPage(currentUser, 'payments') && (
+          <div
+            onClick={() => onNavigate('payments')}
+            className={`min-h-[38px] pr-8 pl-4 py-2 cursor-pointer border-b border-white/5 transition flex items-center gap-2 ${navItemClass(
+              'payments'
+            )}`}
+          >
+            <ArrowUpRight className="w-3.5 h-3.5 shrink-0 text-rose-400" />
+            <span className="font-medium text-xs">سندات الصرف والمصروفات</span>
           </div>
         )}
 
