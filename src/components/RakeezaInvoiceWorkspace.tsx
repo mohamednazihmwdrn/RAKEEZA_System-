@@ -235,22 +235,42 @@ export const RakeezaInvoiceWorkspace: React.FC<RakeezaInvoiceWorkspaceProps> = (
   // Helper to extract item price based on active pricing tier
   const getItemPriceForTier = (dbItem: any, tier: 'cash' | 'wholesale' | 'buy'): number => {
     if (!dbItem) return 0;
+    const cPrice = Number(dbItem.cashPrice || dbItem.salePrice || dbItem.price || 0);
+    const bPrice = Number(dbItem.buyPrice || dbItem.purchasePrice || dbItem.costPrice || 0);
+    const wPrice = Number(dbItem.wholesalePrice || dbItem.wholesaleSellingPrice || 0);
+
     if (tier === 'cash') {
-      return Number(dbItem.cashPrice || dbItem.salePrice || dbItem.price || 0);
+      if (cPrice > 0) return cPrice;
+      if (bPrice > 0) return Math.round(bPrice * 1.25 * 100) / 100;
+      return 0;
     }
+
     if (tier === 'wholesale') {
-      return Number(
-        dbItem.wholesalePrice ||
-        dbItem.wholesaleSellingPrice ||
-        (dbItem.cashPrice ? Number(dbItem.cashPrice) * 0.95 : 0) ||
-        dbItem.price ||
-        0
-      );
+      // If explicit wholesale price exists and differs from cash price, use it
+      if (wPrice > 0 && Math.abs(wPrice - cPrice) > 0.01) {
+        return wPrice;
+      }
+      // Otherwise calculate realistic wholesale price (10% discount from cash price, or 15% margin over cost)
+      if (cPrice > 0) {
+        return Math.round(cPrice * 0.90 * 100) / 100;
+      }
+      if (bPrice > 0) {
+        return Math.round(bPrice * 1.15 * 100) / 100;
+      }
+      return 0;
     }
+
     if (tier === 'buy') {
-      return Number(dbItem.buyPrice || dbItem.purchasePrice || dbItem.costPrice || 0);
+      // If purchase price exists, use it
+      if (bPrice > 0) return bPrice;
+      // Otherwise estimate standard purchase cost (approx 75% of cash price)
+      if (cPrice > 0) {
+        return Math.round(cPrice * 0.75 * 100) / 100;
+      }
+      return 0;
     }
-    return Number(dbItem.cashPrice || dbItem.salePrice || 0);
+
+    return cPrice || 0;
   };
 
   // 🔄 تغيير نظام التسعير (سعر نقدي / سعر جملة / سعر شراء) يُحدث أسعار كافة الأصناف فوراً
@@ -260,10 +280,43 @@ export const RakeezaInvoiceWorkspace: React.FC<RakeezaInvoiceWorkspaceProps> = (
     setCurrentInvoiceItems((prev) => {
       if (prev.length === 0) return prev;
       return prev.map((invItem) => {
-        const dbItem = localItemsDatabase.find(
-          (i) => i.code === invItem.code || (invItem.itemId && i.itemId === invItem.itemId)
-        );
-        const newPrice = dbItem ? getItemPriceForTier(dbItem, newTier) : invItem.price;
+        // Find in local database or in global appData items by code, itemId, or name
+        const dbItem =
+          localItemsDatabase.find(
+            (i) =>
+              (i.code && invItem.code && i.code === invItem.code) ||
+              (invItem.itemId && (i.itemId === invItem.itemId || i.id === invItem.itemId)) ||
+              (i.name && invItem.name && i.name.trim().toLowerCase() === invItem.name.trim().toLowerCase())
+          ) ||
+          appData.items?.find(
+            (i) =>
+              (i.code && invItem.code && i.code === invItem.code) ||
+              (invItem.itemId && i.id === invItem.itemId) ||
+              (i.name && invItem.name && i.name.trim().toLowerCase() === invItem.name.trim().toLowerCase())
+          );
+
+        let newPrice = 0;
+        if (dbItem) {
+          newPrice = getItemPriceForTier(dbItem, newTier);
+        }
+
+        // Fallback for custom items not in DB: adjust relative to current item price
+        if (newPrice <= 0) {
+          const currentP = Number(invItem.price || 0);
+          if (newTier === 'wholesale') {
+            newPrice = Math.round(currentP * 0.90 * 100) / 100;
+          } else if (newTier === 'buy') {
+            newPrice = Number(invItem.costPrice || (currentP > 0 ? Math.round(currentP * 0.75 * 100) / 100 : 0));
+          } else {
+            // cash
+            newPrice = currentP > 0 ? currentP : 10;
+          }
+        }
+
+        if (newPrice <= 0) {
+          newPrice = invItem.price;
+        }
+
         return {
           ...invItem,
           price: newPrice,
@@ -275,6 +328,13 @@ export const RakeezaInvoiceWorkspace: React.FC<RakeezaInvoiceWorkspaceProps> = (
     const tierName = newTier === 'cash' ? 'النقدي' : newTier === 'wholesale' ? 'الجملة' : 'الشراء';
     showToast(`تم تطبيق سعر ${tierName} على كافة بنود الفاتورة بنجاح`, 'info');
   };
+
+  // Sync pricing tier when initialPricingType prop changes
+  useEffect(() => {
+    if (initialPricingType && (initialPricingType === 'cash' || initialPricingType === 'wholesale' || initialPricingType === 'buy')) {
+      setActivePricingTier(initialPricingType);
+    }
+  }, [initialPricingType]);
 
   // Options & Payments Modal State
   const [isOptionsModalOpen, setIsOptionsModalOpen] = useState(false);
@@ -1889,6 +1949,43 @@ export const RakeezaInvoiceWorkspace: React.FC<RakeezaInvoiceWorkspaceProps> = (
                   />
                 </div>
               </div>
+              {/* أزرار التسعير السريعة داخل كارت الصنف */}
+              <div style={{ display: 'flex', gap: '3px', margin: '2px 0 4px 0' }}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const p = getItemPriceForTier(cardItem, 'cash');
+                    setCardPrice(p.toString());
+                  }}
+                  className="pricing-tier-btn"
+                  style={{ flex: 1, padding: '3px', fontSize: '8px', fontWeight: 'bold', background: '#dcfce7', color: '#166534', border: '1px solid #86efac', borderRadius: '3px', cursor: 'pointer' }}
+                >
+                  نقدي ({getItemPriceForTier(cardItem, 'cash').toFixed(2)})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const p = getItemPriceForTier(cardItem, 'wholesale');
+                    setCardPrice(p.toString());
+                  }}
+                  className="pricing-tier-btn"
+                  style={{ flex: 1, padding: '3px', fontSize: '8px', fontWeight: 'bold', background: '#e0e7ff', color: '#3730a3', border: '1px solid #a5b4fc', borderRadius: '3px', cursor: 'pointer' }}
+                >
+                  جملة ({getItemPriceForTier(cardItem, 'wholesale').toFixed(2)})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const p = getItemPriceForTier(cardItem, 'buy');
+                    setCardPrice(p.toString());
+                  }}
+                  className="pricing-tier-btn"
+                  style={{ flex: 1, padding: '3px', fontSize: '8px', fontWeight: 'bold', background: '#fee2e2', color: '#991b1b', border: '1px solid #fca5a5', borderRadius: '3px', cursor: 'pointer' }}
+                >
+                  شراء ({getItemPriceForTier(cardItem, 'buy').toFixed(2)})
+                </button>
+              </div>
+
               <div className="edit-card-grid">
                 <div className="field-inline">
                   <label>سعر الحركة:</label>

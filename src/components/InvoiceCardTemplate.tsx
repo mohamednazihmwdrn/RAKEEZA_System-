@@ -255,26 +255,26 @@ export const InvoiceCardTemplate: React.FC<InvoiceCardTemplateProps> = ({
             <table className="w-full border-collapse text-center text-xs">
               <thead className="bg-slate-100 text-slate-800 font-bold border-b border-slate-300">
                 <tr>
-                  <th className="border border-slate-200 p-2 text-right font-black" style={{ width: '30%' }}>
-                    اسم الصنف
-                  </th>
-                  <th className="border border-slate-200 p-2 text-right font-medium" style={{ width: '22%' }}>
+                  <th className="border border-slate-200 p-1.5 sm:p-2 text-right font-black text-[11px] sm:text-xs" style={{ width: '30%' }}>
                     الوصف
                   </th>
-                  <th className="border border-slate-200 p-2 font-bold" style={{ width: '8%' }}>
-                    الكمية
+                  <th className="border border-slate-200 p-1.5 sm:p-2 text-right font-medium text-[11px] sm:text-xs" style={{ width: '22%' }}>
+                    البيان
                   </th>
-                  <th className="border border-slate-200 p-2 font-bold" style={{ width: '12%' }}>
-                    السعر
+                  <th className="border border-slate-200 p-1.5 sm:p-2 font-bold text-[11px] sm:text-xs" style={{ width: '10%' }}>
+                    العدد
                   </th>
-                  <th className="border border-slate-200 p-2 font-bold" style={{ width: '8%' }}>
+                  <th className="border border-slate-200 p-1.5 sm:p-2 font-bold text-[11px] sm:text-xs" style={{ width: '12%' }}>
+                    سعر
+                  </th>
+                  <th className="border border-slate-200 p-1.5 sm:p-2 font-bold text-[10px] sm:text-xs" style={{ width: '7%' }}>
                     الخصم
                   </th>
-                  <th className="border border-slate-200 p-2 font-bold" style={{ width: '8%' }}>
+                  <th className="border border-slate-200 p-1.5 sm:p-2 font-bold text-[10px] sm:text-xs" style={{ width: '7%' }}>
                     الضريبة
                   </th>
-                  <th className="border border-slate-200 p-2 font-black" style={{ width: '12%' }}>
-                    الإجمالي
+                  <th className="border border-slate-200 p-1.5 sm:p-2 font-black text-[11px] sm:text-xs" style={{ width: '12%' }}>
+                    اجمالي
                   </th>
                 </tr>
               </thead>
@@ -303,23 +303,23 @@ export const InvoiceCardTemplate: React.FC<InvoiceCardTemplateProps> = ({
 
                     return (
                       <tr key={idx} className="bg-white hover:bg-slate-50 transition-colors">
-                        <td className="border border-slate-200 p-2 font-bold text-right text-slate-900 pr-2.5">
+                        <td className="border border-slate-200 p-1.5 sm:p-2 font-bold text-right text-slate-900 pr-2 text-[11px] sm:text-xs">
                           {item.name}
                         </td>
-                        <td className="border border-slate-200 p-2 text-right text-slate-600">
+                        <td className="border border-slate-200 p-1.5 sm:p-2 text-right text-slate-600 text-[10.5px] sm:text-xs">
                           {item.notes || '-'}
                         </td>
-                        <td className="border border-slate-200 p-2 font-mono font-bold text-slate-900">{item.qty}</td>
-                        <td className="border border-slate-200 p-2 font-mono font-bold text-slate-900">
+                        <td className="border border-slate-200 p-1.5 sm:p-2 font-mono font-bold text-slate-900 text-[11px] sm:text-xs">{item.qty}</td>
+                        <td className="border border-slate-200 p-1.5 sm:p-2 font-mono font-bold text-slate-900 text-[11px] sm:text-xs">
                           {parseFloat(item.price.toString()).toFixed(2)}
                         </td>
-                        <td className="border border-slate-200 p-2 font-mono text-[11px] text-slate-700">
+                        <td className="border border-slate-200 p-1.5 sm:p-2 font-mono text-[10px] sm:text-[11px] text-slate-700">
                           {discDisplay}
                         </td>
-                        <td className="border border-slate-200 p-2 font-mono text-[11px] text-slate-700">
+                        <td className="border border-slate-200 p-1.5 sm:p-2 font-mono text-[10px] sm:text-[11px] text-slate-700">
                           {taxDisplay}
                         </td>
-                        <td className="border border-slate-200 p-2 font-black font-mono text-slate-950">
+                        <td className="border border-slate-200 p-1.5 sm:p-2 font-black font-mono text-slate-950 text-[11px] sm:text-xs">
                           {parseFloat(item.total.toString()).toFixed(2)}
                         </td>
                       </tr>
