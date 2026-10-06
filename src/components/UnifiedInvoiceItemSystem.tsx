@@ -570,7 +570,7 @@ export const UnifiedInvoiceItemSystem: React.FC<UnifiedInvoiceItemSystemProps> =
         className="w-full min-h-[48px] py-3.5 px-4 bg-gradient-to-r from-blue-700 via-indigo-700 to-blue-800 hover:from-blue-800 hover:to-indigo-900 active:scale-[0.99] text-white rounded-xl font-black text-sm sm:text-base shadow-md transition-all cursor-pointer flex items-center justify-center gap-2.5 touch-manipulation"
       >
         <Boxes className="w-5 h-5 text-amber-300 shrink-0" />
-        <span>فتح دليل الأصناف والمجموعات (إضافة صنف للفاتورة)</span>
+        <span>إضافة صنف</span>
       </button>
 
       {/* 2. Items List / Table with Touch Optimization */}
@@ -582,7 +582,7 @@ export const UnifiedInvoiceItemSystem: React.FC<UnifiedInvoiceItemSystemProps> =
             </div>
             <p className="font-bold text-slate-700 text-sm">لم يتم إدراج أي أصناف في الفاتورة بعد</p>
             <p className="text-xs text-slate-400">
-              اضغط على زر "فتح دليل الأصناف والمجموعات" أعلاه لاختيار وتعديل الأصناف بسهولة
+              اضغط على زر "إضافة صنف" أعلاه لاختيار وتعديل الأصناف بسهولة
             </p>
           </div>
         ) : (
@@ -592,14 +592,13 @@ export const UnifiedInvoiceItemSystem: React.FC<UnifiedInvoiceItemSystemProps> =
               <table className="w-full border-collapse text-xs text-center border border-slate-300">
                 <thead>
                   <tr className="bg-slate-100 text-slate-800 font-bold sticky top-0 border-b-2 border-slate-300 z-10">
-                    <th className="py-3 px-2 text-center w-14 border border-slate-300 font-bold text-slate-700">كود</th>
-                    <th className="py-3 px-3 text-right border border-slate-300 font-black text-slate-900">اسم الصنف</th>
-                    <th className="py-3 px-2 text-center w-16 border border-slate-300 font-bold text-slate-800">الكمية</th>
-                    <th className="py-3 px-2 text-center w-24 border border-slate-300 font-bold text-slate-800">السعر</th>
+                    <th className="py-3 px-3 text-right border border-slate-300 font-black text-slate-900">الوصف / الصنف</th>
+                    <th className="py-3 px-2 text-center w-16 border border-slate-300 font-bold text-slate-800">العدد</th>
+                    <th className="py-3 px-2 text-center w-24 border border-slate-300 font-bold text-slate-800">سعر</th>
                     <th className="py-3 px-2 text-center w-20 border border-slate-300 font-bold text-slate-800">الخصم</th>
                     <th className="py-3 px-2 text-center w-20 border border-slate-300 font-bold text-slate-800">الضريبة</th>
-                    <th className="py-3 px-3 text-right border border-slate-300 font-bold text-slate-800">الوصف</th>
-                    <th className="py-3 px-3 text-center w-24 border border-slate-300 font-black text-slate-900">الإجمالي</th>
+                    <th className="py-3 px-3 text-right border border-slate-300 font-bold text-slate-800">ملاحظات</th>
+                    <th className="py-3 px-3 text-center w-24 border border-slate-300 font-black text-slate-900">اجمالي</th>
                     <th className="py-3 px-2 text-center w-20 border border-slate-300 font-bold text-slate-800">إجراء</th>
                   </tr>
                 </thead>
@@ -616,9 +615,6 @@ export const UnifiedInvoiceItemSystem: React.FC<UnifiedInvoiceItemSystemProps> =
                     };
                     return (
                       <tr key={index} className="bg-white hover:bg-slate-100 transition-colors border-b border-slate-200">
-                        <td className="py-2.5 px-2 font-mono font-black text-black border border-slate-300">
-                          <span className="bg-slate-100 px-1 py-0.5 rounded border border-slate-300">{item.code}</span>
-                        </td>
                         <td className="py-2.5 px-3 text-right font-black text-black border border-slate-300 text-xs sm:text-sm">{item.name}</td>
                         <td className="py-2.5 px-2 font-mono font-black text-black border border-slate-300 text-xs sm:text-sm">{item.qty}</td>
                         <td className="py-2.5 px-2 font-mono font-black text-black border border-slate-300 text-xs sm:text-sm">
@@ -683,9 +679,6 @@ export const UnifiedInvoiceItemSystem: React.FC<UnifiedInvoiceItemSystemProps> =
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0">
                         <div className="flex items-center gap-1.5 flex-wrap">
-                          <span className="font-mono text-[11px] bg-slate-100 text-black border border-slate-300 px-2 py-0.5 rounded font-black">
-                            {item.code}
-                          </span>
                           <span className="font-black text-black text-sm">{item.name}</span>
                         </div>
                         {item.spec && (

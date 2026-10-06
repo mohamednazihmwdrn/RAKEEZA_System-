@@ -959,13 +959,23 @@ export const SalesView: React.FC<SalesViewProps> = ({ appData, onUpdateData, sho
           <button
             onClick={() => openCreateModal('return_nagdi', 'cash')}
             className="min-h-[40px] bg-rose-600 hover:bg-rose-700 active:bg-rose-800 text-white px-3 sm:px-4 py-2 rounded-lg text-xs md:text-sm font-bold transition cursor-pointer flex items-center justify-center gap-1.5 shadow-xs border border-rose-700 hover:scale-[1.02]"
-            title="مرتجع مبيعات نقدي وصرف نقدية للعميل"
+            title="مرتجع مبيعات نقدي بسعر القطاعي"
           >
             <RotateCcw className="w-4 h-4 shrink-0" />
             <span>↩ مرتجع نقدي</span>
           </button>
 
-          {/* 5. مرتجع أجل */}
+          {/* 5. مرتجع جملة */}
+          <button
+            onClick={() => openCreateModal('return_nagdi', 'wholesale')}
+            className="min-h-[40px] bg-red-800 hover:bg-red-900 active:bg-red-950 text-white px-3 sm:px-4 py-2 rounded-lg text-xs md:text-sm font-bold transition cursor-pointer flex items-center justify-center gap-1.5 shadow-xs border border-red-900 hover:scale-[1.02]"
+            title="مرتجع مبيعات جملة بسعر الجملة"
+          >
+            <RotateCcw className="w-4 h-4 shrink-0" />
+            <span>↩ مرتجع جملة</span>
+          </button>
+
+          {/* 6. مرتجع أجل */}
           <button
             onClick={() => openCreateModal('return_ajel', 'cash')}
             className="min-h-[40px] bg-purple-700 hover:bg-purple-800 active:bg-purple-900 text-white px-3 sm:px-4 py-2 rounded-lg text-xs md:text-sm font-bold transition cursor-pointer flex items-center justify-center gap-1.5 shadow-xs border border-purple-800 hover:scale-[1.02]"

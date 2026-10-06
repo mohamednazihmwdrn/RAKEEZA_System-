@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { X, Plus, Percent, DollarSign, Calculator, Check, Search, Package, Sparkles, ChevronDown, Tag } from 'lucide-react';
 import { InvoiceItem, Item } from '../types';
 
@@ -41,6 +41,7 @@ export const InvoiceItemModal: React.FC<InvoiceItemModalProps> = ({
   const [showCatalogDropdown, setShowCatalogDropdown] = useState<boolean>(false);
   const [searchFilter, setSearchFilter] = useState<string>('');
   const [validationError, setValidationError] = useState<string>('');
+  const qtyInputRef = useRef<HTMLInputElement | null>(null);
 
   // Prepopulate if editing
   useEffect(() => {
@@ -152,6 +153,14 @@ export const InvoiceItemModal: React.FC<InvoiceItemModalProps> = ({
     }
 
     setShowCatalogDropdown(false);
+
+    // Auto-Focus & Select on Quantity immediately
+    setTimeout(() => {
+      if (qtyInputRef.current) {
+        qtyInputRef.current.focus();
+        qtyInputRef.current.select();
+      }
+    }, 60);
   };
 
   const handleSave = () => {
@@ -374,6 +383,7 @@ export const InvoiceItemModal: React.FC<InvoiceItemModalProps> = ({
               </label>
               <div className="relative">
                 <input
+                  ref={qtyInputRef}
                   id="input-item-qty"
                   type="number"
                   min="0"
