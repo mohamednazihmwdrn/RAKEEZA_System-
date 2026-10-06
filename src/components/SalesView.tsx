@@ -883,19 +883,19 @@ export const SalesView: React.FC<SalesViewProps> = ({ appData, onUpdateData, sho
   return (
     <div className="w-full max-w-7xl mx-auto flex flex-col space-y-4">
       {/* 🏛️ ترويسة قسم إدارة المبيعات والفواتير - ثيم أزرق ملكي مميز */}
-      <div className="bg-gradient-to-r from-blue-950 via-indigo-900 to-blue-800 text-white p-3 sm:p-4 rounded-xl shadow-sm border border-blue-700/50 flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
+      <div className="bg-gradient-to-r from-slate-950 via-indigo-950 to-blue-900 text-white p-3 sm:p-4 rounded-xl shadow-sm border border-indigo-700/50 flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-lg bg-blue-600/40 border border-blue-400/40 flex items-center justify-center shrink-0">
+          <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-lg bg-indigo-600/40 border border-indigo-400/40 flex items-center justify-center shrink-0 shadow-inner">
             <DollarSign className="w-6 h-6 text-emerald-300" />
           </div>
           <div>
             <h2 className="text-sm sm:text-base font-black tracking-wide flex items-center gap-2">
               <span>إدارة فواتير المبيعات والإيرادات</span>
-              <span className="text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 px-2 py-0.5 rounded-full font-bold">
-                ركيزة ERP
+              <span className="text-[10px] bg-indigo-500/30 text-indigo-200 border border-indigo-400/30 px-2 py-0.5 rounded-full font-bold">
+                💵 قسم المبيعات
               </span>
             </h2>
-            <p className="text-[11px] text-blue-200">
+            <p className="text-[11px] text-indigo-200/90">
               تسجيل ومتابعة فواتير البيع النقدي والجملة والآجل ومردودات المبيعات بدقة وسرعة
             </p>
           </div>
@@ -903,27 +903,27 @@ export const SalesView: React.FC<SalesViewProps> = ({ appData, onUpdateData, sho
 
         {/* Quick KPI badges */}
         <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
-          <div className="bg-white/10 backdrop-blur-xs border border-white/15 px-2.5 py-1 rounded-lg flex flex-col items-center">
-            <span className="text-[9px] text-blue-200">عدد الفواتير</span>
+          <div className="bg-indigo-950/60 backdrop-blur-xs border border-indigo-500/30 px-2.5 py-1 rounded-lg flex flex-col items-center">
+            <span className="text-[9px] text-indigo-200">عدد الفواتير</span>
             <span className="text-xs font-black font-mono text-white">{appData.salesInvoices?.length || 0}</span>
           </div>
-          <div className="bg-white/10 backdrop-blur-xs border border-white/15 px-2.5 py-1 rounded-lg flex flex-col items-center">
-            <span className="text-[9px] text-blue-200">إجمالي المبيعات</span>
+          <div className="bg-indigo-950/60 backdrop-blur-xs border border-indigo-500/30 px-2.5 py-1 rounded-lg flex flex-col items-center">
+            <span className="text-[9px] text-indigo-200">إجمالي المبيعات</span>
             <span className="text-xs font-black font-mono text-emerald-300">{totalSalesAmount.toLocaleString()} ج.م</span>
           </div>
-          <div className="bg-white/10 backdrop-blur-xs border border-white/15 px-2.5 py-1 rounded-lg flex flex-col items-center">
-            <span className="text-[9px] text-blue-200">المحصل نقداً</span>
+          <div className="bg-indigo-950/60 backdrop-blur-xs border border-indigo-500/30 px-2.5 py-1 rounded-lg flex flex-col items-center">
+            <span className="text-[9px] text-indigo-200">المحصل نقداً</span>
             <span className="text-xs font-black font-mono text-blue-200">{totalSalesPaid.toLocaleString()} ج.م</span>
           </div>
-          <div className="bg-white/10 backdrop-blur-xs border border-white/15 px-2.5 py-1 rounded-lg flex flex-col items-center">
-            <span className="text-[9px] text-blue-200">المتبقي ذمم</span>
+          <div className="bg-indigo-950/60 backdrop-blur-xs border border-indigo-500/30 px-2.5 py-1 rounded-lg flex flex-col items-center">
+            <span className="text-[9px] text-indigo-200">المتبقي ذمم</span>
             <span className="text-xs font-black font-mono text-amber-300">{totalSalesRemaining.toLocaleString()} ج.م</span>
           </div>
         </div>
       </div>
 
       {/* Action Bar */}
-      <div className="bg-white p-3 sm:p-4 rounded-xl shadow-xs border border-slate-200/90 flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between">
+      <div className="bg-indigo-50/40 p-3 sm:p-4 rounded-xl shadow-xs border border-indigo-200/80 flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between">
         <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2">
           {/* 1. بيع نقدي */}
           <button
@@ -997,7 +997,7 @@ export const SalesView: React.FC<SalesViewProps> = ({ appData, onUpdateData, sho
             <select
               value={selectedBranchFilter}
               onChange={(e) => setSelectedBranchFilter(e.target.value)}
-              className="min-h-[40px] px-3 py-2 border border-slate-300 bg-slate-50 text-slate-800 font-semibold rounded-lg text-xs focus:ring-2 focus:ring-blue-600/30 focus:border-blue-600 focus:outline-none cursor-pointer"
+              className="min-h-[40px] px-3 py-2 border border-indigo-300 bg-white text-indigo-950 font-semibold rounded-lg text-xs focus:ring-2 focus:ring-indigo-600/30 focus:border-indigo-600 focus:outline-none cursor-pointer"
             >
               <option value="all">جميع الفروع ({appData.salesInvoices?.length || 0})</option>
               {appData.branches.map((b) => (
@@ -1008,13 +1008,13 @@ export const SalesView: React.FC<SalesViewProps> = ({ appData, onUpdateData, sho
             </select>
           )}
           <div className="relative w-full sm:w-64">
-            <Search className="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <Search className="w-4 h-4 text-indigo-500 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
             <input
               type="text"
-              placeholder="بحث برقم الفاتورة أو العميل..."
+              placeholder="بحث برقم الفاتورة أو اسم العميل..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full min-h-[40px] pr-9 pl-3 py-2 border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-blue-600/30 focus:border-blue-600 focus:outline-none"
+              className="w-full min-h-[40px] pr-9 pl-3 py-2 border border-indigo-300 bg-white rounded-lg text-xs focus:ring-2 focus:ring-indigo-600/30 focus:border-indigo-600 focus:outline-none placeholder:text-slate-400"
             />
           </div>
         </div>
@@ -1032,10 +1032,10 @@ export const SalesView: React.FC<SalesViewProps> = ({ appData, onUpdateData, sho
             return (
               <div
                 key={inv.id}
-                className="bg-white rounded-2xl p-4 shadow-xs border-2 border-slate-300 space-y-3 hover:border-slate-500 transition"
+                className="bg-white rounded-2xl p-4 shadow-xs border-2 border-indigo-200/90 space-y-3 hover:border-indigo-400 transition"
               >
                 {/* Top Row: Invoice ID, Date & Type Badge */}
-                <div className="flex items-center justify-between border-b-2 border-slate-200 pb-2">
+                <div className="flex items-center justify-between border-b border-indigo-100 pb-2">
                   <div
                     onClick={() => {
                       setSelectedInvoice(inv);
@@ -1043,8 +1043,11 @@ export const SalesView: React.FC<SalesViewProps> = ({ appData, onUpdateData, sho
                     }}
                     className="flex items-center gap-1.5 cursor-pointer"
                   >
-                    <span className="text-blue-900 font-black text-sm font-mono">#{inv.id}</span>
-                    <span className="text-black font-bold text-xs font-mono">| {inv.date}</span>
+                    <span className="text-indigo-950 font-black text-sm font-mono">#{inv.id}</span>
+                    <span className="text-slate-600 font-bold text-xs font-mono">| {inv.date}</span>
+                    <span className="text-[10px] bg-indigo-100 text-indigo-900 border border-indigo-300 px-1.5 py-0.2 rounded font-bold">
+                      مبيعات
+                    </span>
                   </div>
                   <span
                     className={`px-2.5 py-0.5 rounded-full text-xs font-black border ${
@@ -1180,15 +1183,15 @@ export const SalesView: React.FC<SalesViewProps> = ({ appData, onUpdateData, sho
       <div className="hidden md:block bg-white rounded-xl shadow-xs border-2 border-slate-300 overflow-x-auto">
         <table className="w-full text-right text-xs md:text-sm border-collapse border border-slate-300">
           <thead>
-            <tr className="bg-[#0f172a] text-white">
-              <th className="p-3 font-black border border-slate-700 text-white">رقم الفاتورة</th>
-              <th className="p-3 font-black border border-slate-700 text-white">العميل</th>
-              {appData.branches && appData.branches.length > 1 && <th className="p-3 font-black border border-slate-700 text-white">الفرع</th>}
-              <th className="p-3 font-black border border-slate-700 text-white">التاريخ</th>
-              <th className="p-3 font-black border border-slate-700 text-white">القيمة (ج.م)</th>
-              <th className="p-3 font-black border border-slate-700 text-white">النوع</th>
-              <th className="p-3 font-black border border-slate-700 text-white">الحالة</th>
-              <th className="p-3 font-black border border-slate-700 text-white">الإجراءات</th>
+            <tr className="bg-gradient-to-r from-slate-950 via-indigo-950 to-blue-950 text-indigo-100">
+              <th className="p-3 font-black border border-indigo-900 text-indigo-100">رقم الفاتورة</th>
+              <th className="p-3 font-black border border-indigo-900 text-indigo-100">العميل</th>
+              {appData.branches && appData.branches.length > 1 && <th className="p-3 font-black border border-indigo-900 text-indigo-100">الفرع</th>}
+              <th className="p-3 font-black border border-indigo-900 text-indigo-100">التاريخ</th>
+              <th className="p-3 font-black border border-indigo-900 text-indigo-100">القيمة (ج.م)</th>
+              <th className="p-3 font-black border border-indigo-900 text-indigo-100">النوع</th>
+              <th className="p-3 font-black border border-indigo-900 text-indigo-100">الحالة</th>
+              <th className="p-3 font-black border border-indigo-900 text-indigo-100">الإجراءات</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-300 bg-white">
