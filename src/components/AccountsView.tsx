@@ -62,24 +62,24 @@ export const AccountsView: React.FC<AccountsViewProps> = ({
 
   return (
     <div className="w-full flex flex-col space-y-4 text-slate-800" dir="rtl">
-      {/* 🧭 Classic Windows ERP Navigation Tabs Bar */}
-      <div className="bg-slate-100 p-1.5 rounded-xl border border-slate-300 flex items-center justify-between gap-2 shadow-xs select-none">
-        <div className="flex items-center gap-1.5 flex-1">
+      {/* 🧭 Classic Windows ERP Navigation Tabs Bar - خلفية بيضاء متناسقة */}
+      <div className="bg-white p-2 rounded-xl border-2 border-slate-200 flex items-center justify-between gap-2 shadow-xs select-none">
+        <div className="flex items-center gap-2 flex-1">
           {/* Customers Tab */}
           <button
             type="button"
             onClick={() => setActiveTab('customers')}
             className={`flex-1 sm:flex-initial px-4 py-2 rounded-lg text-xs sm:text-sm font-bold transition flex items-center justify-center gap-2 cursor-pointer ${
               activeTab === 'customers'
-                ? 'bg-blue-700 text-white shadow-xs'
-                : 'bg-transparent text-slate-700 hover:bg-slate-200/80 hover:text-slate-900'
+                ? 'bg-blue-600 text-white shadow-xs'
+                : 'bg-slate-50 text-slate-700 hover:bg-slate-100 hover:text-slate-900 border border-slate-200'
             }`}
           >
             <Users className="w-4 h-4 shrink-0" />
             <span>دليل وحسابات العملاء</span>
             <span
               className={`text-[10px] px-2 py-0.5 rounded-full font-mono font-bold ${
-                activeTab === 'customers' ? 'bg-blue-900/60 text-blue-100' : 'bg-slate-200 text-slate-700'
+                activeTab === 'customers' ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-700'
               }`}
             >
               {appData.customers.length}
@@ -92,15 +92,15 @@ export const AccountsView: React.FC<AccountsViewProps> = ({
             onClick={() => setActiveTab('suppliers')}
             className={`flex-1 sm:flex-initial px-4 py-2 rounded-lg text-xs sm:text-sm font-bold transition flex items-center justify-center gap-2 cursor-pointer ${
               activeTab === 'suppliers'
-                ? 'bg-indigo-700 text-white shadow-xs'
-                : 'bg-transparent text-slate-700 hover:bg-slate-200/80 hover:text-slate-900'
+                ? 'bg-indigo-600 text-white shadow-xs'
+                : 'bg-slate-50 text-slate-700 hover:bg-slate-100 hover:text-slate-900 border border-slate-200'
             }`}
           >
             <Building2 className="w-4 h-4 shrink-0" />
             <span>دليل وحسابات الموردين</span>
             <span
               className={`text-[10px] px-2 py-0.5 rounded-full font-mono font-bold ${
-                activeTab === 'suppliers' ? 'bg-indigo-900/60 text-indigo-100' : 'bg-slate-200 text-slate-700'
+                activeTab === 'suppliers' ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-700'
               }`}
             >
               {appData.suppliers.length}

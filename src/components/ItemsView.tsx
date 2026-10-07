@@ -33,6 +33,99 @@ export const ItemsView: React.FC<ItemsViewProps> = ({
   const [purchasePrice, setPurchasePrice] = useState('');
   const [salePrice, setSalePrice] = useState('');
 
+  // 🌳 نافذة إضافة هيكل شجري متكامل (مجموعة > تصنيف > نوع > صنف)
+  const [isHierarchyModalOpen, setIsHierarchyModalOpen] = useState(false);
+  const [hierGroup, setHierGroup] = useState('');
+  const [hierCompany, setHierCompany] = useState('');
+  const [hierType, setHierType] = useState('');
+  const [hierItemName, setHierItemName] = useState('');
+  const [hierItemCode, setHierItemCode] = useState('');
+  const [hierQty, setHierQty] = useState('0');
+  const [hierPurchasePrice, setHierPurchasePrice] = useState('0');
+  const [hierSalePrice, setHierSalePrice] = useState('0');
+  const [hierWholesalePrice, setHierWholesalePrice] = useState('0');
+
+  const handleOpenAddHierarchy = () => {
+    setHierGroup('');
+    setHierCompany('');
+    setHierType('');
+    setHierItemName('');
+    setHierItemCode('');
+    setHierQty('');
+    setHierPurchasePrice('');
+    setHierSalePrice('');
+    setHierWholesalePrice('');
+    setIsHierarchyModalOpen(true);
+  };
+
+  const handleSaveHierarchyItem = () => {
+    const grp = hierGroup.trim();
+    const comp = hierCompany.trim();
+    const typ = hierType.trim();
+    const itemName = hierItemName.trim();
+    const code = hierItemCode.trim() || ('UA' + String((appData.items?.length || 0) + 101));
+
+    if (!grp) {
+      showToast('يرجى تحديد أو كتابة اسم المجموعة الرئيسية', 'warning');
+      return;
+    }
+    if (!comp) {
+      showToast('يرجى تحديد أو كتابة اسم التصنيف أو الشركة', 'warning');
+      return;
+    }
+    if (!typ) {
+      showToast('يرجى تحديد أو كتابة اسم النوع أو القسم الفرعي', 'warning');
+      return;
+    }
+    if (!itemName) {
+      showToast('يرجى إدخال اسم الصنف النهائي', 'warning');
+      return;
+    }
+
+    const pPrice = parseFloat(hierPurchasePrice) || 0;
+    const sPrice = parseFloat(hierSalePrice) || (pPrice > 0 ? pPrice * 1.25 : 10);
+    const wPrice = parseFloat(hierWholesalePrice) || (sPrice > 0 ? sPrice * 0.90 : pPrice * 1.15);
+    const qVal = parseFloat(hierQty) || 0;
+    const currentUser = appData.users.find((u) => u.id === appData.currentUser) || appData.users[0];
+    const nowIso = new Date().toISOString();
+
+    const newItem: Item = {
+      id: 'i_' + Date.now(),
+      code,
+      name: itemName,
+      description: `${grp} > ${comp} > ${typ}`,
+      category: grp,
+      material: comp,
+      unit: typ,
+      quantity: qVal,
+      purchasePrice: pPrice,
+      salePrice: sPrice,
+      wholesalePrice: wPrice,
+      companyId: appData.companyId || 'COMP-000001',
+      branchId: appData.activeBranchId || 'main',
+      movements: [],
+      createdAt: nowIso,
+      updatedAt: nowIso,
+      createdBy: currentUser?.name || 'مدير النظام',
+      createdByUserId: currentUser?.id,
+      createdByUserCode: currentUser?.code || 1,
+    };
+
+    const updatedData = {
+      ...appData,
+      items: [...appData.items, newItem],
+    };
+
+    onUpdateData(updatedData, {
+      action: 'create_item_hierarchy',
+      module: 'الأصناف والمخزون',
+      details: `إضافة هيكل شجري كامل للصنف: ${grp} > ${comp} > ${typ} > ${itemName}`,
+    });
+
+    setIsHierarchyModalOpen(false);
+    showToast(`تمت إضافة المجموعة [${grp}] والتصنيف [${comp}] والنوع [${typ}] والصنف [${itemName}] بنجاح`, 'success');
+  };
+
   const filteredItems = appData.items.filter((item) => {
     const s = searchTerm.toLowerCase();
     return item.name?.toLowerCase().includes(s) || item.description?.toLowerCase().includes(s);
@@ -212,9 +305,18 @@ export const ItemsView: React.FC<ItemsViewProps> = ({
             <>
               <button
                 onClick={handleOpenAdd}
-                className="min-h-[42px] bg-[#2e7d32] hover:bg-[#1b5e20] active:bg-[#124116] text-white px-4 py-2 rounded-xl text-xs md:text-sm font-bold transition cursor-pointer flex items-center justify-center gap-1 shadow-xs flex-1 sm:flex-initial"
+                className="min-h-[42px] bg-[#2e7d32] hover:bg-[#1b5e20] active:bg-[#124116] text-white px-3.5 py-2 rounded-xl text-xs md:text-sm font-bold transition cursor-pointer flex items-center justify-center gap-1 shadow-xs flex-1 sm:flex-initial"
               >
                 ➕ إضافة صنف جديد
+              </button>
+              <button
+                type="button"
+                onClick={handleOpenAddHierarchy}
+                className="min-h-[42px] bg-emerald-700 hover:bg-emerald-800 active:bg-emerald-900 text-white px-3.5 py-2 rounded-xl text-xs md:text-sm font-bold transition cursor-pointer flex items-center justify-center gap-1.5 shadow-xs flex-1 sm:flex-initial"
+                title="إضافة مجموعة وبداخلها تصنيف وبداخلة نوع وبداخلة الصنف لتسهيل وتسريع الاختيار"
+              >
+                <span>🌳</span>
+                <span>+ شجرة صنف (مجموعة &gt; تصنيف &gt; نوع &gt; صنف)</span>
               </button>
               <TableActionButtons
                 onPrint={handlePrintItems}
@@ -656,6 +758,167 @@ export const ItemsView: React.FC<ItemsViewProps> = ({
                 value={salePrice}
                 onChange={(e) => setSalePrice(e.target.value)}
                 className="w-full p-2.5 border-2 border-gray-200 rounded-xl focus:border-[#1a237e] focus:outline-none"
+              />
+            </div>
+          </div>
+        </div>
+      </Modal>
+
+      {/* 🌳 Modal إضافة هيكل شجري متكامل (مجموعة > تصنيف > نوع > صنف) */}
+      <Modal
+        isOpen={isHierarchyModalOpen}
+        title="🌳 إضافة شجرة صنف (مجموعة > تصنيف > نوع > صنف)"
+        onClose={() => setIsHierarchyModalOpen(false)}
+        footer={
+          <div className="flex flex-col sm:flex-row gap-2 w-full">
+            <button
+              onClick={handleSaveHierarchyItem}
+              className="min-h-[44px] bg-emerald-700 hover:bg-emerald-800 active:bg-emerald-900 text-white px-6 py-2.5 rounded-xl font-bold cursor-pointer transition shadow-xs flex-1 sm:flex-initial text-center flex items-center justify-center gap-1.5"
+            >
+              <span>💾</span>
+              <span>حفظ وتثبيت الشجرة</span>
+            </button>
+            <button
+              onClick={() => setIsHierarchyModalOpen(false)}
+              className="min-h-[44px] bg-gray-400 hover:bg-gray-500 active:bg-gray-600 text-white px-6 py-2.5 rounded-xl font-bold cursor-pointer transition flex-1 sm:flex-initial text-center"
+            >
+              إلغاء
+            </button>
+          </div>
+        }
+      >
+        <div className="space-y-3.5 text-xs md:text-sm">
+          <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3 text-emerald-800 text-[11px] leading-relaxed">
+            💡 يتيح لك هذا النموذج إدراج هيكل شجري متسلسل للصنف الجديد: اختر أو اكتب اسم المجموعة ثم التصنيف والنوع والصنف النهائي لتسهيل الاختيار السريع عند إصدار الفواتير.
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            {/* 1. المجموعة */}
+            <div>
+              <label className="block font-bold text-teal-800 mb-1">1. المجموعة الرئيسية</label>
+              <input
+                type="text"
+                list="itemsViewGroupsList"
+                placeholder="مثال: بويات..."
+                value={hierGroup}
+                onChange={(e) => setHierGroup(e.target.value)}
+                className="w-full p-2.5 border-2 border-teal-200 rounded-xl focus:border-teal-600 focus:outline-none font-bold"
+              />
+              <datalist id="itemsViewGroupsList">
+                {[...new Set(appData.items.map((i) => i.category).filter(Boolean))].map((g) => (
+                  <option key={g} value={g} />
+                ))}
+              </datalist>
+            </div>
+
+            {/* 2. التصنيف */}
+            <div>
+              <label className="block font-bold text-blue-800 mb-1">2. التصنيف / الشركة</label>
+              <input
+                type="text"
+                list="itemsViewCompaniesList"
+                placeholder="مثال: يوتن، GLC..."
+                value={hierCompany}
+                onChange={(e) => setHierCompany(e.target.value)}
+                className="w-full p-2.5 border-2 border-blue-200 rounded-xl focus:border-blue-600 focus:outline-none font-bold"
+              />
+              <datalist id="itemsViewCompaniesList">
+                {[...new Set(appData.items.map((i) => i.material).filter(Boolean))].map((c) => (
+                  <option key={c} value={c} />
+                ))}
+              </datalist>
+            </div>
+
+            {/* 3. النوع */}
+            <div>
+              <label className="block font-bold text-purple-800 mb-1">3. النوع / القسم الفرعي</label>
+              <input
+                type="text"
+                list="itemsViewTypesList"
+                placeholder="مثال: مطفي داخلي..."
+                value={hierType}
+                onChange={(e) => setHierType(e.target.value)}
+                className="w-full p-2.5 border-2 border-purple-200 rounded-xl focus:border-purple-600 focus:outline-none font-bold"
+              />
+              <datalist id="itemsViewTypesList">
+                {[...new Set(appData.items.map((i) => i.unit).filter(Boolean))].map((t) => (
+                  <option key={t} value={t} />
+                ))}
+              </datalist>
+            </div>
+          </div>
+
+          {/* 4. اسم الصنف النهائي */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="sm:col-span-2">
+              <label className="block font-bold text-slate-900 mb-1">4. اسم الصنف النهائي</label>
+              <input
+                type="text"
+                placeholder="اسم الصنف بالكامل..."
+                value={hierItemName}
+                onChange={(e) => setHierItemName(e.target.value)}
+                className="w-full p-2.5 border-2 border-indigo-300 rounded-xl focus:border-indigo-600 focus:outline-none font-bold"
+              />
+            </div>
+            <div>
+              <label className="block font-bold text-slate-700 mb-1">كود الصنف</label>
+              <input
+                type="text"
+                placeholder="كود الصنف..."
+                value={hierItemCode}
+                onChange={(e) => setHierItemCode(e.target.value)}
+                className="w-full p-2.5 border-2 border-gray-200 rounded-xl focus:border-indigo-600 focus:outline-none text-center font-mono"
+              />
+            </div>
+          </div>
+
+          {/* الأسعار والكمية */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-slate-50 p-3 rounded-xl border border-slate-200">
+            <div>
+              <label className="block font-bold text-slate-700 mb-1 text-[11px]">الكمية بالمخزن</label>
+              <input
+                type="number"
+                min="0"
+                step="any"
+                value={hierQty}
+                onChange={(e) => setHierQty(e.target.value)}
+                className="w-full p-2 border border-slate-300 rounded-lg text-center font-bold"
+              />
+            </div>
+            <div>
+              <label className="block font-bold text-rose-700 mb-1 text-[11px]">سعر الشراء (التكلفة)</label>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                placeholder="0.00"
+                value={hierPurchasePrice}
+                onChange={(e) => setHierPurchasePrice(e.target.value)}
+                className="w-full p-2 border border-rose-300 rounded-lg text-center font-bold text-rose-700"
+              />
+            </div>
+            <div>
+              <label className="block font-bold text-emerald-700 mb-1 text-[11px]">سعر البيع (قطاعي)</label>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                placeholder="0.00"
+                value={hierSalePrice}
+                onChange={(e) => setHierSalePrice(e.target.value)}
+                className="w-full p-2 border border-emerald-300 rounded-lg text-center font-bold text-emerald-700"
+              />
+            </div>
+            <div>
+              <label className="block font-bold text-amber-700 mb-1 text-[11px]">سعر الجملة</label>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                placeholder="0.00"
+                value={hierWholesalePrice}
+                onChange={(e) => setHierWholesalePrice(e.target.value)}
+                className="w-full p-2 border border-amber-300 rounded-lg text-center font-bold text-amber-700"
               />
             </div>
           </div>

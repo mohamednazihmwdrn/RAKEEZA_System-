@@ -139,24 +139,24 @@ export const CashView: React.FC<CashViewProps> = ({
 
   return (
     <div className="w-full flex flex-col space-y-4 text-slate-800" dir="rtl">
-      {/* 🧭 Classic Windows ERP Navigation Tabs Bar */}
-      <div className="bg-slate-100 p-1.5 rounded-xl border border-slate-300 flex items-center justify-between gap-2 shadow-xs select-none">
-        <div className="flex items-center gap-1.5 flex-1">
+      {/* 🧭 Classic Windows ERP Navigation Tabs Bar - خلفية بيضاء متناسقة */}
+      <div className="bg-white p-2 rounded-xl border-2 border-slate-200 flex items-center justify-between gap-2 shadow-xs select-none">
+        <div className="flex items-center gap-2 flex-1">
           {/* Receipts Tab */}
           <button
             type="button"
             onClick={() => setActiveTab('receipt')}
             className={`flex-1 sm:flex-initial px-4 py-2 rounded-lg text-xs sm:text-sm font-bold transition flex items-center justify-center gap-2 cursor-pointer ${
               activeTab === 'receipt'
-                ? 'bg-emerald-700 text-white shadow-xs'
-                : 'bg-transparent text-slate-700 hover:bg-slate-200/80 hover:text-slate-900'
+                ? 'bg-emerald-600 text-white shadow-xs'
+                : 'bg-slate-50 text-slate-700 hover:bg-slate-100 hover:text-slate-900 border border-slate-200'
             }`}
           >
             <ArrowDownLeft className="w-4 h-4 shrink-0" />
             <span>سندات القبض (التحصيل)</span>
             <span
               className={`text-[10px] px-2 py-0.5 rounded-full font-mono font-bold ${
-                activeTab === 'receipt' ? 'bg-emerald-900/60 text-emerald-100' : 'bg-slate-200 text-slate-700'
+                activeTab === 'receipt' ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-700'
               }`}
             >
               {receiptCount}
@@ -169,15 +169,15 @@ export const CashView: React.FC<CashViewProps> = ({
             onClick={() => setActiveTab('pay')}
             className={`flex-1 sm:flex-initial px-4 py-2 rounded-lg text-xs sm:text-sm font-bold transition flex items-center justify-center gap-2 cursor-pointer ${
               activeTab === 'pay'
-                ? 'bg-rose-700 text-white shadow-xs'
-                : 'bg-transparent text-slate-700 hover:bg-slate-200/80 hover:text-slate-900'
+                ? 'bg-rose-600 text-white shadow-xs'
+                : 'bg-slate-50 text-slate-700 hover:bg-slate-100 hover:text-slate-900 border border-slate-200'
             }`}
           >
             <ArrowUpRight className="w-4 h-4 shrink-0" />
             <span>سندات الصرف والمصروفات</span>
             <span
               className={`text-[10px] px-2 py-0.5 rounded-full font-mono font-bold ${
-                activeTab === 'pay' ? 'bg-rose-900/60 text-rose-100' : 'bg-slate-200 text-slate-700'
+                activeTab === 'pay' ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-700'
               }`}
             >
               {paymentCount}
@@ -190,8 +190,8 @@ export const CashView: React.FC<CashViewProps> = ({
             onClick={() => setActiveTab('closing')}
             className={`flex-1 sm:flex-initial px-4 py-2 rounded-lg text-xs sm:text-sm font-bold transition flex items-center justify-center gap-2 cursor-pointer ${
               activeTab === 'closing'
-                ? 'bg-blue-800 text-white shadow-xs'
-                : 'bg-transparent text-slate-700 hover:bg-slate-200/80 hover:text-slate-900'
+                ? 'bg-blue-600 text-white shadow-xs'
+                : 'bg-slate-50 text-slate-700 hover:bg-slate-100 hover:text-slate-900 border border-slate-200'
             }`}
           >
             <Wallet className="w-4 h-4 shrink-0" />

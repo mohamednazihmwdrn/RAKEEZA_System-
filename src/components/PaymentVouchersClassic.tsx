@@ -454,33 +454,33 @@ export const PaymentVouchersClassic: React.FC<PaymentVouchersClassicProps> = ({
 
   return (
     <div className="w-full flex flex-col space-y-4 text-slate-800" dir="rtl">
-      {/* 🏛️ Classic Header with Live Clock */}
-      <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-rose-950 text-white rounded-xl p-3 sm:p-4 shadow-sm border border-slate-700/80 flex flex-wrap justify-between items-center gap-3">
+      {/* 🏛️ Classic Header with Live Clock - خلفية بيضاء وكتابة سوداء متناسقة مع الواجهة الرئيسية */}
+      <div className="bg-white text-slate-900 rounded-xl p-3 sm:p-4 shadow-xs border-2 border-slate-200 flex flex-wrap justify-between items-center gap-3">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-lg bg-rose-600/30 border border-rose-400/40 flex items-center justify-center text-rose-300 shadow-inner">
+          <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-lg bg-rose-50 border border-rose-200 flex items-center justify-center text-rose-700 shadow-2xs">
             <ArrowUpRight className="w-6 h-6" />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-base sm:text-lg font-black tracking-wide text-white">سندات الصرف والمصروفات - ركيزة</h1>
-              <span className="bg-rose-500/20 text-rose-300 border border-rose-400/30 text-[10px] px-2 py-0.5 rounded font-mono font-bold">
-                ERP Windows Classic
+              <h1 className="text-base sm:text-lg font-black tracking-wide text-slate-900">سندات الصرف والمصروفات - ركيزة</h1>
+              <span className="bg-rose-50 text-rose-800 border border-rose-200 text-[10px] px-2 py-0.5 rounded font-bold">
+                📤 قسم سندات الصرف
               </span>
             </div>
-            <p className="text-xs text-slate-300 mt-0.5">
+            <p className="text-xs text-slate-600 mt-0.5 font-medium">
               صرف وسداد دفعات الموردين، المصروفات التشغيلية والعمومية، وطباعة إيصالات الصرف
             </p>
           </div>
         </div>
 
         {/* Live Digital Clock */}
-        <div className="bg-slate-950/70 border border-slate-700/80 rounded-lg px-3 py-1.5 text-left font-mono">
-          <div className="flex items-center gap-1.5 text-emerald-400 text-xs sm:text-sm font-bold tracking-wider">
-            <Clock className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />
+        <div className="bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 text-left font-mono shadow-2xs">
+          <div className="flex items-center gap-1.5 text-rose-700 text-xs sm:text-sm font-bold tracking-wider">
+            <Clock className="w-3.5 h-3.5 text-rose-600 animate-pulse" />
             <span>{currentTime || '--:--:--'}</span>
           </div>
-          <div className="text-[10px] text-slate-400 flex items-center gap-1 mt-0.5">
-            <Calendar className="w-3 h-3 text-slate-400" />
+          <div className="text-[10px] text-slate-500 flex items-center gap-1 mt-0.5 font-semibold">
+            <Calendar className="w-3 h-3 text-slate-500" />
             <span>{currentDate}</span>
           </div>
         </div>

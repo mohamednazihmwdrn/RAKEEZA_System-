@@ -357,20 +357,20 @@ export const SuppliersManagerClassic: React.FC<SuppliersManagerClassicProps> = (
 
   return (
     <div className="w-full flex flex-col space-y-4 text-slate-800" dir="rtl">
-      {/* 🏛️ Classic Header with Live Clock */}
-      <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-indigo-950 text-white rounded-xl p-3 sm:p-4 shadow-sm border border-slate-700/80 flex flex-wrap justify-between items-center gap-3">
+      {/* 🏛️ Classic Header with Live Clock - خلفية بيضاء وكتابة سوداء متناسقة مع الواجهة الرئيسية */}
+      <div className="bg-white text-slate-900 rounded-xl p-3 sm:p-4 shadow-xs border-2 border-slate-200 flex flex-wrap justify-between items-center gap-3">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-lg bg-indigo-600/30 border border-indigo-400/40 flex items-center justify-center text-indigo-300 shadow-inner">
+          <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-lg bg-indigo-50 border border-indigo-200 flex items-center justify-center text-indigo-700 shadow-2xs">
             <Building2 className="w-6 h-6" />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-base sm:text-lg font-black tracking-wide text-white">إدارة الموردين - ركيزة</h1>
-              <span className="bg-indigo-500/20 text-indigo-300 border border-indigo-400/30 text-[10px] px-2 py-0.5 rounded font-mono font-bold">
-                ERP Windows Classic
+              <h1 className="text-base sm:text-lg font-black tracking-wide text-slate-900">إدارة حسابات الموردين - ركيزة</h1>
+              <span className="bg-indigo-50 text-indigo-800 border border-indigo-200 text-[10px] px-2 py-0.5 rounded font-bold">
+                🏢 قسم الموردين
               </span>
             </div>
-            <p className="text-xs text-slate-300 mt-0.5">
+            <p className="text-xs text-slate-600 mt-0.5 font-medium">
               دليل الموردين وشركات التوريد، الالتزامات والمستحقات، وسندات الصرف
             </p>
           </div>
@@ -378,13 +378,13 @@ export const SuppliersManagerClassic: React.FC<SuppliersManagerClassicProps> = (
 
         {/* Live Digital Clock & System Badge */}
         <div className="flex items-center gap-3">
-          <div className="bg-slate-950/70 border border-slate-700/80 rounded-lg px-3 py-1.5 text-left font-mono">
-            <div className="flex items-center gap-1.5 text-emerald-400 text-xs sm:text-sm font-bold tracking-wider">
-              <Clock className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />
+          <div className="bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 text-left font-mono shadow-2xs">
+            <div className="flex items-center gap-1.5 text-indigo-700 text-xs sm:text-sm font-bold tracking-wider">
+              <Clock className="w-3.5 h-3.5 text-indigo-600 animate-pulse" />
               <span>{currentTime || '--:--:--'}</span>
             </div>
-            <div className="text-[10px] text-slate-400 flex items-center gap-1 mt-0.5">
-              <Calendar className="w-3 h-3 text-slate-400" />
+            <div className="text-[10px] text-slate-500 flex items-center gap-1 mt-0.5 font-semibold">
+              <Calendar className="w-3 h-3 text-slate-500" />
               <span>{currentDate}</span>
             </div>
           </div>
@@ -832,17 +832,17 @@ export const SuppliersManagerClassic: React.FC<SuppliersManagerClassicProps> = (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-2xs z-50 flex items-center justify-center p-3 select-none animate-fade-in" dir="rtl">
           <div className="bg-white rounded-xl shadow-2xl border border-slate-300 w-full max-w-4xl max-h-[92vh] flex flex-col overflow-hidden">
             {/* Modal Header */}
-            <div className="bg-gradient-to-r from-slate-900 to-indigo-950 text-white px-4 py-3 flex items-center justify-between border-b border-slate-700">
+            <div className="bg-white text-slate-900 px-4 py-3 flex items-center justify-between border-b-2 border-slate-200">
               <div className="flex items-center gap-2">
-                <FileText className="w-5 h-5 text-indigo-300" />
-                <h3 className="font-bold text-sm">
-                  كشف حساب المورد: <span className="text-indigo-300 font-mono">{statementSupplier.name}</span>
+                <FileText className="w-5 h-5 text-indigo-600" />
+                <h3 className="font-bold text-sm text-slate-900">
+                  كشف حساب المورد: <span className="text-indigo-700 font-mono font-bold">{statementSupplier.name}</span>
                 </h3>
               </div>
               <button
                 type="button"
                 onClick={() => setStatementSupplier(null)}
-                className="w-7 h-7 rounded-lg hover:bg-white/10 text-slate-300 hover:text-white flex items-center justify-center transition cursor-pointer"
+                className="w-7 h-7 rounded-lg hover:bg-slate-100 text-slate-500 hover:text-slate-800 flex items-center justify-center transition cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>

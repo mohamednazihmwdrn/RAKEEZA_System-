@@ -445,7 +445,63 @@ export const UnifiedInvoiceItemSystem: React.FC<UnifiedInvoiceItemSystemProps> =
     if (editingIndex > -1) {
       updated[editingIndex] = itemObj;
     } else {
-      updated.push(itemObj);
+      // 🔍 فحص ما إذا كان البند مضافاً مسبقاً في الفاتورة:
+      const s = (itemObj.spec || '').trim();
+      let targetIdx = -1;
+
+      if (s !== '') {
+        // إذا كُتب له وصف أو بيان مخصص: يتطابق فقط إذا كان هناك بند بنفس الوصف تماماً
+        targetIdx = updated.findIndex((r) => {
+          const isSame =
+            (r.code && itemObj.code && r.code.trim().toLowerCase() === itemObj.code.trim().toLowerCase()) ||
+            (r.itemId && itemObj.itemId && String(r.itemId) === String(itemObj.itemId)) ||
+            (r.name && itemObj.name && r.name.trim().toLowerCase() === itemObj.name.trim().toLowerCase());
+          return isSame && (r.spec || '').trim() === s;
+        });
+      } else {
+        // إذا لم يُكتب أي وصف أو بيان: يزيد العدد على البند القائم (الخالي من الوصف)
+        targetIdx = updated.findIndex((r) => {
+          const isSame =
+            (r.code && itemObj.code && r.code.trim().toLowerCase() === itemObj.code.trim().toLowerCase()) ||
+            (r.itemId && itemObj.itemId && String(r.itemId) === String(itemObj.itemId)) ||
+            (r.name && itemObj.name && r.name.trim().toLowerCase() === itemObj.name.trim().toLowerCase());
+          return isSame && (r.spec || '').trim() === '';
+        });
+
+        if (targetIdx === -1) {
+          targetIdx = updated.findIndex((r) =>
+            (r.code && itemObj.code && r.code.trim().toLowerCase() === itemObj.code.trim().toLowerCase()) ||
+            (r.itemId && itemObj.itemId && String(r.itemId) === String(itemObj.itemId)) ||
+            (r.name && itemObj.name && r.name.trim().toLowerCase() === itemObj.name.trim().toLowerCase())
+          );
+        }
+      }
+
+      if (targetIdx > -1) {
+        const existing = updated[targetIdx];
+        const combinedQty = Number((existing.qty + itemObj.qty).toFixed(2));
+        const effectivePrice = itemObj.price > 0 ? itemObj.price : existing.price;
+        const discVal = existing.discVal || 0;
+        const discType = existing.discType || 'percent';
+        const taxVal = existing.taxVal || 0;
+        const taxType = existing.taxType || 'percent';
+
+        const actualDisc = discType === 'percent' ? (effectivePrice * combinedQty) * (discVal / 100) : (discVal * combinedQty);
+        const baseAfterDisc = (effectivePrice * combinedQty) - actualDisc;
+        const actualTax = taxType === 'percent' ? baseAfterDisc * (taxVal / 100) : (taxVal * combinedQty);
+        const total = baseAfterDisc + actualTax;
+
+        updated[targetIdx] = {
+          ...existing,
+          qty: combinedQty,
+          price: effectivePrice,
+          actualDisc,
+          actualTax,
+          total,
+        };
+      } else {
+        updated.push(itemObj);
+      }
     }
 
     onItemsChange(updated);

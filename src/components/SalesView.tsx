@@ -882,20 +882,20 @@ export const SalesView: React.FC<SalesViewProps> = ({ appData, onUpdateData, sho
 
   return (
     <div className="w-full max-w-7xl mx-auto flex flex-col space-y-4">
-      {/* 🏛️ ترويسة قسم إدارة المبيعات والفواتير - ثيم أزرق ملكي مميز */}
-      <div className="bg-gradient-to-r from-slate-950 via-indigo-950 to-blue-900 text-white p-3 sm:p-4 rounded-xl shadow-sm border border-indigo-700/50 flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
+      {/* 🏛️ ترويسة قسم إدارة المبيعات والفواتير - خلفية بيضاء وكتابة سوداء متناسقة مع الواجهة الرئيسية */}
+      <div className="bg-white text-slate-900 p-3 sm:p-4 rounded-xl shadow-xs border-2 border-slate-200 flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-lg bg-indigo-600/40 border border-indigo-400/40 flex items-center justify-center shrink-0 shadow-inner">
-            <DollarSign className="w-6 h-6 text-emerald-300" />
+          <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-lg bg-blue-50 border border-blue-200 flex items-center justify-center shrink-0 shadow-2xs">
+            <DollarSign className="w-6 h-6 text-blue-600" />
           </div>
           <div>
             <h2 className="text-sm sm:text-base font-black tracking-wide flex items-center gap-2">
-              <span>إدارة فواتير المبيعات والإيرادات</span>
-              <span className="text-[10px] bg-indigo-500/30 text-indigo-200 border border-indigo-400/30 px-2 py-0.5 rounded-full font-bold">
+              <span className="text-slate-900 font-black">إدارة فواتير المبيعات والإيرادات</span>
+              <span className="text-[10px] bg-blue-50 text-blue-700 border border-blue-200 px-2 py-0.5 rounded-full font-bold">
                 💵 قسم المبيعات
               </span>
             </h2>
-            <p className="text-[11px] text-indigo-200/90">
+            <p className="text-[11px] text-slate-600 font-medium">
               تسجيل ومتابعة فواتير البيع النقدي والجملة والآجل ومردودات المبيعات بدقة وسرعة
             </p>
           </div>
@@ -903,21 +903,21 @@ export const SalesView: React.FC<SalesViewProps> = ({ appData, onUpdateData, sho
 
         {/* Quick KPI badges */}
         <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
-          <div className="bg-indigo-950/60 backdrop-blur-xs border border-indigo-500/30 px-2.5 py-1 rounded-lg flex flex-col items-center">
-            <span className="text-[9px] text-indigo-200">عدد الفواتير</span>
-            <span className="text-xs font-black font-mono text-white">{appData.salesInvoices?.length || 0}</span>
+          <div className="bg-slate-50 border border-slate-200 px-3 py-1 rounded-lg flex flex-col items-center shadow-2xs">
+            <span className="text-[9px] text-slate-500 font-bold">عدد الفواتير</span>
+            <span className="text-xs font-black font-mono text-slate-900">{appData.salesInvoices?.length || 0}</span>
           </div>
-          <div className="bg-indigo-950/60 backdrop-blur-xs border border-indigo-500/30 px-2.5 py-1 rounded-lg flex flex-col items-center">
-            <span className="text-[9px] text-indigo-200">إجمالي المبيعات</span>
-            <span className="text-xs font-black font-mono text-emerald-300">{totalSalesAmount.toLocaleString()} ج.م</span>
+          <div className="bg-slate-50 border border-slate-200 px-3 py-1 rounded-lg flex flex-col items-center shadow-2xs">
+            <span className="text-[9px] text-slate-500 font-bold">إجمالي المبيعات</span>
+            <span className="text-xs font-black font-mono text-emerald-600">{totalSalesAmount.toLocaleString()} ج.م</span>
           </div>
-          <div className="bg-indigo-950/60 backdrop-blur-xs border border-indigo-500/30 px-2.5 py-1 rounded-lg flex flex-col items-center">
-            <span className="text-[9px] text-indigo-200">المحصل نقداً</span>
-            <span className="text-xs font-black font-mono text-blue-200">{totalSalesPaid.toLocaleString()} ج.م</span>
+          <div className="bg-slate-50 border border-slate-200 px-3 py-1 rounded-lg flex flex-col items-center shadow-2xs">
+            <span className="text-[9px] text-slate-500 font-bold">المحصل نقداً</span>
+            <span className="text-xs font-black font-mono text-blue-600">{totalSalesPaid.toLocaleString()} ج.م</span>
           </div>
-          <div className="bg-indigo-950/60 backdrop-blur-xs border border-indigo-500/30 px-2.5 py-1 rounded-lg flex flex-col items-center">
-            <span className="text-[9px] text-indigo-200">المتبقي ذمم</span>
-            <span className="text-xs font-black font-mono text-amber-300">{totalSalesRemaining.toLocaleString()} ج.م</span>
+          <div className="bg-slate-50 border border-slate-200 px-3 py-1 rounded-lg flex flex-col items-center shadow-2xs">
+            <span className="text-[9px] text-slate-500 font-bold">المتبقي ذمم</span>
+            <span className="text-xs font-black font-mono text-amber-600">{totalSalesRemaining.toLocaleString()} ج.م</span>
           </div>
         </div>
       </div>

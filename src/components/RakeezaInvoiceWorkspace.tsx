@@ -29,6 +29,9 @@ export interface WorkspaceItemRow {
   total: number;
   itemId?: string;
   costPrice?: number;
+  cashPrice?: number;
+  wholesalePrice?: number;
+  buyPrice?: number;
 }
 
 export interface WorkspacePayRow {
@@ -74,12 +77,86 @@ export const RakeezaInvoiceWorkspace: React.FC<RakeezaInvoiceWorkspaceProps> = (
   });
 
   // Invoice type (nagdi / ajel / return_nagdi / return_ajel)
-  const selectedInvoiceType: 'nagdi' | 'ajel' | 'return_nagdi' | 'return_ajel' = useMemo(() => {
+  const [selectedInvoiceType, setSelectedInvoiceType] = useState<'nagdi' | 'ajel' | 'return_nagdi' | 'return_ajel'>(() => {
     if (editingInvoice?.type) return editingInvoice.type;
     return initialInvoiceType || 'nagdi';
-  }, [editingInvoice, initialInvoiceType]);
+  });
+
+  useEffect(() => {
+    if (initialInvoiceType) {
+      setSelectedInvoiceType(initialInvoiceType);
+    }
+  }, [initialInvoiceType]);
 
   const isReturn = selectedInvoiceType.startsWith('return_');
+
+  // 🎨 هوية الفاتورة اللونيّة الديناميكية طبقاً للأنظمة العالمية (لكل نوع حركة لون وعنوان مختلف)
+  const invoiceTheme = useMemo(() => {
+    if (isSale) {
+      if (selectedInvoiceType === 'return_nagdi' || selectedInvoiceType === 'return_ajel') {
+        return {
+          bg: 'linear-gradient(135deg, #881337 0%, #be123c 100%)',
+          border: '#e11d48',
+          badgeText: selectedInvoiceType === 'return_ajel' ? '↩ مرتجع مبيعات آجل' : '↩ مرتجع مبيعات نقدي',
+          icon: 'fa-rotate-left',
+        };
+      }
+      if (selectedInvoiceType === 'ajel') {
+        return {
+          bg: 'linear-gradient(135deg, #78350f 0%, #b45309 100%)',
+          border: '#d97706',
+          badgeText: '⏳ فاتورة مبيعات آجل',
+          icon: 'fa-clock',
+        };
+      }
+      if (activePricingTier === 'wholesale') {
+        return {
+          bg: 'linear-gradient(135deg, #1e1b4b 0%, #3730a3 100%)',
+          border: '#4f46e5',
+          badgeText: '🏷️ فاتورة مبيعات جملة',
+          icon: 'fa-tags',
+        };
+      }
+      return {
+        bg: 'linear-gradient(135deg, #064e3b 0%, #047857 100%)',
+        border: '#059669',
+        badgeText: '💵 فاتورة مبيعات نقدي',
+        icon: 'fa-cash-register',
+      };
+    } else {
+      // Purchases
+      if (selectedInvoiceType === 'return_nagdi' || selectedInvoiceType === 'return_ajel') {
+        return {
+          bg: 'linear-gradient(135deg, #7f1d1d 0%, #991b1b 100%)',
+          border: '#dc2626',
+          badgeText: selectedInvoiceType === 'return_ajel' ? '↩ مرتجع شراء آجل' : '↩ مرتجع شراء نقدي',
+          icon: 'fa-rotate-left',
+        };
+      }
+      if (selectedInvoiceType === 'ajel') {
+        return {
+          bg: 'linear-gradient(135deg, #713f12 0%, #9a3412 100%)',
+          border: '#ea580c',
+          badgeText: '⏳ فاتورة شراء آجل (ذمم موردين)',
+          icon: 'fa-file-invoice-dollar',
+        };
+      }
+      if (activePricingTier === 'wholesale') {
+        return {
+          bg: 'linear-gradient(135deg, #164e63 0%, #0e7490 100%)',
+          border: '#0891b2',
+          badgeText: '📦 فاتورة توريد / مشتريات جملة',
+          icon: 'fa-boxes-packing',
+        };
+      }
+      return {
+        bg: 'linear-gradient(135deg, #134e4a 0%, #0f766e 100%)',
+        border: '#0d9488',
+        badgeText: '🛒 فاتورة شراء نقدي',
+        icon: 'fa-cart-shopping',
+      };
+    }
+  }, [isSale, selectedInvoiceType, activePricingTier]);
 
   // Window Maximize Toggle
   const [isMaximized, setIsMaximized] = useState(false);
@@ -176,17 +253,11 @@ export const RakeezaInvoiceWorkspace: React.FC<RakeezaInvoiceWorkspaceProps> = (
     }
   }, [matchedParty, isSale, appData]);
 
-  // Integrated Items Database
+  // Integrated Items Database (يعتمد حصرياً على أصناف المستخدم المسجلة دون أي أصناف وهمية مسبقة)
   const [localItemsDatabase, setLocalItemsDatabase] = useState<any[]>(() => {
-    const defaults = [
-      { itemId: "def_1", code: "UA001", name: "بستلة أكسن مط أبيض", group: "بويات", company: "يوتن (Jotun)", typeName: "مطفي داخلي", stock: 25, buyPrice: 200.0, cashPrice: 243.0, wholesalePrice: 225.0, wholesaleBuyPrice: 190.0 },
-      { itemId: "def_2", code: "UA002", name: "فينيل شيلد يوتن", group: "بويات", company: "يوتن (Jotun)", typeName: "مطفي داخلي", stock: 12, buyPrice: 310.0, cashPrice: 360.0, wholesalePrice: 340.0, wholesaleBuyPrice: 295.0 },
-      { itemId: "def_3", code: "GL001", name: "معجون دايتون GLC", group: "بويات", company: "GLC", typeName: "معجون ومعالجة", stock: 40, buyPrice: 150.0, cashPrice: 180.0, wholesalePrice: 165.0, wholesaleBuyPrice: 140.0 },
-    ];
+    if (!appData.items || appData.items.length === 0) return [];
 
-    if (!appData.items || appData.items.length === 0) return defaults;
-
-    const mapped = appData.items.map((i, idx) => {
+    return appData.items.map((i, idx) => {
       const bPrice = Number(i.purchasePrice || i.costPrice || 0);
       const cPrice = Number(i.salePrice || i.price || 0);
       const wPrice = Number(i.wholesalePrice || i.wholesaleSellingPrice || (cPrice > 0 ? cPrice * 0.95 : bPrice * 1.1));
@@ -205,13 +276,6 @@ export const RakeezaInvoiceWorkspace: React.FC<RakeezaInvoiceWorkspaceProps> = (
         itemId: i.id,
       };
     });
-
-    const existingCodes = new Set(mapped.map((m) => m.code));
-    defaults.forEach((d) => {
-      if (!existingCodes.has(d.code)) mapped.push(d);
-    });
-
-    return mapped;
   });
 
   // Current Invoice Items
@@ -235,14 +299,14 @@ export const RakeezaInvoiceWorkspace: React.FC<RakeezaInvoiceWorkspaceProps> = (
   // Helper to extract item price based on active pricing tier
   const getItemPriceForTier = (dbItem: any, tier: 'cash' | 'wholesale' | 'buy'): number => {
     if (!dbItem) return 0;
-    const cPrice = Number(dbItem.cashPrice || dbItem.salePrice || dbItem.price || 0);
+    const cPrice = Number(dbItem.cashPrice || dbItem.salePrice || dbItem.normalSellingPrice || dbItem.price || 0);
     const bPrice = Number(dbItem.buyPrice || dbItem.purchasePrice || dbItem.costPrice || 0);
     const wPrice = Number(dbItem.wholesalePrice || dbItem.wholesaleSellingPrice || 0);
 
     if (tier === 'cash') {
       if (cPrice > 0) return cPrice;
       if (bPrice > 0) return Math.round(bPrice * 1.25 * 100) / 100;
-      return 0;
+      return 10;
     }
 
     if (tier === 'wholesale') {
@@ -257,59 +321,81 @@ export const RakeezaInvoiceWorkspace: React.FC<RakeezaInvoiceWorkspaceProps> = (
       if (bPrice > 0) {
         return Math.round(bPrice * 1.15 * 100) / 100;
       }
-      return 0;
+      return 9;
     }
 
     if (tier === 'buy') {
-      // If purchase price exists, use it
-      if (bPrice > 0) return bPrice;
+      // If purchase price exists and differs from cash price, use it
+      if (bPrice > 0 && Math.abs(bPrice - cPrice) > 0.01) {
+        return bPrice;
+      }
       // Otherwise estimate standard purchase cost (approx 75% of cash price)
       if (cPrice > 0) {
         return Math.round(cPrice * 0.75 * 100) / 100;
       }
-      return 0;
+      if (bPrice > 0) return bPrice;
+      return 7.5;
     }
 
-    return cPrice || 0;
+    return cPrice || 10;
   };
 
   // 🔄 تغيير نظام التسعير (سعر نقدي / سعر جملة / سعر شراء) يُحدث أسعار كافة الأصناف فوراً
   const handleChangePricingTier = (newTier: 'cash' | 'wholesale' | 'buy') => {
     setActivePricingTier(newTier);
 
+    // تحديث السعر فوراً داخل كارت الصنف إذا كان الكارت مفتوحاً حالياً
+    if (cardItem) {
+      const updatedCardPrice = getItemPriceForTier(cardItem, newTier);
+      if (updatedCardPrice > 0) {
+        setCardPrice(updatedCardPrice.toString());
+      }
+    }
+
     setCurrentInvoiceItems((prev) => {
       if (prev.length === 0) return prev;
       return prev.map((invItem) => {
-        // Find in local database or in global appData items by code, itemId, or name
-        const dbItem =
-          localItemsDatabase.find(
-            (i) =>
-              (i.code && invItem.code && i.code === invItem.code) ||
-              (invItem.itemId && (i.itemId === invItem.itemId || i.id === invItem.itemId)) ||
-              (i.name && invItem.name && i.name.trim().toLowerCase() === invItem.name.trim().toLowerCase())
-          ) ||
-          appData.items?.find(
-            (i) =>
-              (i.code && invItem.code && i.code === invItem.code) ||
-              (invItem.itemId && i.id === invItem.itemId) ||
-              (i.name && invItem.name && i.name.trim().toLowerCase() === invItem.name.trim().toLowerCase())
-          );
-
         let newPrice = 0;
-        if (dbItem) {
-          newPrice = getItemPriceForTier(dbItem, newTier);
+
+        // 1. الاسترجاع من الأسعار المحفوظة مسبقاً في السطر
+        if (newTier === 'cash' && invItem.cashPrice && invItem.cashPrice > 0) {
+          newPrice = invItem.cashPrice;
+        } else if (newTier === 'wholesale' && invItem.wholesalePrice && invItem.wholesalePrice > 0) {
+          newPrice = invItem.wholesalePrice;
+        } else if (newTier === 'buy' && (invItem.buyPrice || invItem.costPrice)) {
+          newPrice = Number(invItem.buyPrice || invItem.costPrice || 0);
         }
 
-        // Fallback for custom items not in DB: adjust relative to current item price
+        // 2. البحث في قاعدة الأصناف المحلية أو أصناف التطبيق
         if (newPrice <= 0) {
-          const currentP = Number(invItem.price || 0);
+          const dbItem =
+            localItemsDatabase.find(
+              (i) =>
+                (i.code && invItem.code && i.code.trim().toLowerCase() === invItem.code.trim().toLowerCase()) ||
+                (invItem.itemId && (String(i.itemId) === String(invItem.itemId) || String(i.id) === String(invItem.itemId))) ||
+                (i.name && invItem.name && i.name.trim().toLowerCase() === invItem.name.trim().toLowerCase())
+            ) ||
+            appData.items?.find(
+              (i) =>
+                (i.code && invItem.code && i.code.trim().toLowerCase() === invItem.code.trim().toLowerCase()) ||
+                (invItem.itemId && String(i.id) === String(invItem.itemId)) ||
+                (i.name && invItem.name && i.name.trim().toLowerCase() === invItem.name.trim().toLowerCase())
+            );
+
+          if (dbItem) {
+            newPrice = getItemPriceForTier(dbItem, newTier);
+          }
+        }
+
+        // 3. الحساب التلقائي الواقعي في حال عدم وجود الصنف في القاعدة
+        if (newPrice <= 0) {
+          const baseP = Number(invItem.cashPrice || invItem.price || 0);
           if (newTier === 'wholesale') {
-            newPrice = Math.round(currentP * 0.90 * 100) / 100;
+            newPrice = Math.round(baseP * 0.90 * 100) / 100;
           } else if (newTier === 'buy') {
-            newPrice = Number(invItem.costPrice || (currentP > 0 ? Math.round(currentP * 0.75 * 100) / 100 : 0));
+            newPrice = Number(invItem.costPrice || Math.round(baseP * 0.75 * 100) / 100);
           } else {
-            // cash
-            newPrice = currentP > 0 ? currentP : 10;
+            newPrice = baseP > 0 ? baseP : 10;
           }
         }
 
@@ -332,7 +418,7 @@ export const RakeezaInvoiceWorkspace: React.FC<RakeezaInvoiceWorkspaceProps> = (
   // Sync pricing tier when initialPricingType prop changes
   useEffect(() => {
     if (initialPricingType && (initialPricingType === 'cash' || initialPricingType === 'wholesale' || initialPricingType === 'buy')) {
-      setActivePricingTier(initialPricingType);
+      handleChangePricingTier(initialPricingType);
     }
   }, [initialPricingType]);
 
@@ -408,6 +494,18 @@ export const RakeezaInvoiceWorkspace: React.FC<RakeezaInvoiceWorkspaceProps> = (
   const [editCashPriceManual, setEditCashPriceManual] = useState('');
   const [editWholesalePriceManual, setEditWholesalePriceManual] = useState('');
   const [editQty, setEditQty] = useState('');
+
+  // 🌳 نافذة إضافة هيكل شجري متكامل للصنف الجديد (مجموعة > تصنيف > نوع > صنف)
+  const [isNewHierarchyModalOpen, setIsNewHierarchyModalOpen] = useState(false);
+  const [hierGroup, setHierGroup] = useState('');
+  const [hierCompany, setHierCompany] = useState('');
+  const [hierType, setHierType] = useState('');
+  const [hierItemName, setHierItemName] = useState('');
+  const [hierItemCode, setHierItemCode] = useState('');
+  const [hierBuyPrice, setHierBuyPrice] = useState('');
+  const [hierCashPrice, setHierCashPrice] = useState('');
+  const [hierWholesalePrice, setHierWholesalePrice] = useState('');
+  const [hierStock, setHierStock] = useState('10');
 
   // Auto-Focus helper for modals
   const autoFocusModalFirstInput = (containerRefId: string) => {
@@ -507,19 +605,81 @@ export const RakeezaInvoiceWorkspace: React.FC<RakeezaInvoiceWorkspaceProps> = (
       );
     }
 
-    const newRow: WorkspaceItemRow = {
-      rowId: `row_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
-      code: cardItem.code,
-      name: cardItem.name,
-      spec: s,
-      qty: q,
-      price: p,
-      total: Number((q * p).toFixed(2)),
-      itemId: cardItem.itemId,
-      costPrice: cardItem.buyPrice,
-    };
+    // 🔍 فحص ما إذا كان البند مضافاً مسبقاً في الفاتورة:
+    // إذا لم يُكتب له وصف أو بيان جديد، يزيد العدد ولا ينزل بنداً منفرداً.
+    // وينزل بنداً منفرداً فقط في حالة كتابة وصف أو بيان محدد ومختلف طبقاً لطلب المستخدم بدقة.
+    setCurrentInvoiceItems((prev) => {
+      let targetIndex = -1;
 
-    setCurrentInvoiceItems((prev) => [...prev, newRow]);
+      if (s !== '') {
+        // إذا كتب المستخدم بياناً أو وصفاً: يبحث عن بند يحمل نفس هذا البيان تماماً، وإلا ينزل بنداً منفرداً
+        targetIndex = prev.findIndex((r) => {
+          const isSame =
+            (r.code && cardItem.code && r.code.trim().toLowerCase() === cardItem.code.trim().toLowerCase()) ||
+            (r.itemId && cardItem.itemId && String(r.itemId) === String(cardItem.itemId)) ||
+            (r.name && cardItem.name && r.name.trim().toLowerCase() === cardItem.name.trim().toLowerCase());
+          return isSame && (r.spec || '').trim() === s;
+        });
+      } else {
+        // إذا لم يكتب المستخدم أي بيان أو وصف: يزيد العدد على البند القائم (الخالي من الوصف، أو أول بند من الصنف)
+        targetIndex = prev.findIndex((r) => {
+          const isSame =
+            (r.code && cardItem.code && r.code.trim().toLowerCase() === cardItem.code.trim().toLowerCase()) ||
+            (r.itemId && cardItem.itemId && String(r.itemId) === String(cardItem.itemId)) ||
+            (r.name && cardItem.name && r.name.trim().toLowerCase() === cardItem.name.trim().toLowerCase());
+          return isSame && (r.spec || '').trim() === '';
+        });
+
+        if (targetIndex === -1) {
+          // إذا لم يجد بنداً بدون وصف، يبحث عن أي بند من هذا الصنف لزيادة عدده
+          targetIndex = prev.findIndex((r) =>
+            (r.code && cardItem.code && r.code.trim().toLowerCase() === cardItem.code.trim().toLowerCase()) ||
+            (r.itemId && cardItem.itemId && String(r.itemId) === String(cardItem.itemId)) ||
+            (r.name && cardItem.name && r.name.trim().toLowerCase() === cardItem.name.trim().toLowerCase())
+          );
+        }
+      }
+
+      if (targetIndex > -1) {
+        // زيادة العدد للبند القائم بدلاً من تكراره في سطر منفصل
+        return prev.map((row, idx) => {
+          if (idx === targetIndex) {
+            const newQty = Number((row.qty + q).toFixed(2));
+            const newPrice = p > 0 ? p : row.price;
+            return {
+              ...row,
+              qty: newQty,
+              price: newPrice,
+              total: Number((newQty * newPrice).toFixed(2)),
+            };
+          }
+          return row;
+        });
+      }
+
+      // إضافة بند جديد في سطر منفصل (في حال كان صنفاً جديداً أو كُتب له وصف/بيان خاص)
+      const cPrice = Number(cardItem.cashPrice || getItemPriceForTier(cardItem, 'cash'));
+      const wPrice = Number(cardItem.wholesalePrice || getItemPriceForTier(cardItem, 'wholesale'));
+      const bPrice = Number(cardItem.buyPrice || getItemPriceForTier(cardItem, 'buy'));
+
+      const newRow: WorkspaceItemRow = {
+        rowId: `row_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+        code: cardItem.code,
+        name: cardItem.name,
+        spec: s,
+        qty: q,
+        price: p,
+        total: Number((q * p).toFixed(2)),
+        itemId: cardItem.itemId,
+        costPrice: cardItem.buyPrice,
+        cashPrice: cPrice > 0 ? cPrice : (p > 0 ? p : 10),
+        wholesalePrice: wPrice > 0 ? wPrice : Math.round((cPrice || p || 10) * 0.90 * 100) / 100,
+        buyPrice: bPrice > 0 ? bPrice : Math.round((cPrice || p || 10) * 0.75 * 100) / 100,
+      };
+      return [...prev, newRow];
+    });
+
+    showToast(s ? `تم إدراج البند مع الوصف: ${cardItem.name}` : `تمت زيادة العدد للصنف: ${cardItem.name}`, 'info');
     setIsDetailCardOpen(false);
     setCardItem(null);
   };
@@ -650,6 +810,105 @@ export const RakeezaInvoiceWorkspace: React.FC<RakeezaInvoiceWorkspaceProps> = (
     const groups = [...new Set(localItemsDatabase.map((i) => i.group))];
     setEditItemCategory(groups[0] || 'بويات');
     setIsNewItemModalOpen(true);
+  };
+
+  // 🌳 فتح نافذة إضافة هيكل شجري متكامل (مجموعة > تصنيف/شركة > نوع > صنف) - خالي تماماً ليدخل المستخدم بياناته لأول مرة
+  const openNewHierarchyModal = () => {
+    setHierGroup('');
+    setHierCompany('');
+    setHierType('');
+    setHierItemName('');
+    const newCode = localItemsDatabase.length > 0 ? ('UA' + String(localItemsDatabase.length + 101)) : '';
+    setHierItemCode(newCode);
+    setHierBuyPrice('');
+    setHierCashPrice('');
+    setHierWholesalePrice('');
+    setHierStock('');
+    setIsNewHierarchyModalOpen(true);
+  };
+
+  const saveNewHierarchyModal = () => {
+    const grp = hierGroup.trim();
+    const comp = hierCompany.trim();
+    const typ = hierType.trim();
+    const name = hierItemName.trim();
+    const code = hierItemCode.trim() || ('UA' + String(localItemsDatabase.length + 101));
+
+    if (!grp) {
+      alert('يرجى تحديد أو كتابة اسم المجموعة الرئيسية');
+      return;
+    }
+    if (!comp) {
+      alert('يرجى تحديد أو كتابة اسم التصنيف أو الشركة');
+      return;
+    }
+    if (!typ) {
+      alert('يرجى تحديد أو كتابة اسم النوع أو القسم الفرعي');
+      return;
+    }
+    if (!name) {
+      alert('يرجى إدخال اسم الصنف');
+      return;
+    }
+
+    const buyP = parseFloat(hierBuyPrice) || 0;
+    const cashP = parseFloat(hierCashPrice) || (buyP > 0 ? buyP * 1.25 : 10);
+    const wholesaleP = parseFloat(hierWholesalePrice) || (cashP > 0 ? cashP * 0.90 : buyP * 1.15);
+    const qtyP = parseFloat(hierStock) || 0;
+
+    const newItem = {
+      code,
+      name,
+      group: grp,
+      company: comp,
+      typeName: typ,
+      stock: qtyP,
+      buyPrice: buyP,
+      cashPrice: cashP,
+      wholesalePrice: wholesaleP,
+      wholesaleBuyPrice: Number((buyP * 0.95).toFixed(2)),
+      itemId: `item_${Date.now()}`,
+    };
+
+    setLocalItemsDatabase((prev) => [...prev, newItem]);
+
+    const newAppItem: Item = {
+      id: newItem.itemId,
+      code,
+      name,
+      category: grp,
+      material: comp,
+      unit: typ,
+      quantity: qtyP,
+      purchasePrice: buyP,
+      salePrice: cashP,
+      wholesalePrice: wholesaleP,
+    };
+
+    onUpdateData(
+      {
+        ...appData,
+        items: [...(appData.items || []), newAppItem],
+      },
+      {
+        action: 'create_item',
+        module: 'المخزون',
+        details: `إضافة هيكل شجري كامل: ${grp} > ${comp} > ${typ} > ${name}`,
+      }
+    );
+
+    setIsNewHierarchyModalOpen(false);
+
+    // توجيه الشجرة فوراً إلى موقع الصنف الجديد لاختياره بنقرة واحدة
+    setHierarchyState({
+      step: 'items',
+      selectedGroup: grp,
+      selectedCompany: comp,
+      selectedType: typ,
+    });
+    setGlobalLookupSearch('');
+
+    showToast(`تمت إضافة المجموعة [${grp}] والتصنيف [${comp}] والنوع [${typ}] والصنف [${name}] بنجاح`, 'success');
   };
 
   const saveNewItemData = () => {
@@ -1163,34 +1422,41 @@ export const RakeezaInvoiceWorkspace: React.FC<RakeezaInvoiceWorkspaceProps> = (
         .summary-bar {
           display: grid;
           grid-template-columns: repeat(3, minmax(0, 1fr));
-          gap: 2px;
-          background: #1e293b;
-          color: white;
+          gap: 2.5px;
+          background: #ffffff;
+          color: #0f172a;
+          border: 1.5px solid #cbd5e1;
           padding: 4px;
-          border-radius: 3px;
+          border-radius: 4px;
           text-align: center;
           box-sizing: border-box;
           width: 100%;
+          box-shadow: 0 1px 2px rgba(0,0,0,0.04);
         }
         .summary-item {
           font-size: 8px;
-          background: rgba(255,255,255,0.08);
-          padding: 2px;
-          border-radius: 2px;
+          background: #f8fafc;
+          border: 1px solid #e2e8f0;
+          color: #334155;
+          padding: 2.5px 2px;
+          border-radius: 3px;
           box-sizing: border-box;
         }
         .summary-item span {
           font-weight: bold;
-          color: #4ade80;
+          color: #16a34a;
           display: block;
           font-size: 8.5px;
         }
         .summary-net {
           grid-column: span 3;
-          background: #166534 !important;
+          background: #f0fdf4 !important;
+          border: 1.5px solid #86efac !important;
+          color: #166534 !important;
           font-size: 9.5px !important;
+          font-weight: bold !important;
         }
-        .summary-net span { color: #facc15 !important; font-size: 10.5px !important; }
+        .summary-net span { color: #15803d !important; font-size: 11px !important; font-weight: 900 !important; }
         .btn-action-bar {
           display: flex;
           gap: 3px;
@@ -1285,28 +1551,29 @@ export const RakeezaInvoiceWorkspace: React.FC<RakeezaInvoiceWorkspaceProps> = (
           width: 100%;
         }
         .lookup-modal-box {
-          background: #e5e7eb;
+          background: #ffffff;
           width: 100%;
           max-width: 580px;
           height: 92vh;
-          border-radius: 6px;
+          border-radius: 8px;
           display: flex;
           flex-direction: column;
-          border: 2px solid #64748b;
+          border: 2px solid #94a3b8;
           overflow: hidden;
           box-sizing: border-box;
+          box-shadow: 0 10px 25px rgba(0,0,0,0.15);
         }
         .hierarchy-nav-bar {
-          background: #f1f5f9;
-          padding: 5px 8px;
-          border-bottom: 1px solid #cbd5e1;
+          background: #ffffff;
+          padding: 6px 10px;
+          border-bottom: 1.5px solid #e2e8f0;
           display: flex;
           align-items: center;
           justify-content: space-between;
           gap: 6px;
-          font-size: 9px;
+          font-size: 9.5px;
           font-weight: bold;
-          color: #1e293b;
+          color: #0f172a;
           flex-shrink: 0;
           box-sizing: border-box;
         }
@@ -1315,19 +1582,26 @@ export const RakeezaInvoiceWorkspace: React.FC<RakeezaInvoiceWorkspaceProps> = (
           gap: 3px;
         }
         .hier-btn {
-          background: #1e293b;
-          color: white;
-          border: none;
-          border-radius: 3px;
-          padding: 3px 6px;
+          background: #f8fafc;
+          color: #0f172a;
+          border: 1px solid #cbd5e1;
+          border-radius: 4px;
+          padding: 3.5px 8px;
           cursor: pointer;
           font-size: 8.5px;
+          font-weight: bold;
           display: flex;
           align-items: center;
           gap: 3px;
+          transition: background 0.15s ease;
+        }
+        .hier-btn:hover {
+          background: #f1f5f9;
         }
         .hier-btn.success {
           background: #16a34a;
+          color: #ffffff;
+          border-color: #15803d;
         }
         .hierarchy-content-area {
           flex: 1;
@@ -1378,8 +1652,8 @@ export const RakeezaInvoiceWorkspace: React.FC<RakeezaInvoiceWorkspaceProps> = (
           isMaximized ? '!max-w-none !w-full !h-full !max-h-full !rounded-none' : ''
         }`}
       >
-        {/* 🏷️ Header Bar (نظام الفواتير والمخزون - ركيزة) */}
-        <div className="header-title">
+        {/* 🏷️ Header Bar (نظام الفواتير والمخزون - ركيزة) مع ثيم وعنوان ديناميكي يعبر عن نوع الحركة */}
+        <div className="header-title" style={{ background: invoiceTheme.bg, borderBottomColor: invoiceTheme.border }}>
           <div className="flex items-center gap-1.5">
             <button
               type="button"
@@ -1397,15 +1671,9 @@ export const RakeezaInvoiceWorkspace: React.FC<RakeezaInvoiceWorkspaceProps> = (
             >
               <i className={`fa-solid ${isMaximized ? 'fa-compress' : 'fa-expand'} text-[9px]`}></i>
             </button>
-            <span>
-              <i className="fa-solid fa-receipt ml-1"></i>
-              {isSale
-                ? isReturn
-                  ? 'فاتورة مرتجع مبيعات - ركيزة'
-                  : 'نظام الفواتير والمخزون - ركيزة'
-                : isReturn
-                ? 'فاتورة مرتجع مشتريات - ركيزة'
-                : 'نظام الفواتير والمخزون - ركيزة'}
+            <span style={{ fontWeight: 800, fontSize: '10.5px' }}>
+              <i className={`fa-solid ${invoiceTheme.icon} ml-1`}></i>
+              {invoiceTheme.badgeText}
             </span>
           </div>
           <span id="liveTime">{liveTime}</span>
@@ -1584,7 +1852,7 @@ export const RakeezaInvoiceWorkspace: React.FC<RakeezaInvoiceWorkspaceProps> = (
             </div>
           </div>
 
-          {/* 4. Top Action Buttons Grid (طبق الأصل للصورة 2) */}
+          {/* 4. Top Action Buttons Grid (دليل الأصناف، والخصم والدفع - طبقاً للصورة 2) */}
           <div className="top-actions-grid">
             <button
               type="button"
@@ -1594,8 +1862,9 @@ export const RakeezaInvoiceWorkspace: React.FC<RakeezaInvoiceWorkspaceProps> = (
                 setGlobalLookupSearch('');
                 setIsLookupModalOpen(true);
               }}
+              title="دليل الأصناف والتنقل الهرمي لاختيار صنف"
             >
-              <i className="fa-solid fa-boxes-stacked ml-1"></i> إضافة صنف
+              <i className="fa-solid fa-boxes-stacked ml-1"></i> دليل الأصناف
             </button>
             <button
               type="button"
@@ -1603,8 +1872,9 @@ export const RakeezaInvoiceWorkspace: React.FC<RakeezaInvoiceWorkspaceProps> = (
               onClick={() => {
                 setIsOptionsModalOpen(true);
               }}
+              title="الخصم، الضريبة وإدارة المدفوعات"
             >
-              <i className="fa-solid fa-sliders ml-1"></i> الخصم، الضريبة والدفع
+              <i className="fa-solid fa-sliders ml-1"></i> الخصم والدفع
             </button>
           </div>
 
@@ -2106,6 +2376,15 @@ export const RakeezaInvoiceWorkspace: React.FC<RakeezaInvoiceWorkspaceProps> = (
               />
               <button
                 type="button"
+                className="hier-btn"
+                onClick={openNewHierarchyModal}
+                style={{ background: '#059669', color: '#fff', fontWeight: 'bold' }}
+                title="إضافة مجموعة وبداخلها تصنيف وبداخلة نوع وبداخلة الصنف للتنقل الهرمي السريع"
+              >
+                <i className="fa-solid fa-sitemap ml-1"></i> + إضافة مجموعة وتصنيف ونوع وصنف
+              </button>
+              <button
+                type="button"
                 className="hier-btn success"
                 onClick={openEditModalForNewItem}
               >
@@ -2426,6 +2705,182 @@ export const RakeezaInvoiceWorkspace: React.FC<RakeezaInvoiceWorkspaceProps> = (
               >
                 <i className="fa-solid fa-check ml-1"></i> حفظ الصنف
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 🌳 نافذة إضافة هيكل شجري متكامل (مجموعة > تصنيف/شركة > نوع > صنف) */}
+      {isNewHierarchyModalOpen && (
+        <div className="modal-overlay" id="newHierarchyModal">
+          <div className="modal-box" style={{ maxWidth: '360px' }}>
+            <div className="modal-header" style={{ background: '#ffffff', color: '#0f172a', borderBottom: '1.5px solid #e2e8f0' }}>
+              <span style={{ fontWeight: 800 }}>
+                <i className="fa-solid fa-sitemap ml-1" style={{ color: '#059669' }}></i> إضافة شجرة صنف (مجموعة &gt; تصنيف &gt; نوع &gt; صنف)
+              </span>
+              <span style={{ cursor: 'pointer', fontSize: '18px', color: '#64748b' }} onClick={() => setIsNewHierarchyModalOpen(false)}>
+                &times;
+              </span>
+            </div>
+            <div className="modal-body">
+              <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '4px', padding: '5px 7px', marginBottom: '4px', fontSize: '8.5px', color: '#334155', lineHeight: 1.4 }}>
+                💡 اكتب اسم المجموعة والتصنيف والنوع والصنف النهائي ليتم تثبيته فوراً كفرع نشط في شجرة الفاتورة والمخزون.
+              </div>
+
+              <div className="edit-card-grid">
+                {/* 1. المجموعة */}
+                <div className="field-inline span-2">
+                  <label style={{ color: '#0f766e', fontWeight: 'bold' }}>1. المجموعة الرئيسية</label>
+                  <input
+                    type="text"
+                    list="groupsDataList"
+                    value={hierGroup}
+                    onChange={(e) => setHierGroup(e.target.value)}
+                    placeholder="اكتب اسم المجموعة الرئيسية..."
+                    style={{ height: '24px', fontSize: '9.5px', fontWeight: 'bold' }}
+                  />
+                  <datalist id="groupsDataList">
+                    {[...new Set(localItemsDatabase.map((i) => i.group).filter(Boolean))].map((g) => (
+                      <option key={g} value={g} />
+                    ))}
+                  </datalist>
+                </div>
+
+                {/* 2. التصنيف / الشركة */}
+                <div className="field-inline span-2">
+                  <label style={{ color: '#0369a1', fontWeight: 'bold' }}>2. التصنيف / الشركة / الماركة</label>
+                  <input
+                    type="text"
+                    list="companiesDataList"
+                    value={hierCompany}
+                    onChange={(e) => setHierCompany(e.target.value)}
+                    placeholder="اكتب اسم التصنيف أو الشركة..."
+                    style={{ height: '24px', fontSize: '9.5px', fontWeight: 'bold' }}
+                  />
+                  <datalist id="companiesDataList">
+                    {[...new Set(localItemsDatabase.map((i) => i.company).filter(Boolean))].map((c) => (
+                      <option key={c} value={c} />
+                    ))}
+                  </datalist>
+                </div>
+
+                {/* 3. النوع / القسم الفرعي */}
+                <div className="field-inline span-2">
+                  <label style={{ color: '#6d28d9', fontWeight: 'bold' }}>3. النوع / القسم الفرعي</label>
+                  <input
+                    type="text"
+                    list="typesDataList"
+                    value={hierType}
+                    onChange={(e) => setHierType(e.target.value)}
+                    placeholder="اكتب اسم النوع أو القسم الفرعي..."
+                    style={{ height: '24px', fontSize: '9.5px', fontWeight: 'bold' }}
+                  />
+                  <datalist id="typesDataList">
+                    {[...new Set(localItemsDatabase.map((i) => i.typeName).filter(Boolean))].map((t) => (
+                      <option key={t} value={t} />
+                    ))}
+                  </datalist>
+                </div>
+
+                {/* 4. اسم الصنف */}
+                <div className="field-inline span-2">
+                  <label style={{ color: '#1e293b', fontWeight: 'bold' }}>4. اسم الصنف النهائي</label>
+                  <input
+                    type="text"
+                    value={hierItemName}
+                    onChange={(e) => setHierItemName(e.target.value)}
+                    placeholder="اكتب اسم الصنف النهائي..."
+                    style={{ height: '24px', fontSize: '9.5px', fontWeight: 'bold', border: '1.5px solid #2563eb' }}
+                  />
+                </div>
+
+                {/* كود الصنف */}
+                <div className="field-inline">
+                  <label>كود الصنف</label>
+                  <input
+                    type="text"
+                    value={hierItemCode}
+                    onChange={(e) => setHierItemCode(e.target.value)}
+                    placeholder="كود..."
+                    style={{ height: '24px', fontSize: '9px', textAlign: 'center' }}
+                  />
+                </div>
+
+                {/* العدد بالمخزن */}
+                <div className="field-inline">
+                  <label>العدد بالمخزن</label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="any"
+                    value={hierStock}
+                    onChange={(e) => setHierStock(e.target.value)}
+                    placeholder="0"
+                    style={{ height: '24px', fontSize: '9.5px', textAlign: 'center' }}
+                  />
+                </div>
+
+                {/* سعر الشراء */}
+                <div className="field-inline">
+                  <label>سعر الشراء (التكلفة)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="any"
+                    value={hierBuyPrice}
+                    onChange={(e) => setHierBuyPrice(e.target.value)}
+                    placeholder="0.00"
+                    style={{ height: '24px', fontSize: '9.5px', textAlign: 'center' }}
+                  />
+                </div>
+
+                {/* سعر البيع النقدي */}
+                <div className="field-inline">
+                  <label>سعر القطاعي (نقدي)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="any"
+                    value={hierCashPrice}
+                    onChange={(e) => setHierCashPrice(e.target.value)}
+                    placeholder="0.00"
+                    style={{ height: '24px', fontSize: '9.5px', textAlign: 'center' }}
+                  />
+                </div>
+
+                {/* سعر الجملة */}
+                <div className="field-inline span-2">
+                  <label>سعر بيع الجملة</label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="any"
+                    value={hierWholesalePrice}
+                    onChange={(e) => setHierWholesalePrice(e.target.value)}
+                    placeholder="0.00"
+                    style={{ height: '24px', fontSize: '9.5px', textAlign: 'center' }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: '4px', marginTop: '6px' }}>
+                <button
+                  type="button"
+                  className="btn-action-top"
+                  style={{ background: '#059669', flex: 1, padding: '7px', fontSize: '10px' }}
+                  onClick={saveNewHierarchyModal}
+                >
+                  <i className="fa-solid fa-check ml-1"></i> حفظ وتثبيت في الشجرة
+                </button>
+                <button
+                  type="button"
+                  className="btn-action-top btn-action-alt"
+                  style={{ width: '60px', padding: '7px', fontSize: '9.5px' }}
+                  onClick={() => setIsNewHierarchyModalOpen(false)}
+                >
+                  إلغاء
+                </button>
+              </div>
             </div>
           </div>
         </div>

@@ -258,7 +258,7 @@ export const Header: React.FC<HeaderProps> = ({
   return (
     <>
       <header
-        className="fixed top-0 right-0 left-0 h-[56px] bg-[#1e293b] text-white px-2.5 sm:px-4 flex items-center justify-between z-50 shadow-md border-b border-slate-700/60 no-print select-none"
+        className="fixed top-0 right-0 left-0 h-[56px] bg-white text-slate-900 px-2.5 sm:px-4 flex items-center justify-between z-50 shadow-xs border-b border-slate-200 no-print select-none"
         dir="rtl"
       >
         {/* الجانب الأيمن: القائمة، الشعار، اسم المنشأة، الصفحة الحالية */}
@@ -267,7 +267,7 @@ export const Header: React.FC<HeaderProps> = ({
             <button
               type="button"
               onClick={onToggleSidebar}
-              className="p-1.5 sm:p-2 rounded-lg bg-slate-800/80 hover:bg-slate-700 active:bg-slate-600 text-slate-200 hover:text-white border border-slate-700/80 transition cursor-pointer flex items-center justify-center"
+              className="p-1.5 sm:p-2 rounded-lg bg-slate-100 hover:bg-slate-200 active:bg-slate-300 text-slate-800 border border-slate-200 transition cursor-pointer flex items-center justify-center"
               title="القائمة الجانبية"
               aria-label="القائمة الجانبية"
             >
@@ -281,12 +281,12 @@ export const Header: React.FC<HeaderProps> = ({
             onClick={() => onNavigate?.('home')}
             title="الصفحة الرئيسية"
           >
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-600 to-indigo-700 border border-blue-400/40 flex items-center justify-center text-white shadow-xs">
-              <Building2 className="w-4 h-4 text-amber-300" />
+            <div className="w-8 h-8 rounded-lg bg-blue-600 border border-blue-500 flex items-center justify-center text-white shadow-xs">
+              <Building2 className="w-4 h-4 text-white" />
             </div>
             <div className="flex flex-col text-right">
               <div className="flex items-center gap-1.5">
-                <span className="font-extrabold text-xs sm:text-sm text-white tracking-wide truncate max-w-[120px] sm:max-w-[200px]">
+                <span className="font-extrabold text-xs sm:text-sm text-slate-900 tracking-wide truncate max-w-[120px] sm:max-w-[200px]">
                   {companyName || 'Remix المحاسب الخاص'}
                 </span>
 
@@ -297,21 +297,21 @@ export const Header: React.FC<HeaderProps> = ({
                     e.stopPropagation();
                     handleRakeezaClicks();
                   }}
-                  className="text-[10px] px-1.5 py-0.5 rounded bg-blue-950/80 hover:bg-blue-900 active:scale-95 text-amber-300 border border-amber-400/40 font-black tracking-wider cursor-pointer transition select-none shadow-xs"
+                  className="text-[10px] px-1.5 py-0.5 rounded bg-blue-50 hover:bg-blue-100 active:scale-95 text-blue-800 border border-blue-200 font-black tracking-wider cursor-pointer transition select-none shadow-xs"
                   title="نظام ركيزة RAKEEZA ERP"
                 >
                   RAKEEZA
                 </button>
 
                 {companyCode && (
-                  <span className="hidden md:inline-flex items-center text-[9px] px-1.5 py-0.2 rounded bg-slate-800 text-slate-300 border border-slate-700 font-mono">
+                  <span className="hidden md:inline-flex items-center text-[9px] px-1.5 py-0.2 rounded bg-slate-100 text-slate-700 border border-slate-200 font-mono">
                     {companyCode}
                   </span>
                 )}
               </div>
               {subscriptionPlan && (
-                <span className="hidden lg:flex items-center gap-1 text-[9px] text-emerald-400 font-medium leading-none">
-                  <Sparkles className="w-2.5 h-2.5 text-emerald-400" />
+                <span className="hidden lg:flex items-center gap-1 text-[9px] text-emerald-600 font-medium leading-none">
+                  <Sparkles className="w-2.5 h-2.5 text-emerald-600" />
                   {subscriptionPlan}
                 </span>
               )}
@@ -319,8 +319,8 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
 
           {/* مسار الصفحة الحالية */}
-          <div className="hidden sm:flex items-center gap-1.5 border-r border-slate-700/80 pr-2.5 mr-1">
-            <span className="text-xs sm:text-sm font-bold text-slate-200">
+          <div className="hidden sm:flex items-center gap-1.5 border-r border-slate-200 pr-2.5 mr-1">
+            <span className="text-xs sm:text-sm font-bold text-slate-800">
               {pageTitle}
             </span>
           </div>
@@ -333,15 +333,15 @@ export const Header: React.FC<HeaderProps> = ({
             <button
               type="button"
               onClick={onNavigateBackup}
-              className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-slate-800/80 hover:bg-slate-700 border border-slate-700/80 text-xs font-medium text-slate-200 transition cursor-pointer"
+              className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 border border-slate-200 text-xs font-medium text-slate-700 transition cursor-pointer"
               title={autoBackupActive ? 'النسخ الاحتياطي السحابي نشط - انقر للإدارة' : 'النسخ الاحتياطي'}
             >
-              <Cloud className="w-3.5 h-3.5 text-emerald-400" />
+              <Cloud className="w-3.5 h-3.5 text-emerald-600" />
               <span className="relative flex h-2 w-2">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
               </span>
-              <span className="hidden xl:inline text-[11px] text-emerald-300">النسخ السحابي</span>
+              <span className="hidden xl:inline text-[11px] text-emerald-700">النسخ السحابي</span>
             </button>
           )}
 
@@ -350,10 +350,10 @@ export const Header: React.FC<HeaderProps> = ({
             <button
               type="button"
               onClick={onNavigateWebOrders}
-              className="relative flex items-center gap-1 px-2 py-1 rounded-lg bg-amber-600/30 hover:bg-amber-600/50 border border-amber-500/40 text-amber-200 text-xs font-medium transition cursor-pointer"
+              className="relative flex items-center gap-1 px-2 py-1 rounded-lg bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-900 text-xs font-medium transition cursor-pointer"
               title="طلبات المتجر الإلكتروني الواردة"
             >
-              <ShoppingBag className="w-3.5 h-3.5 text-amber-400" />
+              <ShoppingBag className="w-3.5 h-3.5 text-amber-600" />
               <span className="hidden lg:inline text-[11px]">الطلبات</span>
               {Boolean(pendingWebOrdersCount && pendingWebOrdersCount > 0) && (
                 <span className="absolute -top-1.5 -right-1.5 bg-rose-600 text-white font-black text-[9px] w-4 h-4 rounded-full flex items-center justify-center animate-bounce shadow-md">
@@ -364,15 +364,15 @@ export const Header: React.FC<HeaderProps> = ({
           )}
 
           {/* معلومات المستخدم الحالي */}
-          <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-slate-800/80 border border-slate-700/80">
-            <div className="w-6 h-6 rounded-full bg-blue-600/30 border border-blue-400/40 text-blue-300 flex items-center justify-center text-[10px] font-bold">
+          <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-slate-100 border border-slate-200">
+            <div className="w-6 h-6 rounded-full bg-blue-100 border border-blue-300 text-blue-700 flex items-center justify-center text-[10px] font-bold">
               {currentUser?.name ? currentUser.name.slice(0, 1).toUpperCase() : <UserIcon className="w-3 h-3" />}
             </div>
             <div className="hidden md:flex flex-col text-right">
-              <span className="text-[11px] font-bold text-slate-200 leading-tight">
+              <span className="text-[11px] font-bold text-slate-800 leading-tight">
                 {currentUser?.name || 'مدير النظام'}
               </span>
-              <span className="text-[9px] text-slate-400 leading-none">
+              <span className="text-[9px] text-slate-500 leading-none">
                 {currentUser?.role === 'admin'
                   ? 'مدير عام'
                   : currentUser?.role === 'owner'
@@ -387,11 +387,11 @@ export const Header: React.FC<HeaderProps> = ({
             <button
               type="button"
               onClick={onLogout}
-              className="p-1.5 sm:px-2 sm:py-1 rounded-lg bg-rose-600/20 hover:bg-rose-600/40 border border-rose-500/30 text-rose-300 hover:text-white transition flex items-center gap-1 text-xs cursor-pointer"
+              className="p-1.5 sm:px-2 sm:py-1 rounded-lg bg-rose-50 hover:bg-rose-100 active:bg-rose-200 border border-rose-200 text-rose-700 transition flex items-center gap-1 text-xs cursor-pointer"
               title="تسجيل الخروج الآمن"
             >
-              <LogOut className="w-3.5 h-3.5 text-rose-400" />
-              <span className="hidden md:inline text-[11px]">خروج</span>
+              <LogOut className="w-3.5 h-3.5 text-rose-600" />
+              <span className="hidden md:inline text-[11px] font-bold">خروج</span>
             </button>
           )}
         </div>

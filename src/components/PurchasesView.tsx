@@ -737,20 +737,20 @@ export const PurchasesView: React.FC<PurchasesViewProps> = ({ appData, onUpdateD
 
   return (
     <div className="w-full max-w-7xl mx-auto flex flex-col space-y-4">
-      {/* 🏛️ ترويسة قسم إدارة المشتريات والتوريد - ثيم أخضر بترولي زمردي مميز وفارق بصرياً عن المبيعات */}
-      <div className="bg-gradient-to-r from-teal-950 via-teal-900 to-cyan-950 text-white p-3 sm:p-4 rounded-xl shadow-sm border border-teal-700/60 flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
+      {/* 🏛️ ترويسة قسم إدارة المشتريات والتوريد - خلفية بيضاء وكتابة سوداء متناسقة مع الواجهة الرئيسية */}
+      <div className="bg-white text-slate-900 p-3 sm:p-4 rounded-xl shadow-xs border-2 border-slate-200 flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-lg bg-teal-800/60 border border-teal-400/40 flex items-center justify-center shrink-0 shadow-inner">
-            <Building2 className="w-6 h-6 text-teal-300" />
+          <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-lg bg-teal-50 border border-teal-200 flex items-center justify-center shrink-0 shadow-2xs">
+            <Building2 className="w-6 h-6 text-teal-600" />
           </div>
           <div>
             <h2 className="text-sm sm:text-base font-black tracking-wide flex items-center gap-2">
-              <span>إدارة فواتير المشتريات والتوريدات</span>
-              <span className="text-[10px] bg-teal-500/25 text-teal-200 border border-teal-400/40 px-2 py-0.5 rounded-full font-bold">
+              <span className="text-slate-900 font-black">إدارة فواتير المشتريات والتوريدات</span>
+              <span className="text-[10px] bg-teal-50 text-teal-800 border border-teal-200 px-2 py-0.5 rounded-full font-bold">
                 🛒 قسم المشتريات
               </span>
             </h2>
-            <p className="text-[11px] text-teal-200/90">
+            <p className="text-[11px] text-slate-600 font-medium">
               تسجيل وتدقيق فواتير الشراء النقدي والآجل والتوريدات ومستحقات الموردين بدقة متناهية
             </p>
           </div>
@@ -758,21 +758,21 @@ export const PurchasesView: React.FC<PurchasesViewProps> = ({ appData, onUpdateD
 
         {/* Quick KPI badges */}
         <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
-          <div className="bg-teal-900/50 backdrop-blur-xs border border-teal-500/30 px-2.5 py-1 rounded-lg flex flex-col items-center">
-            <span className="text-[9px] text-teal-200">عدد الفواتير</span>
-            <span className="text-xs font-black font-mono text-white">{appData.purchaseInvoices?.length || 0}</span>
+          <div className="bg-slate-50 border border-slate-200 px-3 py-1 rounded-lg flex flex-col items-center shadow-2xs">
+            <span className="text-[9px] text-slate-500 font-bold">عدد الفواتير</span>
+            <span className="text-xs font-black font-mono text-slate-900">{appData.purchaseInvoices?.length || 0}</span>
           </div>
-          <div className="bg-teal-900/50 backdrop-blur-xs border border-teal-500/30 px-2.5 py-1 rounded-lg flex flex-col items-center">
-            <span className="text-[9px] text-teal-200">إجمالي المشتريات</span>
-            <span className="text-xs font-black font-mono text-emerald-300">{totalPurchasesAmount.toLocaleString()} ج.م</span>
+          <div className="bg-slate-50 border border-slate-200 px-3 py-1 rounded-lg flex flex-col items-center shadow-2xs">
+            <span className="text-[9px] text-slate-500 font-bold">إجمالي المشتريات</span>
+            <span className="text-xs font-black font-mono text-emerald-600">{totalPurchasesAmount.toLocaleString()} ج.م</span>
           </div>
-          <div className="bg-teal-900/50 backdrop-blur-xs border border-teal-500/30 px-2.5 py-1 rounded-lg flex flex-col items-center">
-            <span className="text-[9px] text-teal-200">المسدد للموردين</span>
-            <span className="text-xs font-black font-mono text-teal-200">{totalPurchasesPaid.toLocaleString()} ج.م</span>
+          <div className="bg-slate-50 border border-slate-200 px-3 py-1 rounded-lg flex flex-col items-center shadow-2xs">
+            <span className="text-[9px] text-slate-500 font-bold">المسدد للموردين</span>
+            <span className="text-xs font-black font-mono text-teal-600">{totalPurchasesPaid.toLocaleString()} ج.م</span>
           </div>
-          <div className="bg-teal-900/50 backdrop-blur-xs border border-teal-500/30 px-2.5 py-1 rounded-lg flex flex-col items-center">
-            <span className="text-[9px] text-teal-200">مستحقات آجلة</span>
-            <span className="text-xs font-black font-mono text-amber-300">{totalPurchasesRemaining.toLocaleString()} ج.م</span>
+          <div className="bg-slate-50 border border-slate-200 px-3 py-1 rounded-lg flex flex-col items-center shadow-2xs">
+            <span className="text-[9px] text-slate-500 font-bold">مستحقات آجلة</span>
+            <span className="text-xs font-black font-mono text-amber-600">{totalPurchasesRemaining.toLocaleString()} ج.م</span>
           </div>
         </div>
       </div>
