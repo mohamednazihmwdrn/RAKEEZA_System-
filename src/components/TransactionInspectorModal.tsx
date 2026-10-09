@@ -389,17 +389,17 @@ export const TransactionInspectorModal: React.FC<TransactionInspectorModalProps>
     <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 md:p-6 overflow-y-auto animate-fade-in" dir="rtl">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[92vh] flex flex-col overflow-hidden border border-slate-200">
         {/* Modal Top Bar */}
-        <div className="bg-gradient-to-r from-[#0d47a1] to-[#1a237e] text-white p-4 md:px-6 flex justify-between items-center">
+        <div className="bg-white text-slate-900 border-b-2 border-slate-200 p-4 md:px-6 flex justify-between items-center">
           <div className="flex items-center gap-3">
             <span className="text-2xl">🔍</span>
             <div>
-              <h3 className="font-black text-lg md:text-xl flex items-center gap-2">
+              <h3 className="font-black text-lg md:text-xl flex items-center gap-2 text-slate-900">
                 <span>{getTypeTitle()}</span>
-                <span className="bg-amber-400 text-slate-900 text-xs px-2.5 py-0.5 rounded-full font-bold">
+                <span className="bg-amber-100 text-amber-900 border border-amber-300 text-xs px-2.5 py-0.5 rounded-full font-bold">
                   #{data.id || data.code || data.orderNumber || data.chequeNumber || '0'}
                 </span>
               </h3>
-              <p className="text-xs text-blue-200 mt-0.5">
+              <p className="text-xs text-slate-500 mt-0.5">
                 📅 التاريخ: {data.date || data.createdAt?.substring(0, 10) || '-'} {data.time ? `| ⏰ ${data.time}` : ''}
               </p>
             </div>
@@ -408,7 +408,7 @@ export const TransactionInspectorModal: React.FC<TransactionInspectorModalProps>
           <div className="flex items-center gap-2">
             <button
               onClick={() => handlePrint(false)}
-              className="bg-emerald-500 hover:bg-emerald-600 active:bg-emerald-700 text-white px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1 shadow-xs"
+              className="bg-[#2e7d32] hover:bg-[#1b5e20] active:bg-[#124116] text-white px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1 shadow-xs"
               title="طباعة سريعة ومباشرة للمستند"
             >
               <span>⚡</span>
@@ -416,7 +416,7 @@ export const TransactionInspectorModal: React.FC<TransactionInspectorModalProps>
             </button>
             <button
               onClick={onClose}
-              className="bg-white/10 hover:bg-white/20 text-white rounded-full w-8 h-8 flex items-center justify-center transition cursor-pointer"
+              className="bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-full w-8 h-8 flex items-center justify-center transition cursor-pointer"
             >
               ✕
             </button>

@@ -60,6 +60,13 @@ export const LoginView: React.FC<LoginViewProps> = ({
   const [regAdminUsername, setRegAdminUsername] = useState<string>('admin');
   const [regAdminPassword, setRegAdminPassword] = useState<string>('');
   const [regBranchName, setRegBranchName] = useState<string>('الفرع الرئيسي');
+  const [regLink, setRegLink] = useState<string>(() => {
+    if (typeof window !== 'undefined') {
+      const p = new URLSearchParams(window.location.search);
+      return p.get('link') || p.get('reg') || p.get('ref') || p.get('token') || '';
+    }
+    return '';
+  });
   const [showRegPassword, setShowRegPassword] = useState<boolean>(false);
 
   // Form 2: Bind to Existing Company State
@@ -213,6 +220,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
         adminUsername: cleanUsername,
         adminPassword: cleanPassword,
         branchName: cleanBranch,
+        registrationLink: regLink.trim() || undefined,
       });
 
       if (res.success && res.company && res.user) {
@@ -994,6 +1002,34 @@ export const LoginView: React.FC<LoginViewProps> = ({
                           disabled={isLoading}
                         />
                       </div>
+                    </div>
+
+                    {/* Field 6: Registration Link / Token (Unique Link - One-time use) */}
+                    <div>
+                      <label
+                        htmlFor="reg-link-identifier"
+                        className="block text-xs sm:text-sm font-semibold text-slate-200 mb-1 text-right"
+                      >
+                        رابط / كود التسجيل المعتمد (إن وجد)
+                      </label>
+                      <div className="relative">
+                        <div className="absolute inset-y-0 right-0 pr-3.5 flex items-center pointer-events-none text-slate-400">
+                          <Sparkles className="w-4 h-4 text-amber-400" />
+                        </div>
+                        <input
+                          id="reg-link-identifier"
+                          type="text"
+                          value={regLink}
+                          onChange={(e) => setRegLink(e.target.value)}
+                          placeholder="رابط أو كود الدعوة (لا يمكن استخدامه إلا مرة واحدة)"
+                          dir="ltr"
+                          className="w-full pl-3 pr-10 py-2.5 bg-slate-950 border border-slate-700 rounded-xl text-white placeholder-slate-500 text-sm focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-all text-left font-mono"
+                          disabled={isLoading}
+                        />
+                      </div>
+                      <p className="text-[10px] text-slate-400 mt-1 text-right">
+                        * تنبيه: أي رابط يتم التسجيل به مرة واحدة لا يمكن التسجيل به مجدداً مهما تم تغيير كلمة المرور.
+                      </p>
                     </div>
 
                     {/* Submit Button */}

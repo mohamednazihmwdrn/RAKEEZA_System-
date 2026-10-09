@@ -40,10 +40,10 @@ export const ItemsView: React.FC<ItemsViewProps> = ({
   const [hierType, setHierType] = useState('');
   const [hierItemName, setHierItemName] = useState('');
   const [hierItemCode, setHierItemCode] = useState('');
-  const [hierQty, setHierQty] = useState('0');
-  const [hierPurchasePrice, setHierPurchasePrice] = useState('0');
-  const [hierSalePrice, setHierSalePrice] = useState('0');
-  const [hierWholesalePrice, setHierWholesalePrice] = useState('0');
+  const [hierQty, setHierQty] = useState('');
+  const [hierPurchasePrice, setHierPurchasePrice] = useState('');
+  const [hierSalePrice, setHierSalePrice] = useState('');
+  const [hierWholesalePrice, setHierWholesalePrice] = useState('');
 
   const handleOpenAddHierarchy = () => {
     setHierGroup('');
@@ -798,17 +798,11 @@ export const ItemsView: React.FC<ItemsViewProps> = ({
               <label className="block font-bold text-teal-800 mb-1">1. المجموعة الرئيسية</label>
               <input
                 type="text"
-                list="itemsViewGroupsList"
-                placeholder="مثال: بويات..."
+                placeholder="اكتب اسم المجموعة..."
                 value={hierGroup}
                 onChange={(e) => setHierGroup(e.target.value)}
                 className="w-full p-2.5 border-2 border-teal-200 rounded-xl focus:border-teal-600 focus:outline-none font-bold"
               />
-              <datalist id="itemsViewGroupsList">
-                {[...new Set(appData.items.map((i) => i.category).filter(Boolean))].map((g) => (
-                  <option key={g} value={g} />
-                ))}
-              </datalist>
             </div>
 
             {/* 2. التصنيف */}
@@ -816,17 +810,11 @@ export const ItemsView: React.FC<ItemsViewProps> = ({
               <label className="block font-bold text-blue-800 mb-1">2. التصنيف / الشركة</label>
               <input
                 type="text"
-                list="itemsViewCompaniesList"
-                placeholder="مثال: يوتن، GLC..."
+                placeholder="اكتب اسم التصنيف أو الشركة..."
                 value={hierCompany}
                 onChange={(e) => setHierCompany(e.target.value)}
                 className="w-full p-2.5 border-2 border-blue-200 rounded-xl focus:border-blue-600 focus:outline-none font-bold"
               />
-              <datalist id="itemsViewCompaniesList">
-                {[...new Set(appData.items.map((i) => i.material).filter(Boolean))].map((c) => (
-                  <option key={c} value={c} />
-                ))}
-              </datalist>
             </div>
 
             {/* 3. النوع */}
@@ -834,17 +822,11 @@ export const ItemsView: React.FC<ItemsViewProps> = ({
               <label className="block font-bold text-purple-800 mb-1">3. النوع / القسم الفرعي</label>
               <input
                 type="text"
-                list="itemsViewTypesList"
-                placeholder="مثال: مطفي داخلي..."
+                placeholder="اكتب اسم النوع أو القسم الفرعي..."
                 value={hierType}
                 onChange={(e) => setHierType(e.target.value)}
                 className="w-full p-2.5 border-2 border-purple-200 rounded-xl focus:border-purple-600 focus:outline-none font-bold"
               />
-              <datalist id="itemsViewTypesList">
-                {[...new Set(appData.items.map((i) => i.unit).filter(Boolean))].map((t) => (
-                  <option key={t} value={t} />
-                ))}
-              </datalist>
             </div>
           </div>
 

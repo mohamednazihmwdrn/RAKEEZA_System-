@@ -383,12 +383,12 @@ export const HomeView: React.FC<HomeViewProps> = ({ appData, onNavigate }) => {
 
   return (
     <div className="w-full max-w-7xl mx-auto flex flex-col gap-2.5 pb-8 text-slate-800" dir="rtl">
-      {/* الهيدر العلوي: اسم التطبيق على اليمين فقط وبدون أي عناصر أخرى */}
-      <div className="bg-gradient-to-r from-blue-900 to-blue-600 text-white px-4 py-2.5 rounded-lg flex items-center justify-between text-xs sm:text-sm font-bold shadow-xs">
-        <span className="tracking-wide">
+      {/* الهيدر العلوي: خلفية بيضاء وكتابة سوداء متناسقة مع الواجهة الرئيسية */}
+      <div className="bg-white text-slate-900 border-2 border-slate-200 px-4 py-2.5 rounded-xl flex items-center justify-between text-xs sm:text-sm font-bold shadow-xs">
+        <span className="tracking-wide text-slate-900 font-black">
           {appData?.settings?.companyName || 'المحاسب المحترف'}
         </span>
-        <span className="text-[11px] font-normal text-blue-100 hidden sm:inline">
+        <span className="text-[11px] font-bold text-slate-500 hidden sm:inline">
           لوحة التحكم الرئيسية
         </span>
       </div>

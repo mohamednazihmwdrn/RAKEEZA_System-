@@ -322,13 +322,14 @@ async function startServer() {
 
   // 📱 Register Device & New Company (First-time binding)
   app.post('/api/company/register-device', (req, res) => {
-    const { companyName, adminEmail, adminUsername, adminPassword, branchName } = req.body;
+    const { companyName, adminEmail, adminUsername, adminPassword, branchName, registrationLink } = req.body;
     const result = registerDeviceAndCompany({
       companyName,
       adminEmail,
       adminUsername,
       adminPassword,
       branchName,
+      registrationLink,
     });
 
     if (!result.success) {

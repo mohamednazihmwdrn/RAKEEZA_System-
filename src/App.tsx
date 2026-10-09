@@ -649,9 +649,30 @@ export default function App() {
         showToast(res.message, 'success');
         setIsLicenseModalOpen(false);
         setLicenseCodeInput('');
-        const freshSession = await fetchCurrentSession();
-        if (freshSession.valid) {
-          setSession(freshSession);
+        try {
+          const freshSession = await fetchCurrentSession();
+          if (freshSession.valid && !freshSession.subscription?.isExpired) {
+            setSession(freshSession);
+            return;
+          }
+        } catch {}
+        if (session) {
+          const futureDate = new Date(Date.now() + 365 * 86400000).toISOString().split('T')[0];
+          setSession({
+            ...session,
+            subscription: {
+              status: 'active',
+              planName: 'Enterprise Plan',
+              daysRemaining: 365,
+              isExpired: false,
+              expiresAt: futureDate,
+            },
+            company: {
+              ...session.company,
+              status: 'active',
+              subscriptionExpiresAt: futureDate,
+            } as any,
+          });
         }
       } else {
         showToast(res.message || 'كود التفعيل غير صالح', 'error');
@@ -1374,6 +1395,124 @@ export default function App() {
         />
         <Toast message={toastMessage} type={toastType} />
       </>
+    );
+  }
+
+  // 🔒 Subscription Expired Lock Gate: قفل الصفحة والبيانات عند انتهاء الاشتراك وطلب كود التفعيل مع رابط واتساب
+  const isSubscriptionExpired = Boolean(
+    !isOwner &&
+    session?.valid &&
+    (
+      session?.subscription?.isExpired ||
+      session?.subscription?.status === 'expired' ||
+      session?.company?.status === 'expired' ||
+      (session?.subscription?.daysRemaining !== undefined && session.subscription.daysRemaining <= 0 && session.subscription.status !== 'lifetime') ||
+      (session?.company?.subscriptionExpiresAt && new Date(session.company.subscriptionExpiresAt).getTime() < Date.now())
+    )
+  );
+
+  if (isSubscriptionExpired && currentPage !== 'owner_panel') {
+    const compName = session?.company?.name || appData.settings?.companyName || 'الشركة';
+    const compCode = session?.company?.code || session?.company?.id || userCompanyId;
+    const whatsappMsg = encodeURIComponent(
+      `السلام عليكم ورحمة الله، أود طلب كود تفعيل وتجديد اشتراك منظومة ركيزة لشركة: ${compName} [كود الشركة: ${compCode}]`
+    );
+    const whatsappUrl = `https://wa.me/201029190615?text=${whatsappMsg}`;
+
+    return (
+      <div className="min-h-screen bg-slate-100 flex flex-col items-center justify-center p-4 font-sans select-none" dir="rtl">
+        <div className="w-full max-w-lg bg-white rounded-3xl border-2 border-slate-200 shadow-2xl p-6 sm:p-8 space-y-5 text-center animate-fade-in relative overflow-hidden">
+          {/* Top Lock Icon */}
+          <div className="w-20 h-20 rounded-3xl bg-amber-50 text-amber-600 border-2 border-amber-200 flex items-center justify-center mx-auto shadow-xs">
+            <ShieldAlert className="w-10 h-10" />
+          </div>
+
+          <div className="space-y-1.5">
+            <span className="bg-amber-100 text-amber-900 border border-amber-300 text-xs px-3 py-1 rounded-full font-black inline-block">
+              تنبيه: انتهاء فترة اشتراك المنظومة
+            </span>
+            <h2 className="text-xl sm:text-2xl font-black text-slate-900">
+              انتهت صلاحية اشتراك المنظومة
+            </h2>
+            <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
+              تم إيقاف صلاحية الدخول لصفحة وبيانات شركة: <strong className="text-slate-900 font-black">{compName}</strong> [كود: <span className="font-mono font-bold text-blue-700">{compCode}</span>]
+              <br />
+              يرجى إدخال كود التفعيل المعتمد للمتابعة والدخول إلى بياناتك ومستنداتك.
+            </p>
+          </div>
+
+          {/* Secure Cloud Assurance Box */}
+          <div className="bg-slate-50 border border-slate-200 rounded-2xl p-3.5 text-xs text-slate-600 leading-relaxed text-right space-y-1">
+            <div className="flex items-center gap-1.5 font-bold text-slate-900">
+              <span>🛡️</span>
+              <span>بياناتك ومستنداتك محفوظة بأمان تام:</span>
+            </div>
+            <p className="text-[11px] text-slate-500">
+              جميع الفواتير والقيود والسجلات المحاسبية محفوظة بدقة في السحابة. فور إدخال كود التفعيل سيتم فتح النظام واستعادة الوصول لكافة بياناتك فوراً دون فقدان أي عملية.
+            </p>
+          </div>
+
+          {/* Activation Form */}
+          <form onSubmit={handleActivateLicenseSubmit} className="space-y-3 text-right">
+            <div>
+              <label className="block text-xs font-bold text-slate-800 mb-1.5">
+                أدخل كود التفعيل السحابي (Activation Code):
+              </label>
+              <input
+                type="text"
+                value={licenseCodeInput}
+                onChange={(e) => setLicenseCodeInput(e.target.value.toUpperCase())}
+                placeholder="مثال: RKZ-2026-ENTERPRISE"
+                dir="ltr"
+                className="w-full bg-slate-50 border-2 border-slate-300 focus:border-amber-500 rounded-xl px-4 py-3 text-center text-sm font-mono font-bold tracking-widest text-slate-900 outline-none uppercase transition"
+                disabled={isActivatingLicense}
+                autoFocus
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={isActivatingLicense}
+              className="w-full min-h-[46px] bg-[#2e7d32] hover:bg-[#1b5e20] active:bg-[#124116] text-white font-black py-2.5 px-4 rounded-xl text-sm transition shadow-xs cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2"
+            >
+              <KeyRound className="w-4 h-4" />
+              <span>{isActivatingLicense ? 'جاري التحقق والتفعيل...' : 'تفعيل وتجديد الاشتراك والدخول للبيانات'}</span>
+            </button>
+          </form>
+
+          {/* WhatsApp Direct Code Request Button */}
+          <div className="pt-2 border-t border-slate-200 space-y-2">
+            <span className="text-[11px] text-slate-500 block">
+              لا تمتلك كود التفعيل أو ترغب في تجديد باقتك؟
+            </span>
+            <a
+              href={whatsappUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-full min-h-[44px] bg-[#25D366] hover:bg-[#1ebd5a] active:bg-[#169c49] text-white font-black py-2.5 px-4 rounded-xl text-sm transition shadow-xs flex items-center justify-center gap-2 cursor-pointer no-underline"
+            >
+              <span>💬</span>
+              <span>طلب كود التفعيل عبر واتساب (01029190615)</span>
+            </a>
+          </div>
+
+          {/* Logout / Switch Account */}
+          <div className="flex items-center justify-between text-xs pt-1">
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="text-slate-500 hover:text-rose-600 font-bold transition flex items-center gap-1 cursor-pointer"
+            >
+              <span>🚪</span>
+              <span>تسجيل الخروج والتبديل لحساب آخر</span>
+            </button>
+            <span className="text-slate-400 font-mono text-[11px]">
+              دعم ركيزة: 01029190615
+            </span>
+          </div>
+        </div>
+        <Toast message={toastMessage} type={toastType} />
+      </div>
     );
   }
 

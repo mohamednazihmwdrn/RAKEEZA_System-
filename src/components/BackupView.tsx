@@ -325,24 +325,24 @@ export const BackupView: React.FC<BackupViewProps> = ({ appData, onUpdateData, s
   return (
     <div className="w-full max-w-7xl mx-auto flex flex-col space-y-6 animate-fade-in" dir="rtl">
       {/* Header Banner */}
-      <div className="bg-gradient-to-r from-[#1a237e] via-[#0d47a1] to-[#01579b] text-white p-6 rounded-3xl shadow-md flex flex-wrap justify-between items-center gap-4">
+      <div className="bg-white text-slate-900 border-2 border-slate-200 p-5 sm:p-6 rounded-3xl shadow-xs flex flex-wrap justify-between items-center gap-4">
         <div className="space-y-1">
-          <div className="flex items-center gap-2">
-            <span className="p-2 bg-white/10 rounded-xl text-2xl">💾</span>
-            <h2 className="text-xl md:text-2xl font-black tracking-tight">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="p-2 bg-slate-100 rounded-xl text-2xl border border-slate-200">💾</span>
+            <h2 className="text-lg md:text-xl font-black text-slate-900 tracking-tight">
               مركز النسخ الاحتياطي التلقائي واستعادة الكوارث
             </h2>
             <span
               className={`text-xs px-3 py-1 rounded-full font-bold ${
                 autoConfig.enabled
-                  ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-400/30'
-                  : 'bg-rose-500/20 text-rose-300 border border-rose-400/30'
+                  ? 'bg-emerald-50 text-emerald-800 border border-emerald-300'
+                  : 'bg-rose-50 text-rose-800 border border-rose-300'
               }`}
             >
               {autoConfig.enabled ? '● الحماية التلقائية نشطة' : '○ الحماية التلقائية معطلة'}
             </span>
           </div>
-          <p className="text-xs md:text-sm text-blue-100 max-w-2xl leading-relaxed">
+          <p className="text-xs md:text-sm text-slate-600 max-w-2xl leading-relaxed">
             حماية بيانات المؤسسة من الفقدان بجدولة نسخ ذكي دوري، استرجاع سريع بضغطة زر واحدة (1-Click Rollback)،
             وتصدير ملفات كاملة مشفرة لضمان أمان العمليات المحاسبية.
           </p>
@@ -351,14 +351,14 @@ export const BackupView: React.FC<BackupViewProps> = ({ appData, onUpdateData, s
         <div className="flex flex-wrap gap-2.5">
           <button
             onClick={() => handleCreateSnapshot('نقطة استعادة يدوية سريعة')}
-            className="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2.5 rounded-2xl text-xs font-bold transition flex items-center gap-1.5 shadow-sm cursor-pointer"
+            className="bg-[#2e7d32] hover:bg-[#1b5e20] text-white px-4 py-2.5 rounded-2xl text-xs font-bold transition flex items-center gap-1.5 shadow-xs cursor-pointer"
           >
             <span>⚡ إنشاء نقطة استعادة الآن</span>
           </button>
 
           <button
             onClick={handleExportFile}
-            className="bg-white/15 hover:bg-white/25 text-white px-4 py-2.5 rounded-2xl text-xs font-bold transition flex items-center gap-1.5 backdrop-blur-sm cursor-pointer"
+            className="bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-300 px-4 py-2.5 rounded-2xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer"
           >
             <span>📥 تصدير ملف JSON كامل</span>
           </button>

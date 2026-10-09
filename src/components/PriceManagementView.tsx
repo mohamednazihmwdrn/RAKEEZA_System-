@@ -498,16 +498,16 @@ export const PriceManagementView: React.FC<PriceManagementViewProps> = ({
   return (
     <div className="w-full max-w-7xl mx-auto flex flex-col space-y-5 pb-12">
       {/* 1. Header Banner & Architecture Explanation */}
-      <div className="bg-gradient-to-r from-[#1a237e] via-[#283593] to-[#0d47a1] text-white p-5 rounded-2xl shadow-md flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+      <div className="bg-white text-slate-900 border-2 border-slate-200 p-4 sm:p-5 rounded-2xl shadow-xs flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <span className="text-2xl">💰</span>
-            <h3 className="text-xl font-black">إدارة وتسعير المنتجات المركزية (Price Management)</h3>
-            <span className="bg-amber-400 text-slate-900 text-xs px-2.5 py-0.5 rounded-full font-bold">
+            <h3 className="text-base sm:text-lg font-black text-slate-900">إدارة وتسعير المنتجات المركزية (Price Management)</h3>
+            <span className="bg-amber-100 text-amber-900 border border-amber-300 text-xs px-2.5 py-0.5 rounded-full font-bold">
               المصدر الرئيسي المعتمد للأسعار
             </span>
           </div>
-          <p className="text-xs sm:text-sm text-indigo-100 mt-1 max-w-3xl leading-relaxed">
+          <p className="text-xs sm:text-sm text-slate-600 mt-1 max-w-3xl leading-relaxed">
             المنظومة المركزية لتحديد وحفظ أسعار البيع الدائمة لكافة الأصناف (سعر البيع النقدي وسعر البيع بالجملة). تُسحب الأسعار آلياً داخل فواتير المبيعات ونقاط البيع بناءً على نوع البيع المختار دون الحاجة للإدخال اليدوي.
           </p>
         </div>
@@ -517,7 +517,7 @@ export const PriceManagementView: React.FC<PriceManagementViewProps> = ({
             <button
               type="button"
               onClick={() => onNavigate('company_prices')}
-              className="bg-purple-600 hover:bg-purple-700 text-white font-bold px-3 py-1.5 rounded-lg text-xs flex items-center gap-1.5 cursor-pointer shadow-xs transition"
+              className="bg-white hover:bg-slate-50 text-purple-800 border-2 border-purple-200 font-bold px-3 py-1.5 rounded-xl text-xs flex items-center gap-1.5 cursor-pointer shadow-xs transition"
               title="الانتقال إلى قائمة أسعار الشركات والتصنيفات"
             >
               <span>🏢</span>

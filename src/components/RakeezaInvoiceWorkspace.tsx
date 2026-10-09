@@ -505,7 +505,7 @@ export const RakeezaInvoiceWorkspace: React.FC<RakeezaInvoiceWorkspaceProps> = (
   const [hierBuyPrice, setHierBuyPrice] = useState('');
   const [hierCashPrice, setHierCashPrice] = useState('');
   const [hierWholesalePrice, setHierWholesalePrice] = useState('');
-  const [hierStock, setHierStock] = useState('10');
+  const [hierStock, setHierStock] = useState('');
 
   // Auto-Focus helper for modals
   const autoFocusModalFirstInput = (containerRefId: string) => {
@@ -2733,17 +2733,11 @@ export const RakeezaInvoiceWorkspace: React.FC<RakeezaInvoiceWorkspaceProps> = (
                   <label style={{ color: '#0f766e', fontWeight: 'bold' }}>1. المجموعة الرئيسية</label>
                   <input
                     type="text"
-                    list="groupsDataList"
                     value={hierGroup}
                     onChange={(e) => setHierGroup(e.target.value)}
                     placeholder="اكتب اسم المجموعة الرئيسية..."
                     style={{ height: '24px', fontSize: '9.5px', fontWeight: 'bold' }}
                   />
-                  <datalist id="groupsDataList">
-                    {[...new Set(localItemsDatabase.map((i) => i.group).filter(Boolean))].map((g) => (
-                      <option key={g} value={g} />
-                    ))}
-                  </datalist>
                 </div>
 
                 {/* 2. التصنيف / الشركة */}
@@ -2751,17 +2745,11 @@ export const RakeezaInvoiceWorkspace: React.FC<RakeezaInvoiceWorkspaceProps> = (
                   <label style={{ color: '#0369a1', fontWeight: 'bold' }}>2. التصنيف / الشركة / الماركة</label>
                   <input
                     type="text"
-                    list="companiesDataList"
                     value={hierCompany}
                     onChange={(e) => setHierCompany(e.target.value)}
                     placeholder="اكتب اسم التصنيف أو الشركة..."
                     style={{ height: '24px', fontSize: '9.5px', fontWeight: 'bold' }}
                   />
-                  <datalist id="companiesDataList">
-                    {[...new Set(localItemsDatabase.map((i) => i.company).filter(Boolean))].map((c) => (
-                      <option key={c} value={c} />
-                    ))}
-                  </datalist>
                 </div>
 
                 {/* 3. النوع / القسم الفرعي */}
@@ -2769,17 +2757,11 @@ export const RakeezaInvoiceWorkspace: React.FC<RakeezaInvoiceWorkspaceProps> = (
                   <label style={{ color: '#6d28d9', fontWeight: 'bold' }}>3. النوع / القسم الفرعي</label>
                   <input
                     type="text"
-                    list="typesDataList"
                     value={hierType}
                     onChange={(e) => setHierType(e.target.value)}
                     placeholder="اكتب اسم النوع أو القسم الفرعي..."
                     style={{ height: '24px', fontSize: '9.5px', fontWeight: 'bold' }}
                   />
-                  <datalist id="typesDataList">
-                    {[...new Set(localItemsDatabase.map((i) => i.typeName).filter(Boolean))].map((t) => (
-                      <option key={t} value={t} />
-                    ))}
-                  </datalist>
                 </div>
 
                 {/* 4. اسم الصنف */}

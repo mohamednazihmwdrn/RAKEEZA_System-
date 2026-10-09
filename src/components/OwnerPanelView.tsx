@@ -124,10 +124,10 @@ export const OwnerPanelView: React.FC<OwnerPanelViewProps> = ({
 
   // Real-time Cloud Companies State
   const [cloudCompanies, setCloudCompanies] = useState<TenantCompany[]>(
-    appData.companies && appData.companies.length > 0 ? appData.companies : DEFAULT_COMPANIES
+    appData.companies && appData.companies.length > 0 ? appData.companies : []
   );
   const [isLoadingCompanies, setIsLoadingCompanies] = useState<boolean>(false);
-  const [cloudSyncStatus, setCloudSyncStatus] = useState<string>('');
+  const [cloudSyncStatus, setCloudSyncStatus] = useState<string>('متزامن مع السحابة فورياً');
 
   // Delete Company Confirmation Modal State
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState<boolean>(false);
@@ -159,9 +159,9 @@ export const OwnerPanelView: React.FC<OwnerPanelViewProps> = ({
   const [firestoreCleanConfirmCode, setFirestoreCleanConfirmCode] = useState<string>('');
 
   // Initial state setup if empty
-  const companies: TenantCompany[] = cloudCompanies.length > 0 ? cloudCompanies : (appData.companies || DEFAULT_COMPANIES);
+  const companies: TenantCompany[] = cloudCompanies.length > 0 ? cloudCompanies : (appData.companies || []);
   const plans: SubscriptionPlan[] = appData.plans || DEFAULT_SUBSCRIPTION_PLANS;
-  const trialRegistry: TrialRegistryRecord[] = appData.trialRegistry || DEFAULT_TRIAL_REGISTRY;
+  const trialRegistry: TrialRegistryRecord[] = appData.trialRegistry || [];
   const exportAuditLogs: ExportAuditLog[] = appData.exportAuditLogs || [];
   const supportSessions: SupportAccessSession[] = appData.supportSessions || [];
 
@@ -185,6 +185,11 @@ export const OwnerPanelView: React.FC<OwnerPanelViewProps> = ({
   useEffect(() => {
     if (isAuthenticated) {
       loadCloudCompanies();
+      // 🔄 Auto-refresh live companies every 5 seconds so any newly registered device/company appears automatically
+      const pollTimer = setInterval(() => {
+        loadCloudCompanies(true);
+      }, 5000);
+      return () => clearInterval(pollTimer);
     }
   }, [isAuthenticated]);
 
@@ -611,23 +616,23 @@ export const OwnerPanelView: React.FC<OwnerPanelViewProps> = ({
   // If not authenticated, render Login Gate
   if (!isAuthenticated) {
     return (
-      <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4" dir="rtl">
-        <div className="bg-slate-800 border border-slate-700 rounded-3xl p-8 max-w-md w-full shadow-2xl text-white">
+      <div className="min-h-screen bg-slate-100 flex items-center justify-center p-4" dir="rtl">
+        <div className="bg-white border-2 border-slate-200 rounded-3xl p-8 max-w-md w-full shadow-xl text-slate-900">
           <div className="text-center mb-6">
             <div className="w-16 h-16 bg-amber-500/20 border border-amber-500/40 rounded-2xl flex items-center justify-center text-3xl mx-auto mb-3 shadow-inner">
               👑
             </div>
-            <h1 className="text-2xl font-black tracking-tight text-white">
+            <h1 className="text-2xl font-black tracking-tight text-slate-900">
               RAKEEZA | لوحة مالك المنصة
             </h1>
-            <p className="text-xs text-slate-400 mt-1">
+            <p className="text-xs text-slate-600 mt-1">
               منصة إدارة المستأجرين والشركات والاشتراكات السحابية Multi-Tenant SaaS
             </p>
           </div>
 
           <form onSubmit={handleLogin} className="space-y-4">
             <div>
-              <label className="block text-xs font-bold text-slate-300 mb-1">
+              <label className="block text-xs font-bold text-slate-700 mb-1">
                 اسم المستخدم / المعرف (Owner Username / ID)
               </label>
               <input
@@ -636,13 +641,13 @@ export const OwnerPanelView: React.FC<OwnerPanelViewProps> = ({
                 value={ownerUsername}
                 onChange={(e) => setOwnerUsername(e.target.value)}
                 placeholder="أدخل اسم مستخدم المالك..."
-                className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-amber-500"
+                className="w-full bg-white border-2 border-slate-300 rounded-xl px-4 py-2.5 text-slate-900 text-sm focus:outline-none focus:border-slate-800 placeholder-slate-400"
                 autoFocus
               />
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-300 mb-1">
+              <label className="block text-xs font-bold text-slate-700 mb-1">
                 كلمة المرور (Owner Password)
               </label>
               <input
@@ -651,7 +656,7 @@ export const OwnerPanelView: React.FC<OwnerPanelViewProps> = ({
                 value={ownerPassword}
                 onChange={(e) => setOwnerPassword(e.target.value)}
                 placeholder="أدخل كلمة المرور..."
-                className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-amber-500"
+                className="w-full bg-white border-2 border-slate-300 rounded-xl px-4 py-2.5 text-slate-900 text-sm focus:outline-none focus:border-slate-800 placeholder-slate-400"
               />
             </div>
 
@@ -664,7 +669,7 @@ export const OwnerPanelView: React.FC<OwnerPanelViewProps> = ({
             <button
               type="submit"
               disabled={isLoggingIn}
-              className="w-full bg-linear-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 font-black py-3 rounded-xl transition shadow-lg cursor-pointer flex items-center justify-center gap-2 disabled:opacity-60"
+              className="w-full bg-slate-900 hover:bg-black text-white font-black py-3 rounded-xl transition shadow-md cursor-pointer flex items-center justify-center gap-2 disabled:opacity-60"
             >
               <span>{isLoggingIn ? 'جاري التحقق الآمن...' : 'تسجيل الدخول إلى لوحة التحكم'}</span>
               <span>🔒</span>
@@ -674,7 +679,7 @@ export const OwnerPanelView: React.FC<OwnerPanelViewProps> = ({
               <button
                 type="button"
                 onClick={onClose}
-                className="text-xs text-slate-400 hover:text-white transition"
+                className="text-xs text-slate-600 hover:text-slate-900 font-bold transition"
               >
                 ← العودة إلى منظومة ركيزة
               </button>
@@ -687,9 +692,9 @@ export const OwnerPanelView: React.FC<OwnerPanelViewProps> = ({
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col" dir="rtl">
+    <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col" dir="rtl">
       {/* Top Header */}
-      <header className="bg-slate-900 border-b border-slate-800 sticky top-0 z-40 px-4 sm:px-6 py-3">
+      <header className="bg-white border-b-2 border-slate-200 sticky top-0 z-40 px-4 sm:px-6 py-3 shadow-xs">
         <div className="max-w-7xl mx-auto flex flex-wrap justify-between items-center gap-3">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-linear-to-br from-amber-400 to-amber-600 flex items-center justify-center text-slate-950 font-black text-xl shadow-md">
@@ -697,12 +702,12 @@ export const OwnerPanelView: React.FC<OwnerPanelViewProps> = ({
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h1 className="text-lg font-black text-white">RAKEEZA | لوحة مالك المنصة السحابية</h1>
+                <h1 className="text-lg font-black text-slate-950">RAKEEZA | لوحة مالك المنصة السحابية</h1>
                 <span className="bg-amber-500/20 text-amber-400 text-[10px] font-bold px-2 py-0.5 rounded-md border border-amber-500/30">
                   Owner Super Admin
                 </span>
               </div>
-              <p className="text-[11px] text-slate-400">
+              <p className="text-[11px] text-slate-600 font-medium">
                 إدارة الشركات والمستأجرين • التراخيص والاشتراكات • مكافحة التحايل • هجرة البيانات الشاملة
               </p>
             </div>
@@ -711,19 +716,19 @@ export const OwnerPanelView: React.FC<OwnerPanelViewProps> = ({
           <div className="flex items-center gap-2">
             <button
               onClick={() => setIsCreateModalOpen(true)}
-              className="bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white text-xs font-bold px-3.5 py-2 rounded-xl transition flex items-center gap-1.5 shadow-md cursor-pointer"
+              className="bg-slate-900 hover:bg-black text-white text-xs font-bold px-3.5 py-2 rounded-xl transition flex items-center gap-1.5 shadow-xs cursor-pointer"
             >
               <span>➕ إضافة شركة جديدة</span>
             </button>
             <button
               onClick={onClose}
-              className="bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold px-3 py-2 rounded-xl border border-slate-700 transition"
+              className="bg-white hover:bg-slate-100 text-slate-800 text-xs font-bold px-3 py-2 rounded-xl border-2 border-slate-200 transition"
             >
               🏢 العودة للنظام
             </button>
             <button
               onClick={handleLogout}
-              className="bg-red-950 hover:bg-red-900 text-red-200 text-xs font-semibold px-3 py-2 rounded-xl border border-red-800/60 transition"
+              className="bg-white hover:bg-rose-50 text-rose-700 text-xs font-bold px-3 py-2 rounded-xl border-2 border-rose-200 transition"
               title="تسجيل الخروج"
             >
               🚪 خروج
@@ -752,10 +757,10 @@ export const OwnerPanelView: React.FC<OwnerPanelViewProps> = ({
 
         {/* Global Statistics Overview */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-          <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 flex flex-col justify-between">
-            <span className="text-xs text-slate-400 font-semibold">إجمالي الشركات</span>
+          <div className="bg-white border-2 border-slate-200 rounded-2xl p-4 flex flex-col justify-between shadow-xs text-slate-900">
+            <span className="text-xs text-slate-600 font-bold">إجمالي الشركات</span>
             <div className="flex items-baseline justify-between mt-2">
-              <span className="text-2xl font-black text-white font-mono">{totalCompanies}</span>
+              <span className="text-2xl font-black text-slate-950 font-mono">{totalCompanies}</span>
               <span className="text-xs text-slate-500">شركة</span>
             </div>
             <div className="mt-2 text-[10px] text-emerald-400 flex items-center gap-1">
@@ -764,8 +769,8 @@ export const OwnerPanelView: React.FC<OwnerPanelViewProps> = ({
             </div>
           </div>
 
-          <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 flex flex-col justify-between">
-            <span className="text-xs text-slate-400 font-semibold">التجربة المجانية (30D)</span>
+          <div className="bg-white border-2 border-slate-200 rounded-2xl p-4 flex flex-col justify-between shadow-xs text-slate-900">
+            <span className="text-xs text-slate-600 font-bold">التجربة المجانية (30D)</span>
             <div className="flex items-baseline justify-between mt-2">
               <span className="text-2xl font-black text-emerald-400 font-mono">{trialCompanies}</span>
               <span className="text-xs text-slate-500">تجربة</span>
@@ -775,8 +780,8 @@ export const OwnerPanelView: React.FC<OwnerPanelViewProps> = ({
             </div>
           </div>
 
-          <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 flex flex-col justify-between">
-            <span className="text-xs text-slate-400 font-semibold">الاشتراكات المدفوعة</span>
+          <div className="bg-white border-2 border-slate-200 rounded-2xl p-4 flex flex-col justify-between shadow-xs text-slate-900">
+            <span className="text-xs text-slate-600 font-bold">الاشتراكات المدفوعة</span>
             <div className="flex items-baseline justify-between mt-2">
               <span className="text-2xl font-black text-amber-400 font-mono">
                 {planStats.monthly + planStats.semi_annual + planStats.annual + planStats.lifetime}
@@ -788,8 +793,8 @@ export const OwnerPanelView: React.FC<OwnerPanelViewProps> = ({
             </div>
           </div>
 
-          <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 flex flex-col justify-between">
-            <span className="text-xs text-slate-400 font-semibold">المستخدمين بالنظام</span>
+          <div className="bg-white border-2 border-slate-200 rounded-2xl p-4 flex flex-col justify-between shadow-xs text-slate-900">
+            <span className="text-xs text-slate-600 font-bold">المستخدمين بالنظام</span>
             <div className="flex items-baseline justify-between mt-2">
               <span className="text-2xl font-black text-blue-400 font-mono">{totalUsersAcrossCompanies}</span>
               <span className="text-xs text-slate-500">مستخدم</span>
@@ -799,8 +804,8 @@ export const OwnerPanelView: React.FC<OwnerPanelViewProps> = ({
             </div>
           </div>
 
-          <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 flex flex-col justify-between">
-            <span className="text-xs text-slate-400 font-semibold">إجمالي العمليات المنفذة</span>
+          <div className="bg-white border-2 border-slate-200 rounded-2xl p-4 flex flex-col justify-between shadow-xs text-slate-900">
+            <span className="text-xs text-slate-600 font-bold">إجمالي العمليات المنفذة</span>
             <div className="flex items-baseline justify-between mt-2">
               <span className="text-2xl font-black text-purple-400 font-mono">{totalOperationsAcrossCompanies}</span>
               <span className="text-xs text-slate-500">حركة</span>
@@ -808,8 +813,8 @@ export const OwnerPanelView: React.FC<OwnerPanelViewProps> = ({
             <div className="mt-2 text-[10px] text-purple-300">فواتير ومخزون وسندات</div>
           </div>
 
-          <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 flex flex-col justify-between">
-            <span className="text-xs text-slate-400 font-semibold">حالة الخوادم السحابية</span>
+          <div className="bg-white border-2 border-slate-200 rounded-2xl p-4 flex flex-col justify-between shadow-xs text-slate-900">
+            <span className="text-xs text-slate-600 font-bold">حالة الخوادم السحابية</span>
             <div className="flex items-baseline justify-between mt-2">
               <span className="text-base font-black text-emerald-400 font-mono">99.99%</span>
               <span className="text-[10px] bg-emerald-950 text-emerald-300 px-1.5 py-0.5 rounded border border-emerald-800">
@@ -821,13 +826,13 @@ export const OwnerPanelView: React.FC<OwnerPanelViewProps> = ({
         </div>
 
         {/* Navigation Tabs */}
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-1.5 flex flex-wrap gap-1">
+        <div className="bg-white border-2 border-slate-200 rounded-2xl p-1.5 flex flex-wrap gap-1 shadow-xs">
           <button
             onClick={() => setActiveTab('companies')}
             className={`flex-1 min-w-[120px] py-2.5 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-2 cursor-pointer ${
               activeTab === 'companies'
-                ? 'bg-amber-500 text-slate-950 shadow-md'
-                : 'text-slate-300 hover:bg-slate-800'
+                ? 'bg-slate-900 text-white shadow-md font-bold'
+                : 'text-slate-700 hover:text-slate-900 hover:bg-slate-100 font-bold'
             }`}
           >
             <span>🏢 الشركات والمستأجرين</span>
@@ -840,8 +845,8 @@ export const OwnerPanelView: React.FC<OwnerPanelViewProps> = ({
             onClick={() => setActiveTab('migration')}
             className={`flex-1 min-w-[120px] py-2.5 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-2 cursor-pointer ${
               activeTab === 'migration'
-                ? 'bg-amber-500 text-slate-950 shadow-md'
-                : 'text-slate-300 hover:bg-slate-800'
+                ? 'bg-slate-900 text-white shadow-md font-bold'
+                : 'text-slate-700 hover:text-slate-900 hover:bg-slate-100 font-bold'
             }`}
           >
             <span>💾 مركز هجرة وتصدير البيانات</span>
@@ -854,8 +859,8 @@ export const OwnerPanelView: React.FC<OwnerPanelViewProps> = ({
             onClick={() => setActiveTab('plans')}
             className={`flex-1 min-w-[120px] py-2.5 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-2 cursor-pointer ${
               activeTab === 'plans'
-                ? 'bg-amber-500 text-slate-950 shadow-md'
-                : 'text-slate-300 hover:bg-slate-800'
+                ? 'bg-slate-900 text-white shadow-md font-bold'
+                : 'text-slate-700 hover:text-slate-900 hover:bg-slate-100 font-bold'
             }`}
           >
             <span>💳 الخطط والاشتراكات</span>
@@ -865,8 +870,8 @@ export const OwnerPanelView: React.FC<OwnerPanelViewProps> = ({
             onClick={() => setActiveTab('licenses')}
             className={`flex-1 min-w-[120px] py-2.5 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-2 cursor-pointer ${
               activeTab === 'licenses'
-                ? 'bg-amber-500 text-slate-950 shadow-md'
-                : 'text-slate-300 hover:bg-slate-800'
+                ? 'bg-slate-900 text-white shadow-md font-bold'
+                : 'text-slate-700 hover:text-slate-900 hover:bg-slate-100 font-bold'
             }`}
           >
             <span>🔑 التراخيص وأكواد التفعيل</span>
@@ -876,8 +881,8 @@ export const OwnerPanelView: React.FC<OwnerPanelViewProps> = ({
             onClick={() => setActiveTab('anti_abuse')}
             className={`flex-1 min-w-[120px] py-2.5 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-2 cursor-pointer ${
               activeTab === 'anti_abuse'
-                ? 'bg-amber-500 text-slate-950 shadow-md'
-                : 'text-slate-300 hover:bg-slate-800'
+                ? 'bg-slate-900 text-white shadow-md font-bold'
+                : 'text-slate-700 hover:text-slate-900 hover:bg-slate-100 font-bold'
             }`}
           >
             <span>🛡️ مكافحة التحايل على التجربة</span>
@@ -887,8 +892,8 @@ export const OwnerPanelView: React.FC<OwnerPanelViewProps> = ({
             onClick={() => setActiveTab('audit')}
             className={`flex-1 min-w-[120px] py-2.5 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-2 cursor-pointer ${
               activeTab === 'audit'
-                ? 'bg-amber-500 text-slate-950 shadow-md'
-                : 'text-slate-300 hover:bg-slate-800'
+                ? 'bg-slate-900 text-white shadow-md font-bold'
+                : 'text-slate-700 hover:text-slate-900 hover:bg-slate-100 font-bold'
             }`}
           >
             <span>📜 سجل الرقابة والدعم</span>
@@ -910,14 +915,14 @@ export const OwnerPanelView: React.FC<OwnerPanelViewProps> = ({
         {activeTab === 'companies' && (
           <div className="space-y-4">
             {/* Search & Filter Bar */}
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-wrap gap-3 items-center justify-between">
+            <div className="bg-white border-2 border-slate-200 rounded-2xl p-4 flex flex-wrap gap-3 items-center justify-between shadow-xs text-slate-900">
               <div className="flex-1 min-w-[240px]">
                 <input
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="🔍 بحث باسم الشركة، كود الشركة، رقم الهاتف، أو اسم المدير..."
-                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-500"
+                  className="w-full bg-slate-50 border-2 border-slate-300 rounded-xl px-4 py-2.5 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-slate-800 focus:bg-white"
                 />
               </div>
 
@@ -925,7 +930,7 @@ export const OwnerPanelView: React.FC<OwnerPanelViewProps> = ({
                 <select
                   value={statusFilter}
                   onChange={(e) => setStatusFilter(e.target.value)}
-                  className="bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-300 focus:outline-none"
+                  className="bg-slate-50 border-2 border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
                 >
                   <option value="all">كافة الحالات</option>
                   <option value="active">نشطة (Active)</option>
@@ -937,7 +942,7 @@ export const OwnerPanelView: React.FC<OwnerPanelViewProps> = ({
                 <select
                   value={planFilter}
                   onChange={(e) => setPlanFilter(e.target.value)}
-                  className="bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-300 focus:outline-none"
+                  className="bg-slate-50 border-2 border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
                 >
                   <option value="all">كافة الخطط</option>
                   <option value="trial">التجربة المجانية (30D)</option>
@@ -951,7 +956,7 @@ export const OwnerPanelView: React.FC<OwnerPanelViewProps> = ({
                   type="button"
                   onClick={() => loadCloudCompanies(false)}
                   disabled={isLoadingCompanies}
-                  className="bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold px-3 py-2 rounded-xl transition flex items-center gap-1.5 border border-slate-700 cursor-pointer disabled:opacity-50"
+                  className="bg-white hover:bg-slate-100 text-slate-800 text-xs font-bold px-3 py-2 rounded-xl transition flex items-center gap-1.5 border-2 border-slate-200 cursor-pointer disabled:opacity-50"
                   title="تحديث قائمة الشركات فورياً من السحابة السحابية"
                 >
                   <span className={isLoadingCompanies ? 'animate-spin' : ''}>🔄</span>
@@ -966,7 +971,7 @@ export const OwnerPanelView: React.FC<OwnerPanelViewProps> = ({
                     setCleanupFeedback('');
                     setIsCleanupModalOpen(true);
                   }}
-                  className="bg-purple-950/70 hover:bg-purple-900 text-purple-300 hover:text-white border border-purple-800/80 text-xs font-black px-3.5 py-2 rounded-xl transition flex items-center gap-1.5 cursor-pointer shadow-xs"
+                  className="bg-white hover:bg-rose-50 text-rose-700 border-2 border-rose-200 text-xs font-bold px-3.5 py-2 rounded-xl transition flex items-center gap-1.5 cursor-pointer shadow-xs"
                   title="تنظيف النظام وتصفير كافة الحركات والمبالغ المسجلة"
                 >
                   <span>🧹</span>
@@ -975,7 +980,7 @@ export const OwnerPanelView: React.FC<OwnerPanelViewProps> = ({
 
                 <button
                   onClick={() => setIsCreateModalOpen(true)}
-                  className="bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-black px-4 py-2 rounded-xl transition flex items-center gap-1 cursor-pointer"
+                  className="bg-slate-900 hover:bg-black text-white text-xs font-bold px-4 py-2 rounded-xl transition flex items-center gap-1 cursor-pointer shadow-xs"
                 >
                   <span>➕ شركة جديدة</span>
                 </button>
@@ -983,13 +988,37 @@ export const OwnerPanelView: React.FC<OwnerPanelViewProps> = ({
             </div>
 
             {/* Companies Section */}
-            {/* Mobile Companies Cards (< md) */}
-            <div className="block md:hidden space-y-3">
+            {filteredCompanies.length === 0 ? (
+              <div className="bg-white border-2 border-slate-200 rounded-2xl p-8 text-center text-slate-900 shadow-xs space-y-3">
+                <div className="text-4xl">🏢</div>
+                <h3 className="text-base font-black text-slate-900">
+                  {searchQuery || statusFilter !== 'all' || planFilter !== 'all'
+                    ? 'لا توجد شركات مطابقة لمعايير البحث الحالية'
+                    : 'النظام نظيف تماماً ولا توجد شركات مسجلة حالياً'}
+                </h3>
+                <p className="text-xs text-slate-600 max-w-md mx-auto leading-relaxed">
+                  {searchQuery || statusFilter !== 'all' || planFilter !== 'all'
+                    ? 'يرجى تجربة تعديل عبارة البحث أو الفلاتر المختارة.'
+                    : 'أي جهاز أو شركة جديدة تقوم بالتسجيل في المنظومة ستظهر هنا في هذه اللوحة تلقائياً وبشكل مباشر.'}
+                </p>
+                {!searchQuery && (
+                  <button
+                    onClick={() => setIsCreateModalOpen(true)}
+                    className="inline-flex items-center gap-1.5 bg-slate-900 hover:bg-black text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-xs transition cursor-pointer"
+                  >
+                    <span>➕ إضافة شركة جديدة يدوياً</span>
+                  </button>
+                )}
+              </div>
+            ) : (
+              <>
+                {/* Mobile Companies Cards (< md) */}
+                <div className="block md:hidden space-y-3">
               {filteredCompanies.map((c) => (
-                <div key={c.id} className="bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-3 shadow-xl text-xs">
-                  <div className="flex items-start justify-between gap-2 border-b border-slate-800 pb-2.5">
+                <div key={c.id} className="bg-white border-2 border-slate-200 rounded-2xl p-4 space-y-3 shadow-xs text-xs text-slate-900">
+                  <div className="flex items-start justify-between gap-2 border-b border-slate-200 pb-2.5">
                     <div>
-                      <div className="font-bold text-white text-base">{c.name}</div>
+                      <div className="font-black text-slate-950 text-base">{c.name}</div>
                       <div className="flex items-center gap-2 mt-1">
                         <span className="font-mono bg-slate-800 px-1.5 py-0.5 rounded text-amber-400 font-bold">
                           {c.code}
@@ -1013,7 +1042,7 @@ export const OwnerPanelView: React.FC<OwnerPanelViewProps> = ({
                     </span>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-2 bg-slate-950 p-2.5 rounded-xl border border-slate-800 text-[11px]">
+                  <div className="grid grid-cols-2 gap-2 bg-slate-50 p-2.5 rounded-xl border border-slate-200 text-[11px] text-slate-800">
                     <div>
                       <span className="text-slate-500 block text-[10px]">الخطة:</span>
                       <span className="font-bold text-slate-200">{c.planName}</span>
@@ -1039,7 +1068,7 @@ export const OwnerPanelView: React.FC<OwnerPanelViewProps> = ({
                         setSelectedCompany(c);
                         setIsSupportModalOpen(true);
                       }}
-                      className="min-h-[40px] bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold transition flex items-center justify-center gap-1"
+                      className="min-h-[40px] bg-white hover:bg-slate-100 text-slate-800 border-2 border-slate-200 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1"
                     >
                       <span>🛠️</span>
                       <span>دخول دعم</span>
@@ -1050,7 +1079,7 @@ export const OwnerPanelView: React.FC<OwnerPanelViewProps> = ({
                         setSelectedCompany(c);
                         setIsExportModalOpen(true);
                       }}
-                      className="min-h-[40px] bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-bold border border-slate-700 transition flex items-center justify-center gap-1"
+                      className="min-h-[40px] bg-white hover:bg-slate-100 text-slate-800 border-2 border-slate-200 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1"
                     >
                       <span>💾</span>
                       <span>تصدير</span>
@@ -1059,7 +1088,7 @@ export const OwnerPanelView: React.FC<OwnerPanelViewProps> = ({
                     {c.status === 'active' || c.status === 'trial' ? (
                       <button
                         onClick={() => handleStatusChange(c.id, 'suspended')}
-                        className="min-h-[40px] bg-amber-950 hover:bg-amber-900 text-amber-300 border border-amber-800/60 rounded-xl text-xs font-semibold transition flex items-center justify-center gap-1"
+                        className="min-h-[40px] bg-white hover:bg-amber-50 text-amber-800 border-2 border-amber-300 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1"
                       >
                         <span>⏸️</span>
                         <span>تعليق الحساب</span>
@@ -1067,7 +1096,7 @@ export const OwnerPanelView: React.FC<OwnerPanelViewProps> = ({
                     ) : (
                       <button
                         onClick={() => handleStatusChange(c.id, 'active')}
-                        className="min-h-[40px] bg-emerald-950 hover:bg-emerald-900 text-emerald-300 border border-emerald-800/60 rounded-xl text-xs font-semibold transition flex items-center justify-center gap-1"
+                        className="min-h-[40px] bg-white hover:bg-emerald-50 text-emerald-800 border-2 border-emerald-300 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1"
                       >
                         <span>▶️</span>
                         <span>تنشيط الحساب</span>
@@ -1082,7 +1111,7 @@ export const OwnerPanelView: React.FC<OwnerPanelViewProps> = ({
                         setDeleteError('');
                         setIsDeleteModalOpen(true);
                       }}
-                      className="min-h-[40px] bg-rose-950/80 hover:bg-rose-900 text-rose-300 hover:text-white border border-rose-800/80 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1"
+                      className="min-h-[40px] bg-white hover:bg-rose-50 text-rose-700 border-2 border-rose-200 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1"
                     >
                       <span>🗑️</span>
                       <span>حذف الشركة</span>
@@ -1093,10 +1122,10 @@ export const OwnerPanelView: React.FC<OwnerPanelViewProps> = ({
             </div>
 
             {/* Desktop Companies Table (>= md) */}
-            <div className="hidden md:block bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
+            <div className="hidden md:block bg-white border-2 border-slate-200 rounded-2xl overflow-hidden shadow-xs text-slate-900">
               <div className="overflow-x-auto">
                 <table className="w-full text-right text-xs">
-                  <thead className="bg-slate-950 text-slate-400 font-bold border-b border-slate-800">
+                  <thead className="bg-slate-100 text-slate-800 font-black border-b-2 border-slate-200">
                     <tr>
                       <th className="p-3.5">الشركة / المعرف</th>
                       <th className="p-3.5">الخطة والترخيص</th>
@@ -1107,11 +1136,11 @@ export const OwnerPanelView: React.FC<OwnerPanelViewProps> = ({
                       <th className="p-3.5 text-center">إجراءات المالك</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-800/60">
+                  <tbody className="divide-y divide-slate-200 text-slate-900">
                     {filteredCompanies.map((c) => (
-                      <tr key={c.id} className="hover:bg-slate-800/40 transition">
+                      <tr key={c.id} className="hover:bg-slate-50 transition">
                         <td className="p-3.5">
-                          <div className="font-bold text-white text-sm">{c.name}</div>
+                          <div className="font-black text-slate-950 text-sm">{c.name}</div>
                           <div className="text-[11px] text-slate-400 flex items-center gap-2 mt-0.5">
                             <span className="font-mono bg-slate-800 px-1.5 py-0.5 rounded text-amber-400">
                               {c.code}
@@ -1259,23 +1288,25 @@ export const OwnerPanelView: React.FC<OwnerPanelViewProps> = ({
                 </table>
               </div>
             </div>
-          </div>
+          </>
         )}
+      </div>
+    )}
 
         {/* TAB 2: Data Migration & Export Suite */}
         {activeTab === 'migration' && (
           <div className="space-y-6">
             {/* Banner */}
-            <div className="bg-linear-to-r from-slate-900 via-slate-800 to-slate-900 border border-slate-700 rounded-3xl p-6 sm:p-8 relative overflow-hidden shadow-2xl">
+            <div className="bg-white border-2 border-slate-200 rounded-3xl p-6 sm:p-8 relative overflow-hidden shadow-xs text-slate-900">
               <div className="max-w-3xl relative z-10 space-y-3">
                 <div className="inline-flex items-center gap-2 bg-amber-500/20 text-amber-300 text-xs font-bold px-3 py-1 rounded-full border border-amber-500/30">
                   <span>✨</span>
                   <span>سيادة البيانات وهجرة الأنظمة المفتوحة (Open Data Sovereignty)</span>
                 </div>
-                <h2 className="text-2xl sm:text-3xl font-black text-white">
+                <h2 className="text-2xl sm:text-3xl font-black text-slate-950">
                   بياناتك ملكك دائماً — تصدير احترافي كامل بكافة المعايير
                 </h2>
-                <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
+                <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
                   تمنح ركيزة للشركات والمالكين حرية تصدير كامل البيانات والعلاقات والجداول المحاسبية وقاموس البيانات Data Dictionary للاستيراد السهل في أي نظام ERP عالمي (Odoo, SAP, Oracle, Zoho) أو لاستعادة النظام بالكامل بنقرة زر واحدة.
                 </p>
               </div>
@@ -1284,18 +1315,18 @@ export const OwnerPanelView: React.FC<OwnerPanelViewProps> = ({
             {/* Quick Export Cards */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {/* Option 1: Full Backup JSON */}
-              <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 flex flex-col justify-between hover:border-amber-500/50 transition shadow-lg">
+              <div className="bg-white border-2 border-slate-200 rounded-2xl p-5 flex flex-col justify-between shadow-xs text-slate-900">
                 <div className="space-y-3">
                   <div className="w-12 h-12 rounded-2xl bg-amber-500/20 border border-amber-500/40 text-amber-400 flex items-center justify-center text-2xl font-bold">
                     📦
                   </div>
-                  <h3 className="text-base font-black text-white">
+                  <h3 className="text-base font-black text-slate-950">
                     1. النسخة الاحتياطية الكاملة (Full Backup JSON)
                   </h3>
                   <p className="text-xs text-slate-400 leading-relaxed">
                     ملف JSON متكامل يحتوي على كافة الكيانات والبيانات والحركات المحاسبية لاستعادة المنظومة بالكامل بنقرة واحدة داخل ركيزة.
                   </p>
-                  <ul className="text-[11px] text-slate-300 space-y-1">
+                  <ul className="text-[11px] text-slate-700 space-y-1">
                     <li>✓ شجرة الحسابات والقيود اليومية</li>
                     <li>✓ الفواتير والعملاء والمندوبين</li>
                     <li>✓ المخازن والأصناف والأسعار</li>
@@ -1311,18 +1342,18 @@ export const OwnerPanelView: React.FC<OwnerPanelViewProps> = ({
               </div>
 
               {/* Option 2: Migration Excel Workbook */}
-              <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 flex flex-col justify-between hover:border-emerald-500/50 transition shadow-lg">
+              <div className="bg-white border-2 border-slate-200 rounded-2xl p-5 flex flex-col justify-between shadow-xs text-slate-900">
                 <div className="space-y-3">
                   <div className="w-12 h-12 rounded-2xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 flex items-center justify-center text-2xl font-bold">
                     📊
                   </div>
-                  <h3 className="text-base font-black text-white">
+                  <h3 className="text-base font-black text-slate-950">
                     2. مصنف الهجرة الشامل (Migration Excel Multi-Sheet)
                   </h3>
                   <p className="text-xs text-slate-400 leading-relaxed">
                     ملف Excel مقسم لصفحات متعددة مع صفحة قاموس البيانات Data Dictionary الشارحة لكل حقل ونوع البيانات والمفاتيح الأجنبية.
                   </p>
-                  <ul className="text-[11px] text-slate-300 space-y-1">
+                  <ul className="text-[11px] text-slate-700 space-y-1">
                     <li>✓ صفحة Data Dictionary التوضيحية</li>
                     <li>✓ صفحات منفصلة للعملاء والمندوبين والمخازن</li>
                     <li>✓ تفاصيل بنود الفواتير وحركات النقدية</li>
@@ -1338,18 +1369,18 @@ export const OwnerPanelView: React.FC<OwnerPanelViewProps> = ({
               </div>
 
               {/* Option 3: Migration CSV Bundle */}
-              <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 flex flex-col justify-between hover:border-blue-500/50 transition shadow-lg">
+              <div className="bg-white border-2 border-slate-200 rounded-2xl p-5 flex flex-col justify-between shadow-xs text-slate-900">
                 <div className="space-y-3">
                   <div className="w-12 h-12 rounded-2xl bg-blue-500/20 border border-blue-500/40 text-blue-400 flex items-center justify-center text-2xl font-bold">
                     🗂️
                   </div>
-                  <h3 className="text-base font-black text-white">
+                  <h3 className="text-base font-black text-slate-950">
                     3. حزمة ملفات CSV المنفصلة (CSV ZIP Package)
                   </h3>
                   <p className="text-xs text-slate-400 leading-relaxed">
                     حزمة مضغوطة .ZIP تحتوي على ملف CSV منفصل لكل جدول مع ترميز UTF-8 ودليل الترحيل للاستيراد المباشر في قواعد البيانات.
                   </p>
-                  <ul className="text-[11px] text-slate-300 space-y-1">
+                  <ul className="text-[11px] text-slate-700 space-y-1">
                     <li>✓ ملفات CSV لكل جدول محاسبي ولوجستي</li>
                     <li>✓ توافق تام مع Odoo / SAP / SQL Server</li>
                     <li>✓ ملف README_MIGRATION_GUIDE.txt</li>
@@ -1367,7 +1398,7 @@ export const OwnerPanelView: React.FC<OwnerPanelViewProps> = ({
             </div>
 
             {/* Export Audit Log Table */}
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-4">
+            <div className="bg-white border-2 border-slate-200 rounded-2xl p-5 space-y-4 shadow-xs text-slate-900">
               <h3 className="text-sm font-black text-white flex items-center gap-2">
                 <span>🛡️</span>
                 <span>سجل عمليات التصدير والأمان (Export Audit Log)</span>
@@ -1382,7 +1413,7 @@ export const OwnerPanelView: React.FC<OwnerPanelViewProps> = ({
                   {/* Mobile Export Logs (< md) */}
                   <div className="block md:hidden space-y-2.5">
                     {exportAuditLogs.map((log) => (
-                      <div key={log.id} className="bg-slate-950 p-3 rounded-xl border border-slate-800 text-xs space-y-1.5">
+                      <div key={log.id} className="bg-slate-50 p-3 rounded-xl border border-slate-200 text-slate-900 text-xs space-y-1.5">
                         <div className="flex items-center justify-between gap-2 border-b border-slate-800 pb-1.5">
                           <span className="font-semibold text-white">{log.exportedBy}</span>
                           <span className="font-mono text-slate-500 text-[11px]">{log.timestamp}</span>
@@ -1407,7 +1438,7 @@ export const OwnerPanelView: React.FC<OwnerPanelViewProps> = ({
                   {/* Desktop Export Logs Table (>= md) */}
                   <div className="hidden md:block overflow-x-auto">
                     <table className="w-full text-right text-xs">
-                      <thead className="bg-slate-950 text-slate-400 border-b border-slate-800">
+                      <thead className="bg-slate-100 text-slate-800 font-black border-b-2 border-slate-200">
                         <tr>
                           <th className="p-3">التاريخ والوقت</th>
                           <th className="p-3">المستخدم / الدور</th>
@@ -1420,7 +1451,7 @@ export const OwnerPanelView: React.FC<OwnerPanelViewProps> = ({
                       </thead>
                       <tbody className="divide-y divide-slate-800">
                         {exportAuditLogs.map((log) => (
-                          <tr key={log.id} className="hover:bg-slate-800/40">
+                          <tr key={log.id} className="hover:bg-slate-50 transition border-b border-slate-200 text-slate-900">
                             <td className="p-3 font-mono text-slate-400">{log.timestamp}</td>
                             <td className="p-3 font-semibold text-white">{log.exportedBy}</td>
                             <td className="p-3 text-slate-300">{log.companyName}</td>
@@ -1456,7 +1487,7 @@ export const OwnerPanelView: React.FC<OwnerPanelViewProps> = ({
               {plans.map((p) => (
                 <div
                   key={p.id}
-                  className={`bg-slate-900 border rounded-2xl p-5 flex flex-col justify-between shadow-xl relative ${
+                  className={`bg-white border-2 border-slate-200 rounded-2xl p-5 flex flex-col justify-between shadow-xs text-slate-900 relative ${
                     p.isPopular
                       ? 'border-amber-500 ring-2 ring-amber-500/20'
                       : 'border-slate-800'
@@ -1472,9 +1503,9 @@ export const OwnerPanelView: React.FC<OwnerPanelViewProps> = ({
                     <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-800 text-amber-400">
                       {p.badge}
                     </span>
-                    <h3 className="text-base font-black text-white">{p.name}</h3>
+                    <h3 className="text-base font-black text-slate-950">{p.name}</h3>
                     <div className="flex items-baseline gap-1 my-2">
-                      <span className="text-2xl font-black text-white font-mono">{p.price}</span>
+                      <span className="text-2xl font-black text-slate-950 font-mono">{p.price}</span>
                       <span className="text-xs text-slate-400">{p.currency}</span>
                       <span className="text-[10px] text-slate-500">/ {p.durationDays} يوم</span>
                     </div>
@@ -1517,7 +1548,7 @@ export const OwnerPanelView: React.FC<OwnerPanelViewProps> = ({
         {/* TAB 4: Licenses Center */}
         {activeTab === 'licenses' && (
           <div className="space-y-6">
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4">
+            <div className="bg-white border-2 border-slate-200 rounded-2xl p-6 space-y-4 shadow-xs text-slate-900">
               <h3 className="text-sm font-black text-white flex items-center gap-2">
                 <span>🔑</span>
                 <span>توليد كود تفعيل جديد (License Key Generator)</span>
@@ -1525,7 +1556,7 @@ export const OwnerPanelView: React.FC<OwnerPanelViewProps> = ({
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
-                  <label className="block text-xs font-bold text-slate-300 mb-1">الشركة المستهدفة</label>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">الشركة المستهدفة</label>
                   <select
                     value={genCompanyId}
                     onChange={(e) => setGenCompanyId(e.target.value)}
@@ -1541,7 +1572,7 @@ export const OwnerPanelView: React.FC<OwnerPanelViewProps> = ({
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-slate-300 mb-1">خطة الترخيص</label>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">خطة الترخيص</label>
                   <select
                     value={genPlanId}
                     onChange={(e) => setGenPlanId(e.target.value)}
@@ -1569,7 +1600,7 @@ export const OwnerPanelView: React.FC<OwnerPanelViewProps> = ({
               </div>
 
               {generatedCode && (
-                <div className="bg-slate-950 border-2 border-amber-500/50 rounded-2xl p-4 flex flex-col sm:flex-row justify-between items-center gap-3">
+                <div className="bg-amber-50 border-2 border-amber-300 rounded-2xl p-4 flex flex-col sm:flex-row justify-between items-center gap-3 text-slate-900">
                   <div>
                     <div className="text-[11px] text-amber-400 font-bold">كود التفعيل الجديد الجاهز للاستخدام:</div>
                     <div className="text-lg font-black font-mono tracking-wider text-white mt-0.5">
@@ -1596,7 +1627,7 @@ export const OwnerPanelView: React.FC<OwnerPanelViewProps> = ({
         {activeTab === 'anti_abuse' && (
           <div className="space-y-6">
             {/* Anti-Abuse Testing Tool */}
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4">
+            <div className="bg-white border-2 border-slate-200 rounded-2xl p-6 space-y-4 shadow-xs text-slate-900">
               <h3 className="text-sm font-black text-white flex items-center gap-2">
                 <span>🛡️</span>
                 <span>فحص رقم هاتف / جهاز في سجل مكافحة التحايل</span>
@@ -1639,7 +1670,7 @@ export const OwnerPanelView: React.FC<OwnerPanelViewProps> = ({
             </div>
 
             {/* Registry Table */}
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-4">
+            <div className="bg-white border-2 border-slate-200 rounded-2xl p-5 space-y-4 shadow-xs text-slate-900">
               <h3 className="text-sm font-black text-white">
                 سجل أرقام الهواتف والأجهزة المسجلة في التجربة المجانية ({trialRegistry.length})
               </h3>
@@ -1647,7 +1678,7 @@ export const OwnerPanelView: React.FC<OwnerPanelViewProps> = ({
               {/* Mobile Trial Registry Cards (< md) */}
               <div className="block md:hidden space-y-2.5">
                 {trialRegistry.map((tr) => (
-                  <div key={tr.id} className="bg-slate-950 p-3 rounded-xl border border-slate-800 text-xs space-y-1.5">
+                  <div key={tr.id} className="bg-slate-50 p-3 rounded-xl border border-slate-200 text-slate-900 text-xs space-y-1.5">
                     <div className="flex items-center justify-between gap-2 border-b border-slate-800 pb-1.5">
                       <span className="font-mono font-bold text-amber-300">{tr.phone}</span>
                       <span
@@ -1689,7 +1720,7 @@ export const OwnerPanelView: React.FC<OwnerPanelViewProps> = ({
                   </thead>
                   <tbody className="divide-y divide-slate-800">
                     {trialRegistry.map((tr) => (
-                      <tr key={tr.id} className="hover:bg-slate-800/40">
+                      <tr key={tr.id} className="hover:bg-slate-50 transition border-b border-slate-200 text-slate-900">
                         <td className="p-3 font-mono font-bold text-amber-300">{tr.phone}</td>
                         <td className="p-3 text-white font-semibold">{tr.companyName}</td>
                         <td className="p-3 font-mono text-slate-400">{tr.trialStartedAt}</td>
@@ -1722,7 +1753,7 @@ export const OwnerPanelView: React.FC<OwnerPanelViewProps> = ({
         {/* TAB 6: Audit & Support Sessions */}
         {activeTab === 'audit' && (
           <div className="space-y-6">
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-4">
+            <div className="bg-white border-2 border-slate-200 rounded-2xl p-5 space-y-4 shadow-xs text-slate-900">
               <h3 className="text-sm font-black text-white flex items-center gap-2">
                 <span>🛠️</span>
                 <span>سجل جلسات الدعم الفني والوصول المباشر (Support Access Sessions)</span>
@@ -1737,7 +1768,7 @@ export const OwnerPanelView: React.FC<OwnerPanelViewProps> = ({
                   {/* Mobile Support Sessions Cards (< md) */}
                   <div className="block md:hidden space-y-2.5">
                     {supportSessions.map((s) => (
-                      <div key={s.id} className="bg-slate-950 p-3 rounded-xl border border-slate-800 text-xs space-y-1.5">
+                      <div key={s.id} className="bg-slate-50 p-3 rounded-xl border border-slate-200 text-slate-900 text-xs space-y-1.5">
                         <div className="flex items-center justify-between gap-2 border-b border-slate-800 pb-1.5">
                           <span className="font-semibold text-white">{s.ownerName}</span>
                           <span className="font-mono text-slate-500 text-[11px]">{s.startedAt}</span>
@@ -1771,7 +1802,7 @@ export const OwnerPanelView: React.FC<OwnerPanelViewProps> = ({
                       </thead>
                       <tbody className="divide-y divide-slate-800">
                         {supportSessions.map((s) => (
-                          <tr key={s.id} className="hover:bg-slate-800/40">
+                          <tr key={s.id} className="hover:bg-slate-50 transition border-b border-slate-200 text-slate-900">
                             <td className="p-3 font-mono text-slate-400">{s.id}</td>
                             <td className="p-3 font-semibold text-white">{s.ownerName}</td>
                             <td className="p-3 text-slate-300">{s.companyName}</td>
@@ -1842,7 +1873,7 @@ export const OwnerPanelView: React.FC<OwnerPanelViewProps> = ({
                 <div className="flex items-center gap-3">
                   <span className="p-3 bg-amber-500/20 border border-amber-500/30 rounded-2xl text-xl">🔀</span>
                   <div>
-                    <h3 className="text-base font-black text-white">
+                    <h3 className="text-base font-black text-slate-950">
                       طبقة تقسيم وتجزئة البيانات (Firestore Data Sharding)
                     </h3>
                     <p className="text-xs text-slate-400">
@@ -1947,7 +1978,7 @@ export const OwnerPanelView: React.FC<OwnerPanelViewProps> = ({
                 <div className="flex items-center gap-3">
                   <span className="p-3 bg-cyan-500/20 border border-cyan-500/30 rounded-2xl text-xl">❄️</span>
                   <div>
-                    <h3 className="text-base font-black text-white">
+                    <h3 className="text-base font-black text-slate-950">
                       محرك الأرشفة التلقائية السحابية (Cold Storage &gt; 2 Years)
                     </h3>
                     <p className="text-xs text-slate-400">
@@ -2054,7 +2085,7 @@ export const OwnerPanelView: React.FC<OwnerPanelViewProps> = ({
                 <div className="flex items-center gap-3">
                   <span className="p-3 bg-purple-500/20 border border-purple-500/40 rounded-2xl text-xl">🧹</span>
                   <div>
-                    <h3 className="text-base font-black text-white">
+                    <h3 className="text-base font-black text-slate-950">
                       أداة تنظيف وتطهير قاعدة بيانات فايربيس (Firestore Database Cleaner)
                     </h3>
                     <p className="text-xs text-purple-300">
@@ -2107,22 +2138,22 @@ export const OwnerPanelView: React.FC<OwnerPanelViewProps> = ({
       {/* MODAL: Create New Company Wizard */}
       {isCreateModalOpen && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-2xl w-full p-6 text-white space-y-4 max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between items-center pb-3 border-b border-slate-800">
-              <h3 className="text-base font-black text-amber-400 flex items-center gap-2">
+          <div className="bg-white border-2 border-slate-200 rounded-3xl max-w-2xl w-full p-6 text-slate-900 space-y-4 max-h-[90vh] overflow-y-auto shadow-2xl">
+            <div className="flex justify-between items-center pb-3 border-b border-slate-200">
+              <h3 className="text-base font-black text-slate-950 flex items-center gap-2">
                 <span>➕</span>
                 <span>إضافة وتسجيل شركة جديدة في سحابة ركيزة</span>
               </h3>
               <button
                 onClick={() => setIsCreateModalOpen(false)}
-                className="text-slate-400 hover:text-white text-lg"
+                className="text-slate-400 hover:text-slate-700 text-lg"
               >
                 ✕
               </button>
             </div>
 
             {formError && (
-              <div className="p-3 bg-red-950 border border-red-500 rounded-xl text-xs text-red-200">
+              <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-xs text-red-700">
                 {formError}
               </div>
             )}
@@ -2130,106 +2161,106 @@ export const OwnerPanelView: React.FC<OwnerPanelViewProps> = ({
             <form onSubmit={handleCreateCompany} className="space-y-4 text-xs">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block font-bold text-slate-300 mb-1">اسم الشركة / المؤسسة *</label>
+                  <label className="block font-bold text-slate-700 mb-1">اسم الشركة / المؤسسة *</label>
                   <input
                     type="text"
                     required
                     value={newCompanyForm.name}
                     onChange={(e) => setNewCompanyForm({ ...newCompanyForm, name: e.target.value })}
                     placeholder="مثال: شركة التوفيق للتجارة العامة"
-                    className="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-white"
+                    className="w-full bg-white border-2 border-slate-300 rounded-xl p-2.5 text-slate-900 focus:border-slate-800"
                   />
                 </div>
 
                 <div>
-                  <label className="block font-bold text-slate-300 mb-1">الاسم التجاري / العلامة</label>
+                  <label className="block font-bold text-slate-700 mb-1">الاسم التجاري / العلامة</label>
                   <input
                     type="text"
                     value={newCompanyForm.tradeName}
                     onChange={(e) => setNewCompanyForm({ ...newCompanyForm, tradeName: e.target.value })}
                     placeholder="مثال: التوفيق ستورز"
-                    className="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-white"
+                    className="w-full bg-white border-2 border-slate-300 rounded-xl p-2.5 text-slate-900 focus:border-slate-800"
                   />
                 </div>
 
                 <div>
-                  <label className="block font-bold text-slate-300 mb-1">رقم هاتف الشركة الرئيسي *</label>
+                  <label className="block font-bold text-slate-700 mb-1">رقم هاتف الشركة الرئيسي *</label>
                   <input
                     type="text"
                     required
                     value={newCompanyForm.phone}
                     onChange={(e) => setNewCompanyForm({ ...newCompanyForm, phone: e.target.value })}
                     placeholder="010XXXXXXXX"
-                    className="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-white font-mono"
+                    className="w-full bg-white border-2 border-slate-300 rounded-xl p-2.5 text-slate-900 font-mono focus:border-slate-800"
                   />
                 </div>
 
                 <div>
-                  <label className="block font-bold text-slate-300 mb-1">البريد الإلكتروني للشركة</label>
+                  <label className="block font-bold text-slate-700 mb-1">البريد الإلكتروني للشركة</label>
                   <input
                     type="email"
                     value={newCompanyForm.email}
                     onChange={(e) => setNewCompanyForm({ ...newCompanyForm, email: e.target.value })}
                     placeholder="info@company.com"
-                    className="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-white"
+                    className="w-full bg-white border-2 border-slate-300 rounded-xl p-2.5 text-slate-900 focus:border-slate-800"
                   />
                 </div>
 
                 <div>
-                  <label className="block font-bold text-slate-300 mb-1">الرقم الضريبي (اختياري)</label>
+                  <label className="block font-bold text-slate-700 mb-1">الرقم الضريبي (اختياري)</label>
                   <input
                     type="text"
                     value={newCompanyForm.taxNumber}
                     onChange={(e) => setNewCompanyForm({ ...newCompanyForm, taxNumber: e.target.value })}
                     placeholder="123-456-789"
-                    className="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-white font-mono"
+                    className="w-full bg-white border-2 border-slate-300 rounded-xl p-2.5 text-slate-900 font-mono focus:border-slate-800"
                   />
                 </div>
 
                 <div>
-                  <label className="block font-bold text-slate-300 mb-1">السجل التجاري (اختياري)</label>
+                  <label className="block font-bold text-slate-700 mb-1">السجل التجاري (اختياري)</label>
                   <input
                     type="text"
                     value={newCompanyForm.commercialReg}
                     onChange={(e) => setNewCompanyForm({ ...newCompanyForm, commercialReg: e.target.value })}
                     placeholder="CR-12345"
-                    className="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-white font-mono"
+                    className="w-full bg-white border-2 border-slate-300 rounded-xl p-2.5 text-slate-900 font-mono focus:border-slate-800"
                   />
                 </div>
               </div>
 
               {/* Admin credentials */}
-              <div className="bg-slate-950 p-3.5 rounded-2xl border border-slate-800 space-y-3">
-                <div className="font-bold text-amber-400 text-xs">بيانات المدير العام للشركة (Company Admin):</div>
+              <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200 space-y-3 text-slate-900">
+                <div className="font-bold text-amber-700 text-xs">بيانات المدير العام للشركة (Company Admin):</div>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <div>
-                    <label className="block text-slate-400 mb-1">اسم المدير</label>
+                    <label className="block text-slate-600 mb-1">اسم المدير</label>
                     <input
                       type="text"
                       value={newCompanyForm.adminName}
                       onChange={(e) => setNewCompanyForm({ ...newCompanyForm, adminName: e.target.value })}
                       placeholder="المدير المسؤول"
-                      className="w-full bg-slate-900 border border-slate-700 rounded-xl p-2 text-white"
+                      className="w-full bg-white border-2 border-slate-300 rounded-xl p-2 text-slate-900"
                     />
                   </div>
                   <div>
-                    <label className="block text-slate-400 mb-1">اسم المستخدم</label>
+                    <label className="block text-slate-600 mb-1">اسم المستخدم</label>
                     <input
                       type="text"
                       value={newCompanyForm.adminUsername}
                       onChange={(e) => setNewCompanyForm({ ...newCompanyForm, adminUsername: e.target.value })}
                       placeholder="admin"
-                      className="w-full bg-slate-900 border border-slate-700 rounded-xl p-2 text-white font-mono"
+                      className="w-full bg-white border-2 border-slate-300 rounded-xl p-2 text-slate-900 font-mono"
                     />
                   </div>
                   <div>
-                    <label className="block text-slate-400 mb-1">كلمة المرور الأولية</label>
+                    <label className="block text-slate-600 mb-1">كلمة المرور الأولية</label>
                     <input
                       type="text"
                       value={newCompanyForm.adminPassword}
                       onChange={(e) => setNewCompanyForm({ ...newCompanyForm, adminPassword: e.target.value })}
                       placeholder="123456"
-                      className="w-full bg-slate-900 border border-slate-700 rounded-xl p-2 text-white font-mono"
+                      className="w-full bg-white border-2 border-slate-300 rounded-xl p-2 text-slate-900 font-mono"
                     />
                   </div>
                 </div>
@@ -2237,15 +2268,15 @@ export const OwnerPanelView: React.FC<OwnerPanelViewProps> = ({
 
               {/* Subscription Plan Choice */}
               <div>
-                <label className="block font-bold text-slate-300 mb-1">خطة الاشتراك والترخيص</label>
+                <label className="block font-bold text-slate-700 mb-1">خطة الاشتراك والترخيص</label>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                   {plans.map((p) => (
                     <label
                       key={p.id}
-                      className={`p-3 rounded-xl border cursor-pointer flex flex-col justify-between transition ${
+                      className={`p-3 rounded-xl border-2 cursor-pointer flex flex-col justify-between transition ${
                         newCompanyForm.planId === p.id
-                          ? 'bg-amber-500/20 border-amber-500 text-white'
-                          : 'bg-slate-950 border-slate-800 text-slate-400 hover:bg-slate-800'
+                          ? 'bg-amber-50 border-amber-500 text-slate-900'
+                          : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
                       }`}
                     >
                       <input
@@ -2257,7 +2288,7 @@ export const OwnerPanelView: React.FC<OwnerPanelViewProps> = ({
                         className="sr-only"
                       />
                       <span className="font-bold text-xs">{p.name}</span>
-                      <span className="text-[10px] text-amber-400 font-mono mt-1">
+                      <span className="text-[10px] text-amber-700 font-mono mt-1 font-bold">
                         {p.price === 0 ? 'مجاناً 30 يوم' : `${p.price} ${p.currency}`}
                       </span>
                     </label>
@@ -2268,14 +2299,14 @@ export const OwnerPanelView: React.FC<OwnerPanelViewProps> = ({
               <div className="flex gap-2 pt-2">
                 <button
                   type="submit"
-                  className="flex-1 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black py-2.5 rounded-xl transition cursor-pointer"
+                  className="flex-1 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black py-2.5 rounded-xl transition cursor-pointer shadow-xs"
                 >
                   🚀 إنشاء وتفعيل الشركة وتوليد التراخيص
                 </button>
                 <button
                   type="button"
                   onClick={() => setIsCreateModalOpen(false)}
-                  className="bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold px-4 py-2.5 rounded-xl transition"
+                  className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-4 py-2.5 rounded-xl transition border border-slate-200"
                 >
                   إلغاء
                 </button>
@@ -2287,46 +2318,46 @@ export const OwnerPanelView: React.FC<OwnerPanelViewProps> = ({
 
       {/* MODAL: Launch Support Access */}
       {isSupportModalOpen && selectedCompany && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-md w-full p-6 text-white space-y-4">
-            <h3 className="text-base font-black text-indigo-400 flex items-center gap-2">
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+          <div className="bg-white border-2 border-slate-200 rounded-3xl max-w-md w-full p-6 text-slate-900 space-y-4 shadow-2xl">
+            <h3 className="text-base font-black text-indigo-700 flex items-center gap-2">
               <span>🛠️</span>
               <span>بدء جلسة دخول الدعم الفني المباشر</span>
             </h3>
 
-            <div className="bg-slate-950 p-3.5 rounded-xl border border-slate-800 text-xs space-y-1">
-              <div className="text-slate-400">الشركة المستهدفة:</div>
-              <div className="font-bold text-white text-sm">{selectedCompany.name}</div>
-              <div className="text-[11px] text-slate-500 font-mono">
+            <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200 text-xs space-y-1">
+              <div className="text-slate-500">الشركة المستهدفة:</div>
+              <div className="font-black text-slate-950 text-sm">{selectedCompany.name}</div>
+              <div className="text-[11px] text-slate-600 font-mono">
                 كود: {selectedCompany.code} • المعرف: {selectedCompany.id}
               </div>
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-300 mb-1">سبب الدخول الفني (لأغراض سجل التدقيق)</label>
+              <label className="block text-xs font-bold text-slate-700 mb-1">سبب الدخول الفني (لأغراض سجل التدقيق)</label>
               <textarea
                 value={supportReason}
                 onChange={(e) => setSupportReason(e.target.value)}
                 rows={3}
                 placeholder="أدخل سبب وتفاصيل الدعم الفني..."
-                className="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-xs text-white"
+                className="w-full bg-white border-2 border-slate-300 rounded-xl p-2.5 text-xs text-slate-900 focus:outline-none focus:border-indigo-600"
               />
             </div>
 
-            <div className="text-[11px] text-slate-400 bg-indigo-950/40 border border-indigo-800/50 p-2.5 rounded-xl">
+            <div className="text-[11px] text-indigo-900 bg-indigo-50 border border-indigo-200 p-2.5 rounded-xl">
               ℹ️ سيتم تدوين هذه الجلسة في سجل الرقابة الموحد مع حفظ الطابع الزمني واسم المشرف.
             </div>
 
             <div className="flex gap-2 pt-2">
               <button
                 onClick={handleLaunchSupport}
-                className="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white font-black py-2.5 rounded-xl text-xs transition cursor-pointer"
+                className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-black py-2.5 rounded-xl text-xs transition cursor-pointer"
               >
                 🚀 تأكيد والدخول لبيئة الشركة
               </button>
               <button
                 onClick={() => setIsSupportModalOpen(false)}
-                className="bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold px-4 py-2.5 rounded-xl text-xs transition"
+                className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-4 py-2.5 rounded-xl text-xs transition border border-slate-200"
               >
                 إلغاء
               </button>
@@ -2337,14 +2368,14 @@ export const OwnerPanelView: React.FC<OwnerPanelViewProps> = ({
 
       {/* MODAL: Single Company Export Options */}
       {isExportModalOpen && selectedCompany && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-lg w-full p-6 text-white space-y-4">
-            <div className="flex justify-between items-center pb-3 border-b border-slate-800">
-              <h3 className="text-base font-black text-amber-400 flex items-center gap-2">
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+          <div className="bg-white border-2 border-slate-200 rounded-3xl max-w-lg w-full p-6 text-slate-900 space-y-4 shadow-2xl">
+            <div className="flex justify-between items-center pb-3 border-b border-slate-200">
+              <h3 className="text-base font-black text-slate-950 flex items-center gap-2">
                 <span>💾</span>
                 <span>تصدير حزمة بيانات: {selectedCompany.name}</span>
               </h3>
-              <button onClick={() => setIsExportModalOpen(false)} className="text-slate-400 hover:text-white">
+              <button onClick={() => setIsExportModalOpen(false)} className="text-slate-400 hover:text-slate-700">
                 ✕
               </button>
             </div>
@@ -2355,11 +2386,11 @@ export const OwnerPanelView: React.FC<OwnerPanelViewProps> = ({
                   handleExportFullBackup(selectedCompany);
                   setIsExportModalOpen(false);
                 }}
-                className="w-full bg-slate-950 hover:bg-slate-800 border border-amber-500/40 p-3.5 rounded-2xl text-right flex items-center justify-between transition cursor-pointer"
+                className="w-full bg-slate-50 hover:bg-slate-100 border-2 border-amber-300 p-3.5 rounded-2xl text-right flex items-center justify-between transition cursor-pointer"
               >
                 <div>
-                  <div className="font-bold text-amber-400 text-xs">1. النسخة الاحتياطية الكاملة (JSON)</div>
-                  <div className="text-[11px] text-slate-400">لاستعادة النظام بالكامل بنقرة زر واحدة في ركيزة</div>
+                  <div className="font-bold text-amber-900 text-xs">1. النسخة الاحتياطية الكاملة (JSON)</div>
+                  <div className="text-[11px] text-slate-600">لاستعادة النظام بالكامل بنقرة زر واحدة في ركيزة</div>
                 </div>
                 <span className="text-lg">📦</span>
               </button>
@@ -2369,11 +2400,11 @@ export const OwnerPanelView: React.FC<OwnerPanelViewProps> = ({
                   handleExportMigrationExcel(selectedCompany);
                   setIsExportModalOpen(false);
                 }}
-                className="w-full bg-slate-950 hover:bg-slate-800 border border-emerald-500/40 p-3.5 rounded-2xl text-right flex items-center justify-between transition cursor-pointer"
+                className="w-full bg-slate-50 hover:bg-slate-100 border-2 border-emerald-300 p-3.5 rounded-2xl text-right flex items-center justify-between transition cursor-pointer"
               >
                 <div>
-                  <div className="font-bold text-emerald-400 text-xs">2. مصنف الهجرة الشامل (Excel Multi-Sheet)</div>
-                  <div className="text-[11px] text-slate-400">يشمل قاموس البيانات Data Dictionary وكافة الجداول</div>
+                  <div className="font-bold text-emerald-900 text-xs">2. مصنف الهجرة الشامل (Excel Multi-Sheet)</div>
+                  <div className="text-[11px] text-slate-600">يشمل قاموس البيانات Data Dictionary وكافة الجداول</div>
                 </div>
                 <span className="text-lg">📊</span>
               </button>
@@ -2383,11 +2414,11 @@ export const OwnerPanelView: React.FC<OwnerPanelViewProps> = ({
                   await handleExportMigrationCsv(selectedCompany);
                   setIsExportModalOpen(false);
                 }}
-                className="w-full bg-slate-950 hover:bg-slate-800 border border-blue-500/40 p-3.5 rounded-2xl text-right flex items-center justify-between transition cursor-pointer"
+                className="w-full bg-slate-50 hover:bg-slate-100 border-2 border-blue-300 p-3.5 rounded-2xl text-right flex items-center justify-between transition cursor-pointer"
               >
                 <div>
-                  <div className="font-bold text-blue-400 text-xs">3. حزمة ملفات CSV المنفصلة (ZIP Bundle)</div>
-                  <div className="text-[11px] text-slate-400">متوافق مع Odoo, SAP, Oracle, Zoho, PostgreSQL</div>
+                  <div className="font-bold text-blue-900 text-xs">3. حزمة ملفات CSV المنفصلة (ZIP Bundle)</div>
+                  <div className="text-[11px] text-slate-600">متوافق مع Odoo, SAP, Oracle, Zoho, PostgreSQL</div>
                 </div>
                 <span className="text-lg">🗂️</span>
               </button>
@@ -2396,7 +2427,7 @@ export const OwnerPanelView: React.FC<OwnerPanelViewProps> = ({
             <div className="pt-2">
               <button
                 onClick={() => setIsExportModalOpen(false)}
-                className="w-full bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold py-2.5 rounded-xl text-xs transition"
+                className="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2.5 rounded-xl text-xs transition border border-slate-200"
               >
                 إغلاق النافذة
               </button>
@@ -2407,19 +2438,19 @@ export const OwnerPanelView: React.FC<OwnerPanelViewProps> = ({
 
       {/* 🚨 MODAL: Delete Company Secure Confirmation (Safeguarded against accidental clicks) */}
       {isDeleteModalOpen && companyToDelete && (
-        <div className="fixed inset-0 bg-black/85 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in" dir="rtl">
-          <div className="bg-slate-900 border-2 border-rose-600/80 rounded-3xl max-w-lg w-full p-6 text-white space-y-4 shadow-2xl shadow-rose-950/50">
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in" dir="rtl">
+          <div className="bg-white border-2 border-rose-300 rounded-3xl max-w-lg w-full p-6 text-slate-900 space-y-4 shadow-2xl">
             {/* Header */}
-            <div className="flex justify-between items-center pb-3 border-b border-rose-900/40">
+            <div className="flex justify-between items-center pb-3 border-b border-rose-100">
               <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-xl bg-rose-600/20 border border-rose-500/50 flex items-center justify-center text-xl text-rose-400">
+                <div className="w-9 h-9 rounded-xl bg-rose-50 border border-rose-200 flex items-center justify-center text-xl text-rose-600">
                   ⚠️
                 </div>
                 <div>
-                  <h3 className="text-base font-black text-rose-400">
+                  <h3 className="text-base font-black text-rose-700">
                     تأكيد حذف الشركة نهائياً
                   </h3>
-                  <p className="text-[11px] text-slate-400">
+                  <p className="text-[11px] text-slate-500">
                     إجراء حرج لحماية البيانات من الحذف الخاطئ
                   </p>
                 </div>
@@ -2433,7 +2464,7 @@ export const OwnerPanelView: React.FC<OwnerPanelViewProps> = ({
                     setDeleteError('');
                   }
                 }}
-                className="text-slate-400 hover:text-white p-1 rounded-lg transition"
+                className="text-slate-400 hover:text-slate-700 p-1 rounded-lg transition"
                 disabled={isDeleting}
               >
                 ✕
@@ -2441,56 +2472,56 @@ export const OwnerPanelView: React.FC<OwnerPanelViewProps> = ({
             </div>
 
             {/* Company Info Box */}
-            <div className="bg-slate-950 border border-slate-800 rounded-2xl p-3.5 space-y-2 text-xs">
+            <div className="bg-slate-50 border border-slate-200 rounded-2xl p-3.5 space-y-2 text-xs text-slate-900">
               <div className="flex justify-between items-center">
-                <span className="text-slate-400 font-medium">اسم الشركة:</span>
-                <span className="text-white font-black text-sm">{companyToDelete.name}</span>
+                <span className="text-slate-500 font-medium">اسم الشركة:</span>
+                <span className="text-slate-950 font-black text-sm">{companyToDelete.name}</span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-slate-400 font-medium">كود الشركة والمعرف:</span>
-                <span className="font-mono bg-slate-900 px-2 py-0.5 rounded text-amber-300 font-bold">
+                <span className="text-slate-500 font-medium">كود الشركة والمعرف:</span>
+                <span className="font-mono bg-slate-200 px-2 py-0.5 rounded text-slate-900 font-bold">
                   {companyToDelete.code} ({companyToDelete.id})
                 </span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-slate-400 font-medium">المدير ورقم الهاتف:</span>
-                <span className="text-slate-200">
+                <span className="text-slate-500 font-medium">المدير ورقم الهاتف:</span>
+                <span className="text-slate-800">
                   {companyToDelete.adminName || 'المدير العام'} • {companyToDelete.phone || '—'}
                 </span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-slate-400 font-medium">الخطة الحالية:</span>
-                <span className="text-emerald-400 font-bold">
+                <span className="text-slate-500 font-medium">الخطة الحالية:</span>
+                <span className="text-emerald-700 font-bold">
                   {companyToDelete.planName || companyToDelete.planId}
                 </span>
               </div>
             </div>
 
             {/* Critical Warning Alert */}
-            <div className="bg-rose-950/50 border border-rose-700/60 p-3.5 rounded-2xl text-xs text-rose-200 space-y-1.5 leading-relaxed">
-              <div className="font-black text-rose-300 flex items-center gap-1.5 text-sm">
+            <div className="bg-rose-50 border border-rose-200 p-3.5 rounded-2xl text-xs text-rose-900 space-y-1.5 leading-relaxed">
+              <div className="font-black text-rose-700 flex items-center gap-1.5 text-sm">
                 <span>🛑</span>
                 <span>تحذير لا رجعة فيه:</span>
               </div>
               <p>
                 سيتم مسح هذه الشركة نهائياً من قاعدة البيانات السحابية مع كافة فواتير المبيعات والمشتريات، حركات الخزينة، أرصدة العملاء والموردين، وحسابات المستخدمين التابعة لها.
               </p>
-              <p className="text-[11px] text-rose-300 font-bold">
+              <p className="text-[11px] text-rose-700 font-bold">
                 ⚠️ لن يمكن استرجاع بيانات هذه الشركة بأي شكل بعد تأكيد الحذف.
               </p>
             </div>
 
             {/* Accidental Click Prevention Step */}
             <div className="space-y-2 pt-1">
-              <label className="block text-xs font-bold text-slate-300">
-                لتأكيد الحذف ومنع الضغط بالخطأ، اكتب كلمة <span className="text-rose-400 underline font-black">حذف</span> أو كود الشركة <span className="text-amber-400 font-mono font-bold">({companyToDelete.code})</span> أدناه:
+              <label className="block text-xs font-bold text-slate-700">
+                لتأكيد الحذف ومنع الضغط بالخطأ، اكتب كلمة <span className="text-rose-600 underline font-black">حذف</span> أو كود الشركة <span className="text-slate-900 font-mono font-bold">({companyToDelete.code})</span> أدناه:
               </label>
               <input
                 type="text"
                 value={deleteConfirmText}
                 onChange={(e) => setDeleteConfirmText(e.target.value)}
                 placeholder="اكتب كلمة 'حذف' هنا..."
-                className="w-full bg-slate-950 border-2 border-rose-900/60 focus:border-rose-500 rounded-xl px-3.5 py-2 text-xs text-white placeholder-slate-600 focus:outline-none text-center font-bold"
+                className="w-full bg-white border-2 border-slate-300 focus:border-rose-500 rounded-xl px-3.5 py-2 text-xs text-slate-900 placeholder-slate-400 focus:outline-none text-center font-bold"
                 disabled={isDeleting}
                 autoFocus
               />
@@ -2498,7 +2529,7 @@ export const OwnerPanelView: React.FC<OwnerPanelViewProps> = ({
 
             {/* Error Message */}
             {deleteError && (
-              <div className="bg-red-500/20 border border-red-500/40 text-red-300 p-2.5 rounded-xl text-xs font-bold text-center">
+              <div className="bg-red-50 border border-red-200 text-red-700 p-2.5 rounded-xl text-xs font-bold text-center">
                 {deleteError}
               </div>
             )}
@@ -2514,7 +2545,7 @@ export const OwnerPanelView: React.FC<OwnerPanelViewProps> = ({
                     deleteConfirmText.trim() !== companyToDelete.code &&
                     deleteConfirmText.trim() !== companyToDelete.id)
                 }
-                className="flex-1 bg-rose-600 hover:bg-rose-500 active:bg-rose-700 disabled:bg-slate-800 disabled:text-slate-500 text-white font-black py-2.5 rounded-xl text-xs transition cursor-pointer disabled:cursor-not-allowed flex items-center justify-center gap-1.5 shadow-md shadow-rose-900/30"
+                className="flex-1 bg-rose-600 hover:bg-rose-700 active:bg-rose-800 disabled:bg-slate-200 disabled:text-slate-400 text-white font-black py-2.5 rounded-xl text-xs transition cursor-pointer disabled:cursor-not-allowed flex items-center justify-center gap-1.5 shadow-md"
               >
                 {isDeleting ? (
                   <>
@@ -2538,7 +2569,7 @@ export const OwnerPanelView: React.FC<OwnerPanelViewProps> = ({
                   setDeleteError('');
                 }}
                 disabled={isDeleting}
-                className="bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold px-4 py-2.5 rounded-xl text-xs transition cursor-pointer"
+                className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-4 py-2.5 rounded-xl text-xs transition cursor-pointer border border-slate-200"
               >
                 إلغاء
               </button>
@@ -2551,15 +2582,15 @@ export const OwnerPanelView: React.FC<OwnerPanelViewProps> = ({
       {/* 🧹 SYSTEM CLEANUP CONFIRMATION MODAL                         */}
       {/* ============================================================ */}
       {isCleanupModalOpen && (
-        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-purple-800/80 rounded-3xl max-w-lg w-full p-6 space-y-4 shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white border-2 border-purple-200 rounded-3xl max-w-lg w-full p-6 space-y-4 shadow-2xl animate-in fade-in zoom-in-95 duration-200">
             {/* Header */}
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+            <div className="flex items-center justify-between border-b border-purple-100 pb-3">
               <div className="flex items-center gap-2.5">
-                <span className="text-2xl p-2 bg-purple-950/80 border border-purple-800 rounded-xl">🧹</span>
+                <span className="text-2xl p-2 bg-purple-50 border border-purple-200 rounded-xl">🧹</span>
                 <div>
-                  <h3 className="text-base font-black text-white">تنظيف وتصفير النظام بالكامل</h3>
-                  <p className="text-xs text-purple-300">بدء العمليات الجديدة بدون أي حركات سابقة</p>
+                  <h3 className="text-base font-black text-slate-950">تنظيف وتصفير النظام بالكامل</h3>
+                  <p className="text-xs text-purple-700">بدء العمليات الجديدة بدون أي حركات سابقة</p>
                 </div>
               </div>
               <button
@@ -2571,7 +2602,7 @@ export const OwnerPanelView: React.FC<OwnerPanelViewProps> = ({
                     setCleanupFeedback('');
                   }
                 }}
-                className="text-slate-400 hover:text-white p-1 rounded-lg transition"
+                className="text-slate-400 hover:text-slate-700 p-1 rounded-lg transition"
                 disabled={isCleaning}
               >
                 ✕
@@ -2579,36 +2610,36 @@ export const OwnerPanelView: React.FC<OwnerPanelViewProps> = ({
             </div>
 
             {/* Explanatory Box */}
-            <div className="bg-slate-950 border border-slate-800 rounded-2xl p-4 space-y-2.5 text-xs">
-              <div className="flex items-center justify-between text-slate-300 font-bold">
+            <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-2.5 text-xs text-slate-900">
+              <div className="flex items-center justify-between text-slate-700 font-bold">
                 <span>الشركات المسجلة الحالية:</span>
-                <span className="text-amber-400 font-mono text-sm">{companies.length} شركة مسجلة</span>
+                <span className="text-amber-700 font-mono text-sm">{companies.length} شركة مسجلة</span>
               </div>
-              <div className="h-px bg-slate-800 my-1" />
-              <div className="space-y-1 text-slate-300 leading-relaxed">
-                <p className="font-bold text-white">ما الذي سيقوم به هذا الإجراء؟</p>
-                <ul className="list-disc list-inside space-y-1 text-slate-400">
+              <div className="h-px bg-slate-200 my-1" />
+              <div className="space-y-1 text-slate-700 leading-relaxed">
+                <p className="font-bold text-slate-950">ما الذي سيقوم به هذا الإجراء؟</p>
+                <ul className="list-disc list-inside space-y-1 text-slate-600">
                   <li>مسح وتصفير كافة فواتير المبيعات وفواتير المشتريات.</li>
                   <li>تصفير أرصدة الخزائن النقدية (الدرج، فودافون كاش، إنستاباي، البنوك).</li>
                   <li>تصفير كشوف حسابات العملاء والموردين وأرصدتهم السابقة.</li>
                   <li>تصفير أرصدة شجرة الحسابات العامة وكميات المخزون.</li>
                   <li>إعادة ترقيم الفواتير والسندات لتبدأ من رقم (1).</li>
-                  <li><strong className="text-emerald-400">الحفاظ الكامل على تسجيل الشركات والمستخدمين والاشتراكات.</strong></li>
+                  <li><strong className="text-emerald-700">الحفاظ الكامل على تسجيل الشركات والمستخدمين والاشتراكات.</strong></li>
                 </ul>
               </div>
             </div>
 
             {/* Confirmation verification input */}
             <div className="space-y-2">
-              <label className="block text-xs font-bold text-slate-300">
-                لتأكيد تنظيف وتصفير كافة الحركات، اكتب كلمة <span className="text-purple-400 underline font-black">تصفير</span> أدناه:
+              <label className="block text-xs font-bold text-slate-700">
+                لتأكيد تنظيف وتصفير كافة الحركات، اكتب كلمة <span className="text-purple-700 underline font-black">تصفير</span> أدناه:
               </label>
               <input
                 type="text"
                 value={cleanupConfirmText}
                 onChange={(e) => setCleanupConfirmText(e.target.value)}
                 placeholder="اكتب 'تصفير' هنا..."
-                className="w-full bg-slate-950 border-2 border-purple-800/80 focus:border-purple-500 rounded-xl px-3.5 py-2 text-xs text-white placeholder-slate-600 focus:outline-none text-center font-bold"
+                className="w-full bg-white border-2 border-slate-300 focus:border-purple-600 rounded-xl px-3.5 py-2 text-xs text-slate-900 placeholder-slate-400 focus:outline-none text-center font-bold"
                 disabled={isCleaning}
                 autoFocus
               />
@@ -2616,12 +2647,12 @@ export const OwnerPanelView: React.FC<OwnerPanelViewProps> = ({
 
             {/* Feedback & Error */}
             {cleanupFeedback && (
-              <div className="bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 p-2.5 rounded-xl text-xs font-bold text-center">
+              <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 p-2.5 rounded-xl text-xs font-bold text-center">
                 {cleanupFeedback}
               </div>
             )}
             {cleanupError && (
-              <div className="bg-red-500/20 border border-red-500/40 text-red-300 p-2.5 rounded-xl text-xs font-bold text-center">
+              <div className="bg-red-50 border border-red-200 text-red-700 p-2.5 rounded-xl text-xs font-bold text-center">
                 {cleanupError}
               </div>
             )}
@@ -2632,7 +2663,7 @@ export const OwnerPanelView: React.FC<OwnerPanelViewProps> = ({
                 type="button"
                 onClick={handleConfirmSystemCleanup}
                 disabled={isCleaning || cleanupConfirmText.trim() !== 'تصفير'}
-                className="flex-1 bg-purple-600 hover:bg-purple-500 active:bg-purple-700 disabled:bg-slate-800 disabled:text-slate-500 text-white font-black py-2.5 rounded-xl text-xs transition cursor-pointer disabled:cursor-not-allowed flex items-center justify-center gap-1.5 shadow-md shadow-purple-900/40"
+                className="flex-1 bg-purple-600 hover:bg-purple-700 active:bg-purple-800 disabled:bg-slate-200 disabled:text-slate-400 text-white font-black py-2.5 rounded-xl text-xs transition cursor-pointer disabled:cursor-not-allowed flex items-center justify-center gap-1.5 shadow-md"
               >
                 {isCleaning ? (
                   <>
@@ -2656,7 +2687,7 @@ export const OwnerPanelView: React.FC<OwnerPanelViewProps> = ({
                   setCleanupFeedback('');
                 }}
                 disabled={isCleaning}
-                className="bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold px-4 py-2.5 rounded-xl text-xs transition cursor-pointer"
+                className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-4 py-2.5 rounded-xl text-xs transition cursor-pointer border border-slate-200"
               >
                 إلغاء
               </button>
@@ -2669,15 +2700,15 @@ export const OwnerPanelView: React.FC<OwnerPanelViewProps> = ({
       {/* 🔥 FIRESTORE DATABASE CLEAN & PURGE MODAL                     */}
       {/* ============================================================ */}
       {isFirestoreCleanModalOpen && (
-        <div className="fixed inset-0 bg-slate-950/85 backdrop-blur-md z-50 flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-purple-600/80 rounded-3xl max-w-lg w-full p-6 space-y-4 shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-50 flex items-center justify-center p-4">
+          <div className="bg-white border-2 border-purple-200 rounded-3xl max-w-lg w-full p-6 space-y-4 shadow-2xl animate-in fade-in zoom-in-95 duration-200">
             {/* Header */}
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+            <div className="flex items-center justify-between border-b border-purple-100 pb-3">
               <div className="flex items-center gap-2.5">
-                <span className="text-2xl p-2 bg-purple-950/80 border border-purple-600/60 rounded-xl">🔥</span>
+                <span className="text-2xl p-2 bg-purple-50 border border-purple-200 rounded-xl">🔥</span>
                 <div>
-                  <h3 className="text-base font-black text-white">تطهير وتنظيف قاعدة بيانات فايربيس السحابية</h3>
-                  <p className="text-xs text-purple-300">أداة تحكم المالك الحصري لتفريغ سعة وسجلات Firestore</p>
+                  <h3 className="text-base font-black text-slate-950">تطهير وتنظيف قاعدة بيانات فايربيس السحابية</h3>
+                  <p className="text-xs text-purple-700">أداة تحكم المالك الحصري لتفريغ سعة وسجلات Firestore</p>
                 </div>
               </div>
               <button
@@ -2689,7 +2720,7 @@ export const OwnerPanelView: React.FC<OwnerPanelViewProps> = ({
                     setFirestoreCleanFeedback('');
                   }
                 }}
-                className="text-slate-400 hover:text-white p-1 rounded-lg transition"
+                className="text-slate-400 hover:text-slate-700 p-1 rounded-lg transition"
                 disabled={isCleaningFirestore}
               >
                 ✕
@@ -2698,14 +2729,14 @@ export const OwnerPanelView: React.FC<OwnerPanelViewProps> = ({
 
             {/* Target Selection */}
             <div className="space-y-1.5 text-xs">
-              <label className="block font-bold text-slate-300">
+              <label className="block font-bold text-slate-700">
                 نطاق التنظيف المستهدف في Firestore:
               </label>
               <select
                 value={firestoreCleanTarget}
                 onChange={(e) => setFirestoreCleanTarget(e.target.value)}
                 disabled={isCleaningFirestore}
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-xs text-white focus:outline-none focus:border-purple-500"
+                className="w-full bg-white border-2 border-slate-300 rounded-xl p-2.5 text-xs text-slate-900 focus:outline-none focus:border-purple-600 font-bold"
               >
                 <option value="all">كافة الشركات والوثائق في Firestore ({companies.length} شركة)</option>
                 {companies.map((c) => (
@@ -2718,19 +2749,19 @@ export const OwnerPanelView: React.FC<OwnerPanelViewProps> = ({
 
             {/* Mode selection */}
             <div className="space-y-1.5 text-xs">
-              <label className="block font-bold text-slate-300">نوع إجراء التنظيف:</label>
+              <label className="block font-bold text-slate-700">نوع إجراء التنظيف:</label>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 <button
                   type="button"
                   onClick={() => setFirestoreCleanType('zero_movements')}
                   className={`p-3 rounded-xl border text-right transition cursor-pointer ${
                     firestoreCleanType === 'zero_movements'
-                      ? 'bg-purple-950/60 border-purple-500 text-white font-bold'
-                      : 'bg-slate-950 border-slate-800 text-slate-400'
+                      ? 'bg-purple-50 border-purple-500 text-purple-950 font-bold'
+                      : 'bg-slate-50 border-slate-200 text-slate-600'
                   }`}
                 >
-                  <div className="text-xs font-bold text-purple-300">تصفير الحركات وتفريغ السعة</div>
-                  <div className="text-[11px] text-slate-400 mt-1">
+                  <div className="text-xs font-bold text-purple-800">تصفير الحركات وتفريغ السعة</div>
+                  <div className="text-[11px] text-slate-500 mt-1">
                     مسح الفواتير والشاردز مع الحفاظ التام على الشركات والمستخدمين
                   </div>
                 </button>
@@ -2740,12 +2771,12 @@ export const OwnerPanelView: React.FC<OwnerPanelViewProps> = ({
                   onClick={() => setFirestoreCleanType('full_wipe')}
                   className={`p-3 rounded-xl border text-right transition cursor-pointer ${
                     firestoreCleanType === 'full_wipe'
-                      ? 'bg-rose-950/60 border-rose-500 text-white font-bold'
-                      : 'bg-slate-950 border-slate-800 text-slate-400'
+                      ? 'bg-rose-50 border-rose-500 text-rose-950 font-bold'
+                      : 'bg-slate-50 border-slate-200 text-slate-600'
                   }`}
                 >
-                  <div className="text-xs font-bold text-rose-300">إعادة ضبط مصنع فايربيس</div>
-                  <div className="text-[11px] text-slate-400 mt-1">
+                  <div className="text-xs font-bold text-rose-800">إعادة ضبط مصنع فايربيس</div>
+                  <div className="text-[11px] text-slate-500 mt-1">
                     تفريغ شامل لجميع وثائق ومجموعات فايربيس الفرعية
                   </div>
                 </button>
@@ -2753,7 +2784,7 @@ export const OwnerPanelView: React.FC<OwnerPanelViewProps> = ({
             </div>
 
             {/* Safety Auto-Backup Alert */}
-            <div className="bg-emerald-950/40 border border-emerald-500/30 rounded-2xl p-3 text-xs text-emerald-300 flex items-start gap-2">
+            <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-3 text-xs text-emerald-800 flex items-start gap-2">
               <span className="text-base">🛡️</span>
               <div className="text-[11px] leading-relaxed">
                 <strong>حماية وقائية تلقائية:</strong> سيقوم النظام تلقائياً بتوليد وتحميل حزمة نسخة احتياطية (JSON) قبل بدء التنظيف لضمان إمكانية الاستعادة في أي وقت.
@@ -2762,15 +2793,15 @@ export const OwnerPanelView: React.FC<OwnerPanelViewProps> = ({
 
             {/* Confirmation verification input */}
             <div className="space-y-2">
-              <label className="block text-xs font-bold text-slate-300">
-                لتأكيد بدء تنظيف قاعدة بيانات فايربيس، اكتب كود الأمان التالي: <span className="text-purple-400 font-mono font-black underline">تطهير_فايربيس</span>
+              <label className="block text-xs font-bold text-slate-700">
+                لتأكيد بدء تنظيف قاعدة بيانات فايربيس، اكتب كود الأمان التالي: <span className="text-purple-700 font-mono font-black underline">تطهير_فايربيس</span>
               </label>
               <input
                 type="text"
                 value={firestoreCleanConfirmCode}
                 onChange={(e) => setFirestoreCleanConfirmCode(e.target.value)}
                 placeholder="اكتب 'تطهير_فايربيس' هنا..."
-                className="w-full bg-slate-950 border-2 border-purple-700/80 focus:border-purple-400 rounded-xl px-3.5 py-2 text-xs text-white placeholder-slate-600 focus:outline-none text-center font-bold font-mono"
+                className="w-full bg-white border-2 border-slate-300 focus:border-purple-600 rounded-xl px-3.5 py-2 text-xs text-slate-900 placeholder-slate-400 focus:outline-none text-center font-bold font-mono"
                 disabled={isCleaningFirestore}
                 autoFocus
               />
@@ -2778,12 +2809,12 @@ export const OwnerPanelView: React.FC<OwnerPanelViewProps> = ({
 
             {/* Feedback & Error */}
             {firestoreCleanFeedback && (
-              <div className="bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 p-2.5 rounded-xl text-xs font-bold text-center">
+              <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 p-2.5 rounded-xl text-xs font-bold text-center">
                 ✓ {firestoreCleanFeedback}
               </div>
             )}
             {firestoreCleanError && (
-              <div className="bg-red-500/20 border border-red-500/40 text-red-300 p-2.5 rounded-xl text-xs font-bold text-center">
+              <div className="bg-red-50 border border-red-200 text-red-700 p-2.5 rounded-xl text-xs font-bold text-center">
                 ✕ {firestoreCleanError}
               </div>
             )}
@@ -2794,7 +2825,7 @@ export const OwnerPanelView: React.FC<OwnerPanelViewProps> = ({
                 type="button"
                 onClick={handleConfirmFirestoreClean}
                 disabled={isCleaningFirestore || firestoreCleanConfirmCode.trim() !== 'تطهير_فايربيس'}
-                className="flex-1 bg-gradient-to-r from-purple-600 to-rose-600 hover:from-purple-500 hover:to-rose-500 disabled:from-slate-800 disabled:to-slate-800 disabled:text-slate-500 text-white font-black py-2.5 rounded-xl text-xs transition cursor-pointer disabled:cursor-not-allowed flex items-center justify-center gap-1.5 shadow-md shadow-purple-900/40"
+                className="flex-1 bg-gradient-to-r from-purple-600 to-rose-600 hover:from-purple-700 hover:to-rose-700 disabled:from-slate-200 disabled:to-slate-200 disabled:text-slate-400 text-white font-black py-2.5 rounded-xl text-xs transition cursor-pointer disabled:cursor-not-allowed flex items-center justify-center gap-1.5 shadow-md"
               >
                 {isCleaningFirestore ? (
                   <>
@@ -2818,7 +2849,7 @@ export const OwnerPanelView: React.FC<OwnerPanelViewProps> = ({
                   setFirestoreCleanFeedback('');
                 }}
                 disabled={isCleaningFirestore}
-                className="bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold px-4 py-2.5 rounded-xl text-xs transition cursor-pointer"
+                className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-4 py-2.5 rounded-xl text-xs transition cursor-pointer border border-slate-200"
               >
                 إلغاء
               </button>

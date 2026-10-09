@@ -548,12 +548,12 @@ export const PosView: React.FC<PosViewProps> = ({ appData, onUpdateData, showToa
   return (
     <div className="w-full max-w-7xl mx-auto flex flex-col space-y-4">
       {/* POS Screen Header */}
-      <div className="bg-gradient-to-r from-[#1a237e] to-[#0d47a1] text-white p-4 rounded-2xl shadow-md flex flex-wrap justify-between items-center gap-3">
+      <div className="bg-white text-slate-900 border-2 border-slate-200 p-4 rounded-2xl shadow-xs flex flex-wrap justify-between items-center gap-3">
         <div className="flex items-center gap-2">
           <span className="text-2xl">⚡</span>
           <div>
-            <h3 className="font-black text-base md:text-lg text-[#ffd54f]">نقطة البيع السريعة (Express Touch POS)</h3>
-            <p className="text-xs text-blue-100 opacity-90">شاشة كاشير فائقة السرعة للمبيعات المباشرة وطباعة الإيصالات الفورية</p>
+            <h3 className="font-black text-base md:text-lg text-slate-900">نقطة البيع السريعة (Express Touch POS)</h3>
+            <p className="text-xs text-slate-600">شاشة كاشير فائقة السرعة للمبيعات المباشرة وطباعة الإيصالات الفورية</p>
           </div>
         </div>
 
@@ -577,7 +577,7 @@ export const PosView: React.FC<PosViewProps> = ({ appData, onUpdateData, showToa
               const todayStr = new Date().toISOString().split('T')[0];
               printCashClosingWindow(appData, todayStr, undefined, undefined, showToast);
             }}
-            className="bg-white/10 hover:bg-white/20 text-white px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1.5 border border-white/20"
+            className="bg-slate-100 hover:bg-slate-200 text-slate-800 px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1.5 border border-slate-300"
             title="طباعة تقفيل يومية الخزينة ونقطة البيع (Z-Report)"
           >
             <span>📊</span>

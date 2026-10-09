@@ -1013,15 +1013,15 @@ export const PurchasesView: React.FC<PurchasesViewProps> = ({ appData, onUpdateD
       <div className="hidden md:block bg-white rounded-xl shadow-xs border-2 border-slate-300 overflow-x-auto">
         <table className="w-full text-right text-xs md:text-sm border-collapse border border-slate-300">
           <thead>
-            <tr className="bg-gradient-to-r from-teal-950 via-teal-900 to-cyan-950 text-teal-100">
-              <th className="p-3 font-black border border-teal-800 text-teal-100">رقم الفاتورة</th>
-              <th className="p-3 font-black border border-teal-800 text-teal-100">المورد</th>
-              {appData.branches && appData.branches.length > 1 && <th className="p-3 font-black border border-teal-800 text-teal-100">الفرع</th>}
-              <th className="p-3 font-black border border-teal-800 text-teal-100">التاريخ</th>
-              <th className="p-3 font-black border border-teal-800 text-teal-100">القيمة (ج.م)</th>
-              <th className="p-3 font-black border border-teal-800 text-teal-100">المسدد / المتبقي</th>
-              <th className="p-3 font-black border border-teal-800 text-teal-100">النوع</th>
-              <th className="p-3 font-black border border-teal-800 text-teal-100">الإجراءات</th>
+            <tr className="bg-slate-100 text-slate-900 font-bold border-b-2 border-slate-300">
+              <th className="p-3 font-black border border-slate-300 text-slate-900">رقم الفاتورة</th>
+              <th className="p-3 font-black border border-slate-300 text-slate-900">المورد</th>
+              {appData.branches && appData.branches.length > 1 && <th className="p-3 font-black border border-slate-300 text-slate-900">الفرع</th>}
+              <th className="p-3 font-black border border-slate-300 text-slate-900">التاريخ</th>
+              <th className="p-3 font-black border border-slate-300 text-slate-900">القيمة (ج.م)</th>
+              <th className="p-3 font-black border border-slate-300 text-slate-900">المسدد / المتبقي</th>
+              <th className="p-3 font-black border border-slate-300 text-slate-900">النوع</th>
+              <th className="p-3 font-black border border-slate-300 text-slate-900">الإجراءات</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-300 bg-white">

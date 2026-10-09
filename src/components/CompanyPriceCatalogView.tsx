@@ -526,21 +526,21 @@ export const CompanyPriceCatalogView: React.FC<CompanyPriceCatalogViewProps> = (
 
   return (
     <div className="w-full max-w-7xl mx-auto flex flex-col gap-3 text-slate-800" dir="rtl">
-      {/* 🏛️ الهيدر والبانر الرئيسي - تدرج أزرق داكن إلى كحلي ملكي مطابق للكود الأصلي */}
-      <div className="bg-gradient-to-r from-slate-900 via-blue-950 to-blue-800 text-white p-3.5 sm:p-5 rounded-xl shadow-md border border-blue-700/40 no-print flex flex-col gap-3">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 border-b border-white/10 pb-2.5">
+      {/* 🏛️ الهيدر والبانر الرئيسي - خلفية بيضاء وكتابة سوداء متناسقة مع الواجهة الرئيسية */}
+      <div className="bg-white text-slate-900 p-3.5 sm:p-5 rounded-xl shadow-xs border-2 border-slate-200 no-print flex flex-col gap-3">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 border-b border-slate-200 pb-2.5">
           <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-lg bg-blue-600/40 border border-blue-400/40 flex items-center justify-center font-bold text-amber-300">
+            <div className="w-9 h-9 rounded-lg bg-blue-50 border border-blue-200 flex items-center justify-center font-bold text-blue-600">
               <Building2 className="w-5 h-5" />
             </div>
             <div>
               <h2 className="text-sm sm:text-base font-black tracking-wide flex items-center gap-2">
-                <span>ركيزة | إدارة الشركات والتصنيفات والأسعار الذكية</span>
-                <span className="text-[10px] bg-yellow-400/20 text-yellow-300 border border-yellow-400/30 px-2 py-0.5 rounded-full font-bold">
+                <span className="text-slate-900">ركيزة | إدارة الشركات والتصنيفات والأسعار الذكية</span>
+                <span className="text-[10px] bg-amber-50 text-amber-800 border border-amber-300 px-2 py-0.5 rounded-full font-bold">
                   النظام المركزي
                 </span>
               </h2>
-              <p className="text-[11px] text-blue-200">
+              <p className="text-[11px] text-slate-600">
                 قائمة الأسعار المعتمدة، تثبيت الشركات والفئات، وحساب هوامش الأرباح التلقائية
               </p>
             </div>
@@ -550,16 +550,16 @@ export const CompanyPriceCatalogView: React.FC<CompanyPriceCatalogViewProps> = (
             <button
               type="button"
               onClick={handleExportExcel}
-              className="text-xs bg-white/10 hover:bg-white/20 text-white px-2.5 py-1.5 rounded-lg border border-white/20 font-bold transition flex items-center gap-1 cursor-pointer"
+              className="text-xs bg-slate-100 hover:bg-slate-200 text-slate-800 px-2.5 py-1.5 rounded-lg border border-slate-300 font-bold transition flex items-center gap-1 cursor-pointer"
               title="تصدير إكسيل"
             >
-              <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-300" />
+              <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600" />
               <span>إكسيل</span>
             </button>
             <button
               type="button"
               onClick={handlePrintCatalog}
-              className="text-xs bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg font-bold shadow-xs transition flex items-center gap-1 cursor-pointer"
+              className="text-xs bg-[#2e7d32] hover:bg-[#1b5e20] text-white px-3 py-1.5 rounded-lg font-bold shadow-xs transition flex items-center gap-1 cursor-pointer"
             >
               <Printer className="w-3.5 h-3.5" />
               <span>طباعة</span>

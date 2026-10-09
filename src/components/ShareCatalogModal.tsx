@@ -324,19 +324,19 @@ export const ShareCatalogModal: React.FC<ShareCatalogModalProps> = ({
         dir="rtl"
       >
         {/* Header */}
-        <div className="bg-gradient-to-r from-[#1a237e] via-[#0d47a1] to-[#1565c0] text-white px-5 py-4 flex items-center justify-between">
+        <div className="bg-white text-slate-900 px-5 py-4 flex items-center justify-between border-b-2 border-slate-200">
           <div className="flex items-center gap-2.5">
-            <div className="w-10 h-10 rounded-xl bg-white/15 flex items-center justify-center text-xl shadow-inner">
+            <div className="w-10 h-10 rounded-xl bg-blue-50 border border-blue-200 flex items-center justify-center text-xl shadow-xs">
               🛍️
             </div>
             <div>
-              <h3 className="font-black text-sm sm:text-base flex items-center gap-2">
+              <h3 className="font-black text-sm sm:text-base flex items-center gap-2 text-slate-900">
                 <span>مشاركة كتالوج المنتجات والمتجر الإلكتروني</span>
-                <span className="bg-amber-400 text-slate-950 text-[10px] font-black px-2 py-0.5 rounded-full">
+                <span className="bg-amber-100 text-amber-900 border border-amber-300 text-[10px] font-bold px-2 py-0.5 rounded-full">
                   B2B / B2C
                 </span>
               </h3>
-              <p className="text-xs text-blue-100">
+              <p className="text-xs text-slate-500">
                 رابط خارجي ورمز QR Code يتيح لعملائك تصفح البضائع وطلب الشراء فورياً
               </p>
             </div>
@@ -344,7 +344,7 @@ export const ShareCatalogModal: React.FC<ShareCatalogModalProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="text-white/80 hover:text-white w-8 h-8 rounded-full hover:bg-white/10 flex items-center justify-center text-base cursor-pointer"
+            className="text-slate-500 hover:text-slate-800 w-8 h-8 rounded-full hover:bg-slate-100 flex items-center justify-center text-base cursor-pointer"
           >
             ✕
           </button>

@@ -487,27 +487,27 @@ export const YearEndClosingView: React.FC<YearEndClosingViewProps> = ({
   return (
     <div className="w-full max-w-7xl mx-auto flex flex-col space-y-6">
       {/* Header Banner */}
-      <div className="bg-gradient-to-r from-[#0d47a1] via-[#1a237e] to-[#311b92] text-white p-6 rounded-3xl shadow-xl flex flex-wrap justify-between items-center gap-4">
+      <div className="bg-white text-slate-900 border-2 border-slate-200 p-5 sm:p-6 rounded-3xl shadow-xs flex flex-wrap justify-between items-center gap-4">
         <div className="space-y-1">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <span className="text-2xl">🏛️</span>
-            <h2 className="text-xl md:text-2xl font-black text-[#ffd54f]">
+            <h2 className="text-lg md:text-xl font-black text-slate-900">
               نظام الإقفال السنوي والترحيل المالي (Fiscal Year-End Closing)
             </h2>
-            <span className="bg-amber-400 text-slate-900 text-xs font-black px-2.5 py-0.5 rounded-full">
+            <span className="bg-amber-100 text-amber-900 border border-amber-300 text-xs font-black px-2.5 py-0.5 rounded-full">
               Enterprise Closing Engine
             </span>
           </div>
-          <p className="text-xs md:text-sm text-blue-100 max-w-2xl leading-relaxed">
+          <p className="text-xs md:text-sm text-slate-600 max-w-2xl leading-relaxed">
             محرك الإقفال السنوي الذكي: فحص الجاهزية الشامل، إقفال حسابات الأرباح والخسائر، تدوير الأرصدة الافتتاحية للميزانية، وقفل الفترات المحاسبية لمنع التعديلات العشوائية.
           </p>
         </div>
 
-        <div className="bg-white/10 backdrop-blur-md p-3.5 rounded-2xl border border-white/20 text-center font-mono">
-          <span className="text-xs text-blue-200 block">السنة المالية الحالية</span>
-          <strong className="text-xl font-black text-[#ffd54f]">{currentFiscalYear}</strong>
+        <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-300 text-center font-mono">
+          <span className="text-xs text-slate-500 block font-sans">السنة المالية الحالية</span>
+          <strong className="text-xl font-black text-blue-900">{currentFiscalYear}</strong>
           {appData.fiscalLockDate && (
-            <span className="block text-[10px] text-rose-300 font-sans font-bold">
+            <span className="block text-[10px] text-rose-700 font-sans font-bold">
               🔒 مقفلة حتى: {appData.fiscalLockDate}
             </span>
           )}
@@ -515,25 +515,25 @@ export const YearEndClosingView: React.FC<YearEndClosingViewProps> = ({
       </div>
 
       {/* 🔄 Interactive Switcher between Current Fiscal Year and Closed Year */}
-      <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white p-4 sm:p-5 rounded-3xl border border-indigo-500/30 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-lg">
+      <div className="bg-white text-slate-900 border-2 border-slate-200 p-4 sm:p-5 rounded-3xl shadow-xs flex flex-col sm:flex-row items-center justify-between gap-4">
         <div className="flex items-center gap-3.5">
           <div
             className={`w-12 h-12 rounded-2xl flex items-center justify-center text-xl shrink-0 ${
               appData.viewingClosedYear
-                ? 'bg-amber-500/20 text-amber-300 border border-amber-400/40 shadow-amber-500/20'
-                : 'bg-emerald-500/20 text-emerald-300 border border-emerald-400/40 shadow-emerald-500/20'
+                ? 'bg-amber-50 text-amber-800 border border-amber-300'
+                : 'bg-emerald-50 text-emerald-800 border border-emerald-300'
             }`}
           >
             {appData.viewingClosedYear ? '🔒' : '🟢'}
           </div>
           <div>
             <div className="flex flex-wrap items-center gap-2">
-              <span className="text-xs text-slate-400">وضع السنة المالية في شاشتك:</span>
+              <span className="text-xs text-slate-500 font-bold">وضع السنة المالية في شاشتك:</span>
               <span
                 className={`font-mono font-black text-xs sm:text-sm px-2.5 py-1 rounded-lg ${
                   appData.viewingClosedYear
-                    ? 'bg-amber-500/25 text-amber-300 border border-amber-400/30'
-                    : 'bg-emerald-500/25 text-emerald-300 border border-emerald-400/30'
+                    ? 'bg-amber-50 text-amber-900 border border-amber-300'
+                    : 'bg-emerald-50 text-emerald-900 border border-emerald-300'
                 }`}
               >
                 {appData.viewingClosedYear
@@ -541,7 +541,7 @@ export const YearEndClosingView: React.FC<YearEndClosingViewProps> = ({
                   : `سنة ${appData.settings?.fiscalYear} (الحالية النشطة - تشغيل كامل)`}
               </span>
             </div>
-            <p className="text-xs text-slate-300 mt-1">
+            <p className="text-xs text-slate-600 mt-1">
               {appData.viewingClosedYear
                 ? '⚠️ تم قفل التعديلات والحذف لحماية الدفاتر؛ متاح الاستعراض والطباعة واستخراج التقارير فقط.'
                 : 'الوضع التشغيلي النشط: يتم تسجيل الفواتير والسندات والقيود على السنة الحالية كالمعتاد.'}
@@ -554,15 +554,15 @@ export const YearEndClosingView: React.FC<YearEndClosingViewProps> = ({
             <button
               type="button"
               onClick={handleReturnToCurrentYear}
-              className="w-full sm:w-auto min-h-[44px] px-5 py-2.5 bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-500 hover:to-emerald-600 active:from-emerald-700 active:to-emerald-800 text-white rounded-2xl text-xs sm:text-sm font-black transition flex items-center justify-center gap-2 shadow-md cursor-pointer"
+              className="w-full sm:w-auto min-h-[44px] px-5 py-2.5 bg-[#2e7d32] hover:bg-[#1b5e20] text-white rounded-2xl text-xs sm:text-sm font-black transition flex items-center justify-center gap-2 shadow-xs cursor-pointer"
             >
               <span>العودة للسنة الحالية ({appData.currentActiveFiscalYear || appData.settings?.fiscalYear})</span>
               <span className="text-base">↩</span>
             </button>
           ) : (
             <div className="flex items-center gap-2">
-              <span className="text-xs text-emerald-400 font-bold bg-emerald-950/60 border border-emerald-500/30 px-3.5 py-2 rounded-xl flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+              <span className="text-xs text-emerald-800 font-bold bg-emerald-50 border border-emerald-300 px-3.5 py-2 rounded-xl flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-emerald-600 animate-pulse"></span>
                 السنة الحالية نشطة
               </span>
             </div>
@@ -779,15 +779,15 @@ export const YearEndClosingView: React.FC<YearEndClosingViewProps> = ({
               </div>
 
               {/* Net Profit Banner */}
-              <div className="bg-gradient-to-r from-[#1a237e] to-[#2e7d32] text-white p-5 rounded-2xl flex justify-between items-center shadow-lg">
+              <div className="bg-white text-slate-900 border-2 border-slate-200 p-5 rounded-2xl flex justify-between items-center shadow-xs">
                 <div>
-                  <span className="text-xs text-blue-200 block">صافي النتيجة الختامية للعام المالي ({currentFiscalYear})</span>
-                  <strong className="text-lg md:text-xl font-bold">
+                  <span className="text-xs text-slate-500 block font-bold">صافي النتيجة الختامية للعام المالي ({currentFiscalYear})</span>
+                  <strong className="text-lg md:text-xl font-black text-slate-900">
                     {financialSummary.netProfitOrLoss >= 0 ? '🏆 صافي ربح العام المالي' : '⚠️ صافي خسارة العام المالي'}
                   </strong>
                 </div>
                 <div className="text-right">
-                  <strong className="text-2xl font-mono text-[#ffd54f]">
+                  <strong className={`text-2xl font-mono font-black ${financialSummary.netProfitOrLoss >= 0 ? 'text-emerald-700' : 'text-rose-700'}`}>
                     {financialSummary.netProfitOrLoss.toLocaleString('en-US', { minimumFractionDigits: 2 })} ج.م
                   </strong>
                 </div>

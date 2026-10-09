@@ -363,40 +363,39 @@ export const CatalogManagerView: React.FC<CatalogManagerViewProps> = ({
   return (
     <div className="w-full max-w-7xl mx-auto flex flex-col space-y-5 pb-16" dir="rtl">
       {/* Top Header Card */}
-      <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white p-5 md:p-7 rounded-3xl shadow-md border border-indigo-900/60 relative overflow-hidden">
-        <div className="absolute -left-10 -bottom-10 w-48 h-48 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="bg-white text-slate-900 p-5 md:p-6 rounded-3xl shadow-xs border-2 border-slate-200 relative overflow-hidden">
         <div className="relative z-10 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-5">
           <div className="space-y-2">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="bg-amber-400 text-slate-950 text-xs font-black px-3 py-1 rounded-lg">
+              <span className="bg-amber-100 text-amber-900 border border-amber-300 text-xs font-bold px-3 py-1 rounded-lg">
                 🛍️ متجر الويب سايت والكتالوج B2B / B2C
               </span>
-              <span className="bg-white/10 text-slate-200 text-xs px-2.5 py-1 rounded-lg border border-white/10">
+              <span className="bg-slate-100 text-slate-700 text-xs px-2.5 py-1 rounded-lg border border-slate-300">
                 🔒 عزل كامل لبيانات وأسعار كل شركة
               </span>
             </div>
-            <h2 className="text-2xl md:text-3xl font-black text-white">
+            <h2 className="text-xl md:text-2xl font-black text-slate-900">
               إدارة المنتجات وأسعار الويب سايت (Catalog Product Manager)
             </h2>
-            <p className="text-sm text-slate-300 max-w-3xl leading-relaxed">
+            <p className="text-xs sm:text-sm text-slate-600 max-w-3xl leading-relaxed">
               تحكم بدقة في المنتجات التي تظهر لعملائك على الويب سايت، وحدد أسعار بيع خاصة بالمتجر الإلكتروني
               أو عروض وخصومات ترويجية، مع عزل تام يضمن استقلالية كل شركة بكتالوجها وأسعارها.
             </p>
           </div>
 
           {/* Company Selector Box */}
-          <div className="bg-white/10 backdrop-blur-md p-3.5 rounded-2xl border border-white/20 flex flex-col gap-2 min-w-[280px]">
-            <div className="flex items-center justify-between text-xs text-amber-300 font-bold">
+          <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-300 flex flex-col gap-2 min-w-[280px]">
+            <div className="flex items-center justify-between text-xs text-slate-700 font-bold">
               <span>🏢 الشركة الحالية المدارة:</span>
-              <span className="bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded text-[10px] border border-emerald-500/30">
+              <span className="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded text-[10px] border border-emerald-300 font-mono">
                 {activeCompany.code || activeCompany.id}
               </span>
             </div>
 
             {!isOwner ? (
-              <div className="bg-slate-900/90 text-white font-black text-sm p-3 rounded-xl border border-slate-700 flex items-center justify-between">
+              <div className="bg-white text-slate-900 font-black text-sm p-3 rounded-xl border border-slate-300 flex items-center justify-between">
                 <span>{activeCompany.name}</span>
-                <span className="text-[11px] text-emerald-400 font-bold">🔒 بياناتك معزولة ومحمية</span>
+                <span className="text-[11px] text-emerald-700 font-bold">🔒 بياناتك معزولة ومحمية</span>
               </div>
             ) : (
               <select

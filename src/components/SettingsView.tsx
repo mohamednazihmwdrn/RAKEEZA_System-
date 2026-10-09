@@ -585,23 +585,23 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ appData, onUpdateDat
       </div>
 
       {/* 🔑 External API & Mobile APK Integration Key Card */}
-      <div className="bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 text-white p-6 rounded-2xl shadow-lg border border-indigo-900/50 space-y-5">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-indigo-800/40 pb-4">
+      <div className="bg-white text-slate-900 p-6 rounded-2xl shadow-xs border-2 border-slate-200 space-y-5">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 pb-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400">
+            <div className="w-10 h-10 rounded-xl bg-amber-50 border border-amber-300 flex items-center justify-center text-amber-600">
               <Key className="w-5 h-5" />
             </div>
             <div>
-              <h4 className="text-lg font-bold text-white flex items-center gap-2">
+              <h4 className="text-lg font-bold text-slate-900 flex items-center gap-2">
                 مفتاح الـ API والربط الخارجي وتطبيق الموبايل (APK Key)
               </h4>
-              <p className="text-xs text-indigo-200">
+              <p className="text-xs text-slate-500">
                 مفتاح موثق ومشفر لربط تطبيق الموبايل (Android APK) أو أي سيرفر خارجي بقاعدة بيانات المنظومة
               </p>
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-800 border border-emerald-300">
               <ShieldCheck className="w-3.5 h-3.5" /> سحابي نشط
             </span>
           </div>
@@ -609,30 +609,30 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ appData, onUpdateDat
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* Company ID */}
-          <div className="bg-white/5 border border-white/10 p-3.5 rounded-xl">
-            <span className="text-xs text-indigo-200 block mb-1">معرف المنشأة (Company ID):</span>
-            <div className="flex items-center justify-between font-mono font-bold text-sm text-indigo-300">
+          <div className="bg-slate-50 border border-slate-200 p-3.5 rounded-xl">
+            <span className="text-xs text-slate-500 block mb-1">معرف المنشأة (Company ID):</span>
+            <div className="flex items-center justify-between font-mono font-bold text-sm text-blue-900">
               <span>{apiKeyInfo?.companyId || appData.companyId || 'COMP-672842'}</span>
-              <span className="text-xs px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-200">
+              <span className="text-xs px-2 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200">
                 كود: {apiKeyInfo?.companyCode || '108'}
               </span>
             </div>
           </div>
 
           {/* API Base URL */}
-          <div className="bg-white/5 border border-white/10 p-3.5 rounded-xl">
-            <span className="text-xs text-indigo-200 block mb-1">رابط الخادم المباشر (API Base URL):</span>
-            <div className="font-mono font-bold text-xs text-slate-300 truncate" dir="ltr">
+          <div className="bg-slate-50 border border-slate-200 p-3.5 rounded-xl">
+            <span className="text-xs text-slate-500 block mb-1">رابط الخادم المباشر (API Base URL):</span>
+            <div className="font-mono font-bold text-xs text-slate-700 truncate" dir="ltr">
               {typeof window !== 'undefined' ? `${window.location.origin}/api` : 'https://.../api'}
             </div>
           </div>
         </div>
 
         {/* API Key Box */}
-        <div className="bg-black/40 border border-indigo-500/30 p-4 rounded-xl space-y-2">
+        <div className="bg-slate-50 border border-slate-300 p-4 rounded-xl space-y-2">
           <div className="flex items-center justify-between">
-            <label className="text-xs font-bold text-amber-300 flex items-center gap-1.5">
-              <Key className="w-3.5 h-3.5" />
+            <label className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+              <Key className="w-3.5 h-3.5 text-amber-600" />
               مفتاح المصادقة السري للـ APK والسيرفر الخارجي (Secret API Key)
             </label>
             <div className="flex items-center gap-2">
@@ -857,22 +857,22 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ appData, onUpdateDat
       </div>
 
       {/* Developer Rights Box */}
-      <div className="bg-gradient-to-r from-[#072a4e] to-[#0d4b8e] text-white p-6 rounded-2xl shadow-sm border border-indigo-900 space-y-3">
-        <h4 className="font-bold text-lg flex items-center gap-2 text-[#ffd54f]">
+      <div className="bg-white text-slate-900 border-2 border-slate-200 p-6 rounded-2xl shadow-xs space-y-3">
+        <h4 className="font-bold text-lg flex items-center gap-2 text-slate-900">
           <span>💻</span> حقوق الملكية وتطوير النظام
         </h4>
-        <div className="text-sm space-y-1.5 opacity-95">
+        <div className="text-sm space-y-1.5 text-slate-700">
           <p>
-            اسم المنظومة: <strong className="text-white text-base">منظومة ركيزة | RAKEEZA Cloud ERP</strong>
+            اسم المنظومة: <strong className="text-slate-900 text-base">منظومة ركيزة | RAKEEZA Cloud ERP</strong>
           </p>
           <p>
-            تطوير وبرمجة: <strong className="text-[#ffd54f] text-base">Mohamed Nazih</strong>
+            تطوير وبرمجة: <strong className="text-blue-900 text-base">Mohamed Nazih</strong>
           </p>
           <p>
-            رقم الهاتف والتواصل المباشر: <strong className="font-mono text-emerald-300 text-base" dir="ltr">01029190615</strong>
+            رقم الهاتف والتواصل المباشر: <strong className="font-mono text-emerald-700 text-base" dir="ltr">01029190615</strong>
           </p>
         </div>
-        <p className="text-xs text-blue-200 pt-2 border-t border-white/20">
+        <p className="text-xs text-slate-500 pt-2 border-t border-slate-200">
           جميع حقوق الملكية والتأليف محفوظة للمطور. يتم طباعة هذا التذييل تلقائياً على جميع الفواتير، التقارير الشاملة، كشوفات الحسابات وسندات الخزينة.
         </p>
       </div>

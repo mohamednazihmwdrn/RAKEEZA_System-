@@ -662,10 +662,10 @@ export const TreasuryView: React.FC<TreasuryViewProps> = ({ appData, onUpdateDat
           <div className="text-[#1a237e] text-xl font-bold">{cash.bank.toFixed(2)} ج.م</div>
         </div>
 
-        <div className="bg-gradient-to-br from-[#1a237e] to-[#0d47a1] text-white p-5 rounded-2xl shadow-md text-center">
+        <div className="bg-white text-slate-900 border-2 border-slate-200 p-5 rounded-2xl shadow-xs text-center">
           <div className="text-3xl mb-1">💵</div>
-          <div className="text-slate-200 text-xs mb-1">الإجمالي الكلي للنقدية</div>
-          <div className="text-2xl font-extrabold text-[#ffd54f]">{totalCash.toFixed(2)} ج.م</div>
+          <div className="text-slate-600 text-xs mb-1 font-bold">الإجمالي الكلي للنقدية</div>
+          <div className="text-2xl font-black text-emerald-700">{totalCash.toFixed(2)} ج.م</div>
         </div>
       </div>
 

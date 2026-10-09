@@ -452,7 +452,7 @@ export const UsersView: React.FC<UsersViewProps> = ({ appData, onUpdateData, sho
           />
           <button
             onClick={handleOpenNewUserModal}
-            className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-4 py-2 rounded-xl text-xs md:text-sm font-bold cursor-pointer flex items-center gap-1.5 shadow-md shadow-blue-500/20 transition-all"
+            className="bg-[#2e7d32] hover:bg-[#1b5e20] active:bg-[#124116] text-white px-4 py-2 rounded-xl text-xs md:text-sm font-bold cursor-pointer flex items-center gap-1.5 shadow-xs transition-all"
           >
             <UserPlus className="w-4 h-4" />
             <span>إضافة مستخدم جديد</span>
@@ -947,7 +947,7 @@ export const UsersView: React.FC<UsersViewProps> = ({ appData, onUpdateData, sho
             <button
               type="button"
               onClick={handleSaveUser}
-              className="flex-1 py-3 px-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold rounded-xl shadow-md shadow-blue-500/20 transition-all text-sm cursor-pointer"
+              className="flex-1 py-3 px-4 bg-[#2e7d32] hover:bg-[#1b5e20] active:bg-[#124116] text-white font-bold rounded-xl shadow-xs transition-all text-sm cursor-pointer"
             >
               💾 حفظ المستخدم والصلاحيات
             </button>

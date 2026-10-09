@@ -218,22 +218,22 @@ export const EInvoicingView: React.FC<EInvoicingViewProps> = ({
   return (
     <div className="w-full max-w-7xl mx-auto flex flex-col space-y-6">
       {/* Top Header */}
-      <div className="bg-gradient-to-r from-[#0d47a1] to-[#1565c0] text-white p-5 rounded-2xl shadow-md flex flex-wrap justify-between items-center gap-4">
+      <div className="bg-white text-slate-900 border-2 border-slate-200 p-4 sm:p-5 rounded-2xl shadow-xs flex flex-wrap justify-between items-center gap-4">
         <div>
           <div className="flex items-center gap-2">
             <span className="text-2xl">🏛️</span>
-            <h3 className="font-black text-lg md:text-xl text-[#ffd54f]">
+            <h3 className="font-black text-base md:text-lg text-slate-900">
               المنظومة الضريبية والفاتورة الإلكترونية (ETA E-Invoicing & Tax Compliance)
             </h3>
           </div>
-          <p className="text-xs text-blue-100 mt-1 opacity-90">
+          <p className="text-xs text-slate-600 mt-1">
             الربط المباشر مع منظومة الفاتورة والإيصال الإلكتروني المصرية (ETA)، توليد وتصدير ملفات JSON v1.0، والنموذج 41 للخصم من المنبع
           </p>
         </div>
 
-        <div className="flex items-center gap-2 bg-emerald-500/20 border border-emerald-400/40 px-3 py-1.5 rounded-xl text-xs">
-          <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
-          <span className="font-bold text-emerald-200">الربط الإلكتروني (ETA SDK): مُفعل ونشط</span>
+        <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-300 px-3 py-1.5 rounded-xl text-xs">
+          <span className="w-2.5 h-2.5 rounded-full bg-emerald-600 animate-pulse"></span>
+          <span className="font-bold text-emerald-800">الربط الإلكتروني (ETA SDK): مُفعل ونشط</span>
         </div>
       </div>
 

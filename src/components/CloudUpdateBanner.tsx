@@ -139,19 +139,19 @@ export const CloudUpdateBanner: React.FC<CloudUpdateBannerProps> = ({ showToast 
       dir="rtl"
       className="fixed top-14 right-3 left-3 sm:right-6 sm:left-6 md:right-auto md:left-6 md:max-w-md z-50 animate-bounce-subtle"
     >
-      <div className="bg-gradient-to-r from-blue-900 to-indigo-900 text-white p-3.5 rounded-xl border-2 border-blue-400 shadow-2xl flex items-center justify-between gap-3">
+      <div className="bg-white text-slate-900 p-3.5 rounded-xl border-2 border-slate-300 shadow-xl flex items-center justify-between gap-3">
         <div className="flex items-center gap-2.5">
-          <div className="w-9 h-9 rounded-lg bg-blue-600/50 border border-blue-400 flex items-center justify-center shrink-0">
-            <Sparkles className="w-5 h-5 text-amber-300 animate-spin-slow" />
+          <div className="w-9 h-9 rounded-lg bg-blue-50 border border-blue-200 flex items-center justify-center shrink-0">
+            <Sparkles className="w-5 h-5 text-amber-500 animate-spin-slow" />
           </div>
           <div className="text-right">
-            <h4 className="text-xs sm:text-sm font-black text-white leading-tight flex items-center gap-1.5">
+            <h4 className="text-xs sm:text-sm font-black text-slate-900 leading-tight flex items-center gap-1.5">
               <span>تحديث جديد متوفر على Vercel!</span>
-              <span className="bg-emerald-500 text-white text-[9px] px-1.5 py-0.2 rounded font-mono font-bold">
+              <span className="bg-emerald-100 text-emerald-800 border border-emerald-300 text-[9px] px-1.5 py-0.2 rounded font-mono font-bold">
                 NEW
               </span>
             </h4>
-            <p className="text-[10.5px] sm:text-xs text-blue-200 mt-0.5 leading-snug">
+            <p className="text-[10.5px] sm:text-xs text-slate-600 mt-0.5 leading-snug">
               تم نشر إصدار أحدث للنظام من GitHub. انقر للتحديث الفوري لجميع أجهزتك.
             </p>
           </div>

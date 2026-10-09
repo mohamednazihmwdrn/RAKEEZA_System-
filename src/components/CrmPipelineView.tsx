@@ -264,15 +264,15 @@ export const CrmPipelineView: React.FC<CrmPipelineViewProps> = ({
   return (
     <div className="w-full max-w-7xl mx-auto flex flex-col space-y-6">
       {/* Banner */}
-      <div className="bg-gradient-to-r from-[#1a237e] via-[#0d47a1] to-[#1565c0] text-white p-5 rounded-2xl shadow-md flex flex-wrap justify-between items-center gap-4">
+      <div className="bg-white text-slate-900 border-2 border-slate-200 p-4 sm:p-5 rounded-2xl shadow-xs flex flex-wrap justify-between items-center gap-4">
         <div>
           <div className="flex items-center gap-2">
             <span className="text-2xl">🎯</span>
-            <h3 className="font-black text-lg md:text-xl text-[#ffd54f]">
+            <h3 className="font-black text-base md:text-lg text-slate-900">
               إدارة علاقات العملاء وفرص المبيعات (Mini-CRM & Sales Pipeline)
             </h3>
           </div>
-          <p className="text-xs text-blue-100 mt-1 opacity-90">
+          <p className="text-xs text-slate-600 mt-1">
             متابعة الصفقات والعملاء المحتملين، وتتبع مراحل الإغلاق، والمحادثة الفورية عبر واتساب، والتحويل المباشر إلى فواتير
           </p>
         </div>
@@ -280,7 +280,7 @@ export const CrmPipelineView: React.FC<CrmPipelineViewProps> = ({
         <div className="flex items-center gap-2">
           <button
             onClick={() => setIsAddModalOpen(true)}
-            className="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white font-bold rounded-xl text-xs transition shadow-sm cursor-pointer flex items-center gap-1.5"
+            className="px-4 py-2 bg-[#2e7d32] hover:bg-[#1b5e20] text-white font-bold rounded-xl text-xs transition shadow-xs cursor-pointer flex items-center gap-1.5"
           >
             <span>➕</span> إضافة فرصة بيع جديدة
           </button>

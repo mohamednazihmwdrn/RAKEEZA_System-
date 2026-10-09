@@ -57,22 +57,22 @@ export const BiAnalyticsView: React.FC<BiAnalyticsViewProps> = ({ appData, onNav
   return (
     <div className="w-full max-w-7xl mx-auto flex flex-col space-y-6">
       {/* Top Banner */}
-      <div className="bg-gradient-to-r from-[#1a237e] via-[#283593] to-[#3949ab] text-white p-6 rounded-2xl shadow-lg flex flex-wrap justify-between items-center gap-4">
+      <div className="bg-white text-slate-900 border-2 border-slate-200 p-5 sm:p-6 rounded-2xl shadow-xs flex flex-wrap justify-between items-center gap-4">
         <div>
           <div className="flex items-center gap-2">
             <span className="text-3xl">📊</span>
-            <h3 className="font-black text-xl md:text-2xl text-[#ffd54f]">
+            <h3 className="font-black text-lg md:text-xl text-slate-900">
               ذكاء الأعمال والتحليلات التنبؤية (BI Intelligence & Analytics)
             </h3>
           </div>
-          <p className="text-xs text-indigo-100 mt-1">
+          <p className="text-xs text-slate-600 mt-1">
             مؤشرات الأداء الرئيسية (KPIs)، تحليل هوامش الربحية، تنبيهات إعادة الطلب الذكية، والأصناف الراكدة
           </p>
         </div>
 
-        <div className="bg-white/10 backdrop-blur-md px-4 py-2 rounded-xl text-center border border-white/20">
-          <span className="text-[11px] text-indigo-200 block">متوسط الفاتورة</span>
-          <strong className="text-lg font-mono font-bold text-white">
+        <div className="bg-slate-50 border border-slate-300 px-4 py-2 rounded-xl text-center">
+          <span className="text-[11px] text-slate-500 block font-bold">متوسط الفاتورة</span>
+          <strong className="text-lg font-mono font-black text-blue-900">
             {(avgInvoiceValue || 0).toLocaleString('en-US', { minimumFractionDigits: 1 })} ج.م
           </strong>
         </div>

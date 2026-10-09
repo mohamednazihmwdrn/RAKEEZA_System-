@@ -212,16 +212,16 @@ export const InvoiceItemModal: React.FC<InvoiceItemModalProps> = ({
         dir="rtl"
       >
         {/* Modal Header */}
-        <div className="bg-gradient-to-r from-blue-700 via-indigo-700 to-blue-800 text-white px-5 py-4 flex items-center justify-between border-b border-blue-600">
+        <div className="bg-white text-slate-900 px-5 py-4 flex items-center justify-between border-b-2 border-slate-200">
           <div className="flex items-center gap-2.5">
-            <div className="w-10 h-10 rounded-xl bg-white/15 flex items-center justify-center border border-white/20 shadow-inner">
-              <Package className="w-5 h-5 text-amber-300" />
+            <div className="w-10 h-10 rounded-xl bg-blue-50 border border-blue-200 flex items-center justify-center text-blue-600 shadow-xs">
+              <Package className="w-5 h-5 text-blue-600" />
             </div>
             <div>
-              <h3 className="font-black text-lg text-white">
+              <h3 className="font-black text-lg text-slate-900">
                 {initialItem ? 'تعديل بيانات كارت الصنف' : 'كارت الصنف (إضافة صنف للفاتورة)'}
               </h3>
-              <p className="text-xs text-blue-100 font-medium">
+              <p className="text-xs text-slate-500 font-medium">
                 أدخل بيانات الصنف بدقة - جميع الحسابات لحظية والتحكم في نوع الخصم والضريبة متاح
               </p>
             </div>
@@ -230,7 +230,7 @@ export const InvoiceItemModal: React.FC<InvoiceItemModalProps> = ({
             id="btn-close-item-modal"
             type="button"
             onClick={onClose}
-            className="w-9 h-9 rounded-xl bg-white/10 hover:bg-white/25 flex items-center justify-center transition-colors text-white"
+            className="w-9 h-9 rounded-xl bg-slate-100 hover:bg-slate-200 active:bg-slate-300 flex items-center justify-center transition-colors text-slate-600 cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
@@ -536,40 +536,40 @@ export const InvoiceItemModal: React.FC<InvoiceItemModalProps> = ({
           </div>
 
           {/* 5. Live Calculation Breakdown */}
-          <div className="bg-gradient-to-br from-slate-900 to-blue-950 rounded-xl p-4 text-white shadow-md">
-            <div className="text-xs font-bold text-blue-200 mb-2.5 flex items-center justify-between border-b border-white/10 pb-2">
+          <div className="bg-white rounded-xl p-4 text-slate-900 border-2 border-slate-200 shadow-xs">
+            <div className="text-xs font-bold text-slate-700 mb-2.5 flex items-center justify-between border-b border-slate-200 pb-2">
               <span className="flex items-center gap-1.5">
-                <Calculator className="w-4 h-4 text-amber-400" />
+                <Calculator className="w-4 h-4 text-blue-600" />
                 <span>شريط الحسابات اللحظية للصنف</span>
               </span>
-              <span className="text-[11px] text-amber-300 font-medium">
+              <span className="text-[11px] text-slate-500 font-medium">
                 (تسمع الخصومات والضرائب في الإجمالي النهائي)
               </span>
             </div>
 
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
-              <div className="p-2 rounded-lg bg-white/5 border border-white/10">
-                <div className="text-[11px] text-slate-300 mb-0.5">القيمة الأساسية</div>
-                <div className="text-sm font-bold font-mono text-white">{baseSubtotal.toFixed(2)} ج.م</div>
+              <div className="p-2 rounded-lg bg-slate-50 border border-slate-200">
+                <div className="text-[11px] text-slate-600 mb-0.5 font-bold">القيمة الأساسية</div>
+                <div className="text-sm font-bold font-mono text-slate-900">{baseSubtotal.toFixed(2)} ج.م</div>
               </div>
 
-              <div className="p-2 rounded-lg bg-emerald-500/10 border border-emerald-400/20">
-                <div className="text-[11px] text-emerald-300 mb-0.5">الخصم</div>
-                <div className="text-sm font-bold font-mono text-emerald-400">
+              <div className="p-2 rounded-lg bg-emerald-50 border border-emerald-200">
+                <div className="text-[11px] text-emerald-800 mb-0.5 font-bold">الخصم</div>
+                <div className="text-sm font-bold font-mono text-emerald-700">
                   {calculatedDiscount > 0 ? `-${calculatedDiscount.toFixed(2)}` : '0.00'} ج.م
                 </div>
               </div>
 
-              <div className="p-2 rounded-lg bg-indigo-500/10 border border-indigo-400/20">
-                <div className="text-[11px] text-indigo-300 mb-0.5">الضريبة</div>
-                <div className="text-sm font-bold font-mono text-indigo-300">
+              <div className="p-2 rounded-lg bg-blue-50 border border-blue-200">
+                <div className="text-[11px] text-blue-800 mb-0.5 font-bold">الضريبة</div>
+                <div className="text-sm font-bold font-mono text-blue-700">
                   {calculatedTax > 0 ? `+${calculatedTax.toFixed(2)}` : '0.00'} ج.م
                 </div>
               </div>
 
-              <div className="p-2 rounded-lg bg-amber-500/15 border border-amber-400/30">
-                <div className="text-[11px] text-amber-300 mb-0.5">الإجمالي النهائي للصنف</div>
-                <div className="text-base font-black font-mono text-amber-400">{finalItemTotal.toFixed(2)} ج.م</div>
+              <div className="p-2 rounded-lg bg-amber-50 border border-amber-300">
+                <div className="text-[11px] text-amber-900 mb-0.5 font-bold">الإجمالي النهائي للصنف</div>
+                <div className="text-base font-black font-mono text-amber-950">{finalItemTotal.toFixed(2)} ج.م</div>
               </div>
             </div>
           </div>
