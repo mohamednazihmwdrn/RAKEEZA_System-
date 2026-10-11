@@ -1,9 +1,10 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { AppData, Item, ProductPrice, PriceHistoryRecord } from '../types';
 import { Modal } from './Modal';
 import { openUnifiedPrintWindow } from '../utils/printUnified';
 import { exportToExcel } from '../utils/excelExport';
 import { TableActionButtons } from './TableActionButtons';
+import { registerModalBackHandler } from '../utils/navigationHistory';
 import {
   calculateProfitMargin,
   updateProductPrice,
@@ -58,6 +59,34 @@ export const PriceManagementView: React.FC<PriceManagementViewProps> = ({
   // History Filter
   const [historySearch, setHistorySearch] = useState('');
   const [historyDateFilter, setHistoryDateFilter] = useState('');
+
+  // 🧭 Intercept phone back button for sub-tabs and sub-modals inside PriceManagementView
+  useEffect(() => {
+    if (editingItem || historyItem || showBulkConfirmModal) {
+      const unregister = registerModalBackHandler(() => {
+        if (showBulkConfirmModal) {
+          setShowBulkConfirmModal(false);
+          return true;
+        }
+        if (editingItem) {
+          setEditingItem(null);
+          return true;
+        }
+        if (historyItem) {
+          setHistoryItem(null);
+          return true;
+        }
+        return false;
+      });
+      return () => unregister();
+    } else if (activeTab !== 'list') {
+      const unregister = registerModalBackHandler(() => {
+        setActiveTab('list');
+        return true;
+      });
+      return () => unregister();
+    }
+  }, [editingItem, historyItem, showBulkConfirmModal, activeTab]);
 
   // Import State
   const [importJsonText, setImportJsonText] = useState('');

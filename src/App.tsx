@@ -48,6 +48,7 @@ import { MonthlyProfitReportView } from './components/MonthlyProfitReportView';
 import { CrmPipelineView } from './components/CrmPipelineView';
 import { SerialWarrantyTrackingView } from './components/SerialWarrantyTrackingView';
 import { CashFlowClosingView } from './components/CashFlowClosingView';
+import { BigDataDiagnosticsModal } from './components/BigDataDiagnosticsModal';
 import { printWebOrderReceipt } from './utils/printOrderReceipt';
 import { playOrderAlertChime } from './utils/audioChime';
 import {
@@ -72,6 +73,13 @@ import {
 import { realtimeSync } from './services/realtimeSync';
 import { offlineSyncManager } from './services/offlineSyncManager';
 import { canAccessPage, getDefaultLandingPage, verifyDataOperationPermission } from './utils/permissions';
+import {
+  pushNavigationPage,
+  popNavigationPage,
+  canNavigateBack,
+  consumeModalBack,
+  getParentPage,
+} from './utils/navigationHistory';
 import { AuditLog } from './types';
 import { AlertTriangle, KeyRound, RotateCcw, Home, Zap, ShoppingCart, ShoppingBag, Menu, ShieldAlert } from 'lucide-react';
 
@@ -101,13 +109,16 @@ export default function App() {
     if (currentPage && currentPage !== 'login') {
       try {
         localStorage.setItem('rakeeza_current_page', currentPage);
-        if (window.location.hash !== `#${currentPage}`) {
-          window.history.replaceState({ page: currentPage }, '', `#${currentPage}`);
-        }
       } catch {}
     }
   }, [currentPage]);
-  const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(true);
+
+  const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      return window.innerWidth > 768;
+    }
+    return true;
+  });
   const [isShareCatalogOpen, setIsShareCatalogOpen] = useState<boolean>(false);
 
   // Cloud Authentication & Tenant Session State
@@ -121,6 +132,38 @@ export default function App() {
   // Global Transaction Inspector Modal State (Click-to-inspect, print, edit, delete, review)
   const [inspectModalItem, setInspectModalItem] = useState<InspectableItem | null>(null);
   const [isInspectModalOpen, setIsInspectModalOpen] = useState<boolean>(false);
+  const [isDiagnosticsModalOpen, setIsDiagnosticsModalOpen] = useState<boolean>(false);
+
+  // Live Refs for non-stale event listeners (Phone back buttons & popstate)
+  const currentPageRef = useRef(currentPage);
+  useEffect(() => {
+    currentPageRef.current = currentPage;
+  }, [currentPage]);
+
+  const isSidebarOpenRef = useRef(isSidebarOpen);
+  useEffect(() => {
+    isSidebarOpenRef.current = isSidebarOpen;
+  }, [isSidebarOpen]);
+
+  const isInspectModalOpenRef = useRef(isInspectModalOpen);
+  useEffect(() => {
+    isInspectModalOpenRef.current = isInspectModalOpen;
+  }, [isInspectModalOpen]);
+
+  const isShareCatalogOpenRef = useRef(isShareCatalogOpen);
+  useEffect(() => {
+    isShareCatalogOpenRef.current = isShareCatalogOpen;
+  }, [isShareCatalogOpen]);
+
+  const isDiagnosticsModalOpenRef = useRef(isDiagnosticsModalOpen);
+  useEffect(() => {
+    isDiagnosticsModalOpenRef.current = isDiagnosticsModalOpen;
+  }, [isDiagnosticsModalOpen]);
+
+  const isLicenseModalOpenRef = useRef(isLicenseModalOpen);
+  useEffect(() => {
+    isLicenseModalOpenRef.current = isLicenseModalOpen;
+  }, [isLicenseModalOpen]);
 
   const handleInspectItem = (type: any, data: any) => {
     setInspectModalItem({ type, data });
@@ -772,7 +815,7 @@ export default function App() {
   }, []);
 
   const handleNavigate = (page: string, pushHistory = true) => {
-    if (page === currentPage) return;
+    if (page === currentPageRef.current) return;
 
     // 🛡️ User Permission Access Guard with Isolated Owner Context
     const activeUser = session?.user || appData.users?.find((u) => u.id === appData.currentUser) || appData.users?.[0];
@@ -784,14 +827,18 @@ export default function App() {
         showToast(`عفواً، حسابك لا يمتلك صلاحية الدخول لشاشة "${page}". تم توجيهك لصفحتك المصرح بها.`, 'warning');
       }
       const safePage = getDefaultLandingPage(activeUser);
-      if (safePage !== currentPage) {
-        if (pushHistory) window.history.pushState({ page: safePage }, '', `#${safePage}`);
+      if (safePage !== currentPageRef.current) {
+        if (pushHistory) {
+          pushNavigationPage(safePage);
+          window.history.pushState({ page: safePage }, '', `#${safePage}`);
+        }
         setCurrentPage(safePage);
       }
       return;
     }
 
     if (pushHistory) {
+      pushNavigationPage(page);
       window.history.pushState({ page }, '', `#${page}`);
     }
     try {
@@ -804,49 +851,156 @@ export default function App() {
     }
   };
 
+  // 🧭 Manual & On-Screen Back Navigation Handler (Stepping back to previous / parent page)
+  const handleNavigateBack = () => {
+    // 1. Close open modals or workspaces first
+    if (consumeModalBack()) {
+      return;
+    }
+    if (isInspectModalOpenRef.current) {
+      setIsInspectModalOpen(false);
+      return;
+    }
+    if (isShareCatalogOpenRef.current) {
+      setIsShareCatalogOpen(false);
+      return;
+    }
+    if (isDiagnosticsModalOpenRef.current) {
+      setIsDiagnosticsModalOpen(false);
+      return;
+    }
+    if (isLicenseModalOpenRef.current) {
+      setIsLicenseModalOpen(false);
+      return;
+    }
+    if (window.innerWidth <= 768 && isSidebarOpenRef.current) {
+      setIsSidebarOpen(false);
+      return;
+    }
+
+    // 2. Step back to previous or parent page
+    const current = currentPageRef.current;
+    let target = popNavigationPage(current);
+    if (!target || target === current) {
+      target = getParentPage(current) || 'home';
+    }
+
+    handleNavigate(target, true);
+  };
+
   // Mobile Phone Back Button & Navigation History Handler (Hardware back button & gestures)
   useEffect(() => {
     // Initialize initial state if empty
-    const currentHash = window.location.hash.replace('#', '') || currentPage || 'home';
+    const currentHash = (() => {
+      try {
+        return decodeURIComponent(window.location.hash.replace('#', '')) || currentPageRef.current || 'home';
+      } catch {
+        return window.location.hash.replace('#', '') || currentPageRef.current || 'home';
+      }
+    })();
     const activeUser = session?.user || appData.users?.find((u) => u.id === appData.currentUser) || appData.users?.[0];
     const hasOwnerAccess = !!ownerSession || !!getStoredOwnerToken() || activeUser?.role === 'owner' || isOwner;
     const safeInitPage = canAccessPage(activeUser, currentHash, hasOwnerAccess) ? currentHash : getDefaultLandingPage(activeUser);
+
+    if (safeInitPage !== 'home') {
+      const parent = getParentPage(safeInitPage);
+      if (parent) {
+        pushNavigationPage(parent);
+      }
+      pushNavigationPage(safeInitPage);
+    } else {
+      pushNavigationPage('home');
+    }
+
     window.history.replaceState({ page: safeInitPage }, '', `#${safeInitPage}`);
 
     const handlePopState = (event: PopStateEvent) => {
-      // 1. If mobile sidebar is open, phone back button closes the sidebar first
-      if (isSidebarOpen) {
-        setIsSidebarOpen(false);
-        window.history.pushState({ page: currentPage }, '', `#${currentPage}`);
+      // 1. Intercept active modal/workspace back handler (Top Priority)
+      if (consumeModalBack()) {
+        window.history.pushState({ page: currentPageRef.current }, '', `#${currentPageRef.current}`);
         return;
       }
-
-      // 2. If any modal is open, close it
-      if (isInspectModalOpen) {
+      if (isInspectModalOpenRef.current) {
         setIsInspectModalOpen(false);
+        window.history.pushState({ page: currentPageRef.current }, '', `#${currentPageRef.current}`);
         return;
       }
-      if (isShareCatalogOpen) {
+      if (isShareCatalogOpenRef.current) {
         setIsShareCatalogOpen(false);
+        window.history.pushState({ page: currentPageRef.current }, '', `#${currentPageRef.current}`);
+        return;
+      }
+      if (isDiagnosticsModalOpenRef.current) {
+        setIsDiagnosticsModalOpen(false);
+        window.history.pushState({ page: currentPageRef.current }, '', `#${currentPageRef.current}`);
+        return;
+      }
+      if (isLicenseModalOpenRef.current) {
+        setIsLicenseModalOpen(false);
+        window.history.pushState({ page: currentPageRef.current }, '', `#${currentPageRef.current}`);
         return;
       }
 
-      // 3. Navigate back to previous page in app with permission validation
-      const targetPage = event.state?.page || window.location.hash.replace('#', '') || 'home';
-      const currentUserActive = session?.user || appData.users?.find((u) => u.id === appData.currentUser) || appData.users?.[0];
+      // 2. If mobile sidebar is open on phone screens, phone back button closes sidebar first
+      if (window.innerWidth <= 768 && isSidebarOpenRef.current) {
+        setIsSidebarOpen(false);
+        window.history.pushState({ page: currentPageRef.current }, '', `#${currentPageRef.current}`);
+        return;
+      }
+
+      // 3. Resolve target page from pop event or our explicit navigation stack
+      const current = currentPageRef.current;
+      let targetPage = event.state?.page;
+
+      if (!targetPage) {
+        try {
+          const hashVal = decodeURIComponent(window.location.hash.replace('#', '') || '');
+          if (hashVal) targetPage = hashVal;
+        } catch {}
+      }
+
+      if (!targetPage || targetPage === current) {
+        targetPage = popNavigationPage(current);
+      } else {
+        popNavigationPage(current);
+      }
+
+      // 🛡️ Hierarchy Guard: If target resolved to 'home' but current page has a direct parent, step back to parent first!
+      if (!targetPage || targetPage === 'home') {
+        const parent = getParentPage(current);
+        if (parent && parent !== 'home' && parent !== current) {
+          targetPage = parent;
+        } else {
+          targetPage = 'home';
+        }
+      }
+
+      const currentUserActive = session?.user || appDataRef.current.users?.find((u) => u.id === appDataRef.current.currentUser) || appDataRef.current.users?.[0];
       const hasTargetOwnerAccess = !!ownerSession || !!getStoredOwnerToken() || currentUserActive?.role === 'owner' || isOwner;
-      const verifiedTarget = canAccessPage(currentUserActive, targetPage, hasTargetOwnerAccess) ? targetPage : getDefaultLandingPage(currentUserActive);
+      const verifiedTarget = canAccessPage(currentUserActive, targetPage, hasTargetOwnerAccess)
+        ? targetPage
+        : getDefaultLandingPage(currentUserActive);
+
       try {
         localStorage.setItem('rakeeza_current_page', verifiedTarget);
       } catch {}
+
       setCurrentPage(verifiedTarget);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
     // 🛡️ Security Guard: Prevent bypassing restrictions by manually editing the URL hash
     const handleHashChange = () => {
-      const hashPage = window.location.hash.replace('#', '') || 'home';
-      const currentUserActive = session?.user || appData.users?.find((u) => u.id === appData.currentUser) || appData.users?.[0];
+      let hashPage = 'home';
+      try {
+        hashPage = decodeURIComponent(window.location.hash.replace('#', '')) || 'home';
+      } catch {
+        hashPage = window.location.hash.replace('#', '') || 'home';
+      }
+
+      if (hashPage === currentPageRef.current) return;
+
+      const currentUserActive = session?.user || appDataRef.current.users?.find((u) => u.id === appDataRef.current.currentUser) || appDataRef.current.users?.[0];
       const hasHashOwnerAccess = !!ownerSession || !!getStoredOwnerToken() || currentUserActive?.role === 'owner' || isOwner;
       if (!canAccessPage(currentUserActive, hashPage, hasHashOwnerAccess)) {
         if (hashPage === 'owner_panel') {
@@ -871,7 +1025,7 @@ export default function App() {
       window.removeEventListener('popstate', handlePopState);
       window.removeEventListener('hashchange', handleHashChange);
     };
-  }, [isSidebarOpen, isInspectModalOpen, isShareCatalogOpen, currentPage, ownerSession]);
+  }, []);
 
   // Keyboard Shortcuts (Ctrl+1: Sales, Ctrl+2: Purchases, Ctrl+3: POS, Ctrl+4: Items, Ctrl+5: Accounts, Ctrl+0: Home)
   useEffect(() => {
@@ -1118,11 +1272,11 @@ export default function App() {
       case 'purchases':
         return <PurchasesView appData={appData} onUpdateData={updateData} showToast={showToast} onInspectItem={handleInspectItem} />;
       case 'cash':
-        return <CashView appData={appData} onUpdateData={updateData} showToast={showToast} onInspectItem={handleInspectItem} initialTab="all" />;
+        return <CashView appData={appData} onUpdateData={updateData} showToast={showToast} onInspectItem={handleInspectItem} initialTab="all" onNavigate={handleNavigate} />;
       case 'receipts':
-        return <CashView appData={appData} onUpdateData={updateData} showToast={showToast} onInspectItem={handleInspectItem} initialTab="receipt" />;
+        return <CashView appData={appData} onUpdateData={updateData} showToast={showToast} onInspectItem={handleInspectItem} initialTab="receipt" onNavigate={handleNavigate} />;
       case 'payments':
-        return <CashView appData={appData} onUpdateData={updateData} showToast={showToast} onInspectItem={handleInspectItem} initialTab="pay" />;
+        return <CashView appData={appData} onUpdateData={updateData} showToast={showToast} onInspectItem={handleInspectItem} initialTab="pay" onNavigate={handleNavigate} />;
       case 'accounts':
         return <AccountsView appData={appData} onUpdateData={updateData} showToast={showToast} initialTab="customers" onNavigate={handleNavigate} />;
       case 'customers':
@@ -1176,6 +1330,7 @@ export default function App() {
             showToast={showToast}
             onShareCatalog={() => setIsShareCatalogOpen(true)}
             onOpenCatalog={() => handleNavigate('catalog')}
+            onNavigate={handleNavigate}
           />
         );
       case 'physical_inventory':
@@ -1193,7 +1348,7 @@ export default function App() {
       case 'trial_balance':
       case 'income_statement':
       case 'balance_sheet':
-        return <OperationsView appData={appData} subPage={currentPage} onUpdateData={updateData} showToast={showToast} />;
+        return <OperationsView appData={appData} subPage={currentPage} onUpdateData={updateData} showToast={showToast} onNavigate={handleNavigate} />;
       case 'profit_report':
       case 'monthly_profit_report':
         return <MonthlyProfitReportView appData={appData} onNavigate={handleNavigate} />;
@@ -1553,6 +1708,9 @@ export default function App() {
         onNavigateReports={(year) => handleNavigate('reports')}
         onNavigate={handleNavigate}
         currentPage={currentPage}
+        onOpenDiagnostics={() => setIsDiagnosticsModalOpen(true)}
+        onGoBack={handleNavigateBack}
+        canGoBack={canNavigateBack(currentPage)}
       />
 
       {/* 👑 Owner Browsing Company Banner */}
@@ -1854,6 +2012,15 @@ export default function App() {
           </div>
         </div>
       )}
+
+      {/* ⚡ Big Data Diagnostics & Integrity Auditor Modal (10M+ Support) */}
+      <BigDataDiagnosticsModal
+        isOpen={isDiagnosticsModalOpen}
+        onClose={() => setIsDiagnosticsModalOpen(false)}
+        appData={appData}
+        onUpdateData={updateData}
+        showToast={showToast}
+      />
     </div>
   );
 }

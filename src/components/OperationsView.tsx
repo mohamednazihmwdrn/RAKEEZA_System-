@@ -14,6 +14,7 @@ interface OperationsViewProps {
   subPage?: string;
   onUpdateData?: (newData: AppData) => void;
   showToast?: (msg: string, type: 'success' | 'error' | 'warning' | 'info') => void;
+  onNavigate?: (page: string) => void;
 }
 
 export const OperationsView: React.FC<OperationsViewProps> = ({
@@ -21,6 +22,7 @@ export const OperationsView: React.FC<OperationsViewProps> = ({
   subPage = 'daily_operations',
   onUpdateData,
   showToast,
+  onNavigate,
 }) => {
   const getInitialTab = (page: string): 'operations' | 'journals' | 'trialBalance' | 'incomeStatement' | 'balanceSheet' => {
     switch (page) {
@@ -281,7 +283,10 @@ export const OperationsView: React.FC<OperationsViewProps> = ({
       <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex flex-wrap justify-between items-center gap-3">
         <div className="flex flex-wrap gap-2">
           <button
-            onClick={() => setActiveTab('operations')}
+            onClick={() => {
+              setActiveTab('operations');
+              onNavigate?.('daily_operations');
+            }}
             className={`px-3.5 py-2 rounded-xl text-xs md:text-sm font-bold transition cursor-pointer flex items-center gap-1.5 ${
               activeTab === 'operations'
                 ? 'bg-[#1a237e] text-white shadow-md'
@@ -291,7 +296,10 @@ export const OperationsView: React.FC<OperationsViewProps> = ({
             📊 العمليات اليومية
           </button>
           <button
-            onClick={() => setActiveTab('journals')}
+            onClick={() => {
+              setActiveTab('journals');
+              onNavigate?.('daily_entries');
+            }}
             className={`px-3.5 py-2 rounded-xl text-xs md:text-sm font-bold transition cursor-pointer flex items-center gap-1.5 ${
               activeTab === 'journals'
                 ? 'bg-[#1a237e] text-white shadow-md'
@@ -301,7 +309,10 @@ export const OperationsView: React.FC<OperationsViewProps> = ({
             📑 دفتر القيود المزدوجة ({appData.journalEntries?.length || 0})
           </button>
           <button
-            onClick={() => setActiveTab('trialBalance')}
+            onClick={() => {
+              setActiveTab('trialBalance');
+              onNavigate?.('trial_balance');
+            }}
             className={`px-3.5 py-2 rounded-xl text-xs md:text-sm font-bold transition cursor-pointer flex items-center gap-1.5 ${
               activeTab === 'trialBalance'
                 ? 'bg-[#1a237e] text-white shadow-md'
@@ -311,7 +322,10 @@ export const OperationsView: React.FC<OperationsViewProps> = ({
             ⚖️ ميزان المراجعة
           </button>
           <button
-            onClick={() => setActiveTab('incomeStatement')}
+            onClick={() => {
+              setActiveTab('incomeStatement');
+              onNavigate?.('income_statement');
+            }}
             className={`px-3.5 py-2 rounded-xl text-xs md:text-sm font-bold transition cursor-pointer flex items-center gap-1.5 ${
               activeTab === 'incomeStatement'
                 ? 'bg-[#1a237e] text-white shadow-md'
@@ -321,7 +335,10 @@ export const OperationsView: React.FC<OperationsViewProps> = ({
             📈 قائمة الدخل (P&L)
           </button>
           <button
-            onClick={() => setActiveTab('balanceSheet')}
+            onClick={() => {
+              setActiveTab('balanceSheet');
+              onNavigate?.('balance_sheet');
+            }}
             className={`px-3.5 py-2 rounded-xl text-xs md:text-sm font-bold transition cursor-pointer flex items-center gap-1.5 ${
               activeTab === 'balanceSheet'
                 ? 'bg-[#1a237e] text-white shadow-md'

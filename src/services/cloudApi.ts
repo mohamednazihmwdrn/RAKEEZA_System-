@@ -732,6 +732,7 @@ export async function registerNewCompanyDeviceApi(params: {
   adminUsername: string;
   adminPassword: string;
   branchName?: string;
+  registrationLink?: string;
 }): Promise<{
   success: boolean;
   company?: TenantCompany;
@@ -1921,9 +1922,37 @@ export async function fetchOwnerCompaniesCloud(): Promise<{
     if (res.ok && contentType.includes('application/json')) {
       const json = await res.json();
       if (json && Array.isArray(json.companies)) {
+        // Merge with any locally registered companies so newly created companies immediately appear
+        const localComps = getStoredLocalCompanies();
+        const mergedMap = new Map<string, TenantCompany>();
+        json.companies.forEach((c: TenantCompany) => {
+          if (c && c.id) mergedMap.set(c.id, c);
+        });
+        localComps.forEach((c: TenantCompany) => {
+          if (c && c.id && !mergedMap.has(c.id)) {
+            mergedMap.set(c.id, c);
+          }
+        });
+
+        // Also check if current company in localStorage exists
+        try {
+          const rawAppData = localStorage.getItem('rakeeza_accounting_data') || localStorage.getItem('accounting_data');
+          if (rawAppData) {
+            const parsed = JSON.parse(rawAppData);
+            if (parsed && Array.isArray(parsed.companies)) {
+              parsed.companies.forEach((c: TenantCompany) => {
+                if (c && c.id && !mergedMap.has(c.id)) {
+                  mergedMap.set(c.id, c);
+                }
+              });
+            }
+          }
+        } catch {}
+
+        const finalCompanies = Array.from(mergedMap.values());
         return {
           success: true,
-          companies: json.companies,
+          companies: finalCompanies,
           plans: json.plans || DEFAULT_SUBSCRIPTION_PLANS,
           trialRegistry: json.trialRegistry || [],
           licenses: json.licenses || [],
@@ -1937,18 +1966,32 @@ export async function fetchOwnerCompaniesCloud(): Promise<{
   // Graceful fallback for offline, preview environments, or network delay:
   // Retrieve companies from local storage or default multi-tenant definitions
   try {
+    const localComps = getStoredLocalCompanies();
+    const mergedMap = new Map<string, TenantCompany>();
+    localComps.forEach((c: TenantCompany) => {
+      if (c && c.id) mergedMap.set(c.id, c);
+    });
+
     const localAppDataRaw = localStorage.getItem('rakeeza_accounting_data') || localStorage.getItem('accounting_data');
     if (localAppDataRaw) {
       const parsed = JSON.parse(localAppDataRaw);
       if (parsed && Array.isArray(parsed.companies) && parsed.companies.length > 0) {
-        return {
-          success: true,
-          companies: parsed.companies,
-          plans: parsed.plans || DEFAULT_SUBSCRIPTION_PLANS,
-          trialRegistry: parsed.trialRegistry || DEFAULT_TRIAL_REGISTRY,
-          licenses: parsed.licenses || [],
-        };
+        parsed.companies.forEach((c: TenantCompany) => {
+          if (c && c.id && !mergedMap.has(c.id)) {
+            mergedMap.set(c.id, c);
+          }
+        });
       }
+    }
+
+    if (mergedMap.size > 0) {
+      return {
+        success: true,
+        companies: Array.from(mergedMap.values()),
+        plans: DEFAULT_SUBSCRIPTION_PLANS,
+        trialRegistry: DEFAULT_TRIAL_REGISTRY,
+        licenses: [],
+      };
     }
   } catch {}
 
@@ -1982,6 +2025,40 @@ export async function deleteCompanyCloudApi(companyId: string): Promise<{
     headers['Authorization'] = `Bearer ${token}`;
   }
 
+  const cleanLocalCompanyCaches = () => {
+    try {
+      if (typeof localStorage !== 'undefined') {
+        localStorage.removeItem(`rakeeza_tenant_data_${companyId}`);
+        // Remove from rakeeza_local_companies
+        const localCompsRaw = localStorage.getItem('rakeeza_local_companies');
+        if (localCompsRaw) {
+          const list = JSON.parse(localCompsRaw);
+          if (Array.isArray(list)) {
+            const filtered = list.filter((c: any) => c.id !== companyId && c.code !== companyId);
+            localStorage.setItem('rakeeza_local_companies', JSON.stringify(filtered));
+          }
+        }
+        // Remove from rakeeza_bound_device if matches
+        const boundRaw = localStorage.getItem('rakeeza_bound_device');
+        if (boundRaw) {
+          const b = JSON.parse(boundRaw);
+          if (b.companyId === companyId || b.companyCode === companyId) {
+            localStorage.removeItem('rakeeza_bound_device');
+          }
+        }
+        // Remove from rakeeza_accounting_data
+        const raw = localStorage.getItem('rakeeza_accounting_data') || localStorage.getItem('accounting_data');
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (parsed && Array.isArray(parsed.companies)) {
+            parsed.companies = parsed.companies.filter((c: any) => c.id !== companyId && c.code !== companyId);
+            localStorage.setItem('rakeeza_accounting_data', JSON.stringify(parsed));
+          }
+        }
+      }
+    } catch {}
+  };
+
   try {
     const res = await fetch(`/api/owner/companies/${encodeURIComponent(companyId)}`, {
       method: 'DELETE',
@@ -2002,19 +2079,7 @@ export async function deleteCompanyCloudApi(companyId: string): Promise<{
       } catch (fbErr) {
         console.warn('Firebase tenant deletion note:', fbErr);
       }
-      try {
-        if (typeof localStorage !== 'undefined') {
-          localStorage.removeItem(`rakeeza_tenant_data_${companyId}`);
-          const raw = localStorage.getItem('rakeeza_accounting_data') || localStorage.getItem('accounting_data');
-          if (raw) {
-            const parsed = JSON.parse(raw);
-            if (parsed && Array.isArray(parsed.companies)) {
-              parsed.companies = parsed.companies.filter((c: any) => c.id !== companyId && c.code !== companyId);
-              localStorage.setItem('rakeeza_accounting_data', JSON.stringify(parsed));
-            }
-          }
-        }
-      } catch {}
+      cleanLocalCompanyCaches();
       return result;
     }
 
@@ -2024,17 +2089,7 @@ export async function deleteCompanyCloudApi(companyId: string): Promise<{
         await deleteDoc(doc(db, 'tenants', companyId)).catch(() => {});
         await deleteDoc(doc(db, 'companies', companyId)).catch(() => {});
       }
-      if (typeof localStorage !== 'undefined') {
-        localStorage.removeItem(`rakeeza_tenant_data_${companyId}`);
-        const raw = localStorage.getItem('rakeeza_accounting_data') || localStorage.getItem('accounting_data');
-        if (raw) {
-          const parsed = JSON.parse(raw);
-          if (parsed && Array.isArray(parsed.companies)) {
-            parsed.companies = parsed.companies.filter((c: any) => c.id !== companyId && c.code !== companyId);
-            localStorage.setItem('rakeeza_accounting_data', JSON.stringify(parsed));
-          }
-        }
-      }
+      cleanLocalCompanyCaches();
       return { success: true };
     } catch {}
 
@@ -2046,17 +2101,7 @@ export async function deleteCompanyCloudApi(companyId: string): Promise<{
         await deleteDoc(doc(db, 'tenants', companyId)).catch(() => {});
         await deleteDoc(doc(db, 'companies', companyId)).catch(() => {});
       }
-      if (typeof localStorage !== 'undefined') {
-        localStorage.removeItem(`rakeeza_tenant_data_${companyId}`);
-        const raw = localStorage.getItem('rakeeza_accounting_data') || localStorage.getItem('accounting_data');
-        if (raw) {
-          const parsed = JSON.parse(raw);
-          if (parsed && Array.isArray(parsed.companies)) {
-            parsed.companies = parsed.companies.filter((c: any) => c.id !== companyId && c.code !== companyId);
-            localStorage.setItem('rakeeza_accounting_data', JSON.stringify(parsed));
-          }
-        }
-      }
+      cleanLocalCompanyCaches();
       return { success: true };
     } catch (cleanErr: any) {
       return { success: false, error: err?.message || 'حدث خطأ أثناء معالجة حذف الشركة' };

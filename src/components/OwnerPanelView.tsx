@@ -1240,7 +1240,7 @@ export const OwnerPanelView: React.FC<OwnerPanelViewProps> = ({
                                 setSelectedCompany(c);
                                 setIsExportModalOpen(true);
                               }}
-                              className="bg-slate-800 hover:bg-slate-700 text-slate-200 px-2.5 py-1.5 rounded-lg text-[11px] font-bold border border-slate-700 transition flex items-center gap-1"
+                              className="bg-slate-100 hover:bg-slate-200 text-slate-900 px-2.5 py-1.5 rounded-lg text-[11px] font-bold border border-slate-300 transition flex items-center gap-1 cursor-pointer"
                               title="تصدير بيانات الشركة"
                             >
                               <span>💾 تصدير</span>
@@ -1250,7 +1250,7 @@ export const OwnerPanelView: React.FC<OwnerPanelViewProps> = ({
                             {c.status === 'active' || c.status === 'trial' ? (
                               <button
                                 onClick={() => handleStatusChange(c.id, 'suspended')}
-                                className="bg-amber-950 hover:bg-amber-900 text-amber-300 border border-amber-800/60 px-2 py-1.5 rounded-lg text-[11px] font-semibold transition"
+                                className="bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 px-2 py-1.5 rounded-lg text-[11px] font-bold transition cursor-pointer"
                                 title="تعليق الحساب مؤقتاً"
                               >
                                 ⏸️ تعليق
@@ -1258,7 +1258,7 @@ export const OwnerPanelView: React.FC<OwnerPanelViewProps> = ({
                             ) : (
                               <button
                                 onClick={() => handleStatusChange(c.id, 'active')}
-                                className="bg-emerald-950 hover:bg-emerald-900 text-emerald-300 border border-emerald-800/60 px-2 py-1.5 rounded-lg text-[11px] font-semibold transition"
+                                className="bg-emerald-50 hover:bg-emerald-100 text-emerald-900 border border-emerald-300 px-2 py-1.5 rounded-lg text-[11px] font-bold transition cursor-pointer"
                                 title="تنشيط الحساب"
                               >
                                 ▶️ تنشيط
@@ -1274,7 +1274,7 @@ export const OwnerPanelView: React.FC<OwnerPanelViewProps> = ({
                                 setDeleteError('');
                                 setIsDeleteModalOpen(true);
                               }}
-                              className="bg-rose-950/80 hover:bg-rose-900 text-rose-300 hover:text-white border border-rose-800/80 px-2 py-1.5 rounded-lg text-[11px] font-bold transition flex items-center gap-1 cursor-pointer"
+                              className="bg-rose-50 hover:bg-rose-100 text-rose-800 border border-rose-300 px-2.5 py-1.5 rounded-lg text-[11px] font-bold transition flex items-center gap-1 cursor-pointer"
                               title="حذف الشركة نهائياً من قاعدة البيانات السحابية"
                             >
                               <span>🗑️</span>
@@ -2514,17 +2514,27 @@ export const OwnerPanelView: React.FC<OwnerPanelViewProps> = ({
             {/* Accidental Click Prevention Step */}
             <div className="space-y-2 pt-1">
               <label className="block text-xs font-bold text-slate-700">
-                لتأكيد الحذف ومنع الضغط بالخطأ، اكتب كلمة <span className="text-rose-600 underline font-black">حذف</span> أو كود الشركة <span className="text-slate-900 font-mono font-bold">({companyToDelete.code})</span> أدناه:
+                لتأكيد الحذف ومنع الضغط بالخطأ، اكتب كلمة <span className="text-rose-600 underline font-black">حذف</span> أو كود الشركة <span className="text-slate-900 font-mono font-bold">({companyToDelete.code})</span> أدناه (أو اضغط زر التعبئة السريعة):
               </label>
-              <input
-                type="text"
-                value={deleteConfirmText}
-                onChange={(e) => setDeleteConfirmText(e.target.value)}
-                placeholder="اكتب كلمة 'حذف' هنا..."
-                className="w-full bg-white border-2 border-slate-300 focus:border-rose-500 rounded-xl px-3.5 py-2 text-xs text-slate-900 placeholder-slate-400 focus:outline-none text-center font-bold"
-                disabled={isDeleting}
-                autoFocus
-              />
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={deleteConfirmText}
+                  onChange={(e) => setDeleteConfirmText(e.target.value)}
+                  placeholder="اكتب كلمة 'حذف' هنا..."
+                  className="flex-1 bg-white border-2 border-slate-300 focus:border-rose-500 rounded-xl px-3.5 py-2 text-xs text-slate-900 placeholder-slate-400 focus:outline-none text-center font-bold"
+                  disabled={isDeleting}
+                  autoFocus
+                />
+                <button
+                  type="button"
+                  onClick={() => setDeleteConfirmText('حذف')}
+                  className="bg-slate-100 hover:bg-slate-200 active:bg-slate-300 text-slate-900 font-bold px-3 py-2 rounded-xl text-xs border border-slate-300 transition cursor-pointer"
+                  title="تعبئة تلقائية لكلمة حذف بنقرة واحدة"
+                >
+                  ⚡ تعبئة سريعة
+                </button>
+              </div>
             </div>
 
             {/* Error Message */}

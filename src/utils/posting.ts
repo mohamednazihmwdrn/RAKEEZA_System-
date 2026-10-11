@@ -461,9 +461,26 @@ export function postPurchaseInvoice(
     }
 
     const qtyChange = isReturn ? -item.qty : item.qty;
-    stockItem.quantity = (stockItem.quantity || 0) + qtyChange;
-    if (!isReturn && item.price > 0) {
-      stockItem.purchasePrice = item.price; // اعتماد سعر الشراء المحدث
+    stockItem.quantity = Math.max(0, (stockItem.quantity || 0) + qtyChange);
+    if (!isReturn) {
+      if (item.price > 0) {
+        stockItem.purchasePrice = item.price; // اعتماد وتحديث سعر الشراء
+        stockItem.costPrice = item.price;
+        stockItem.lastPriceUpdate = dateStr;
+        if (item.salePrice && item.salePrice > 0) {
+          stockItem.salePrice = Number(item.salePrice.toFixed(2));
+          stockItem.normalSellingPrice = Number(item.salePrice.toFixed(2));
+          stockItem.wholesaleSellingPrice = Number((item.salePrice * 0.92).toFixed(2));
+        } else if (!stockItem.salePrice || stockItem.salePrice === 0) {
+          stockItem.salePrice = Number((item.price * 1.25).toFixed(2));
+          stockItem.normalSellingPrice = Number((item.price * 1.25).toFixed(2));
+          stockItem.wholesaleSellingPrice = Number((item.price * 1.15).toFixed(2));
+        }
+      }
+      stockItem.lastPurchaseDate = dateStr; // تحديث تاريخ الشراء
+      if (item.category && item.category.trim() && item.category !== 'بدون تصنيف') {
+        stockItem.category = item.category.trim();
+      }
     }
 
     const moveType: ItemMovement['type'] = isReturn ? 'return_purchase' : 'purchase';

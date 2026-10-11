@@ -18,6 +18,12 @@ import {
   Calendar,
   Save,
   X,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
+  Activity,
+  Sparkles,
 } from 'lucide-react';
 import { AppData, SaleInvoice, InvoiceItem } from '../types';
 import { Modal } from './Modal';
@@ -33,6 +39,7 @@ import { generateInvoiceWhatsAppMessage, openWhatsAppChat } from '../services/wh
 import { postSaleInvoice, deleteSaleInvoice } from '../utils/posting';
 import { calculateCustomerBalance } from '../utils/accounting';
 import { RakeezaInvoiceWorkspace } from './RakeezaInvoiceWorkspace';
+import { BigDataDiagnosticsModal } from './BigDataDiagnosticsModal';
 
 interface SalesViewProps {
   appData: AppData;
@@ -49,6 +56,12 @@ export const SalesView: React.FC<SalesViewProps> = ({ appData, onUpdateData, sho
   const [modalType, setModalType] = useState<'nagdi' | 'ajel' | 'return_nagdi' | 'return_ajel'>('nagdi');
   const [selectedInvoice, setSelectedInvoice] = useState<SaleInvoice | null>(null);
   const [editingInvoiceId, setEditingInvoiceId] = useState<number | null>(null);
+
+  // ⚡ 10M+ High-Volume Big Data Pagination & Partitioning States
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [pageSize, setPageSize] = useState<number>(50);
+  const [selectedYearFilter, setSelectedYearFilter] = useState<string>('all');
+  const [isDiagnosticsModalOpen, setIsDiagnosticsModalOpen] = useState<boolean>(false);
 
   // 🏷️ Centralized Price Management Master Source Control: 'cash' vs 'wholesale'
   const [salesPricingType, setSalesPricingType] = useState<'cash' | 'wholesale'>('cash');
@@ -141,7 +154,11 @@ export const SalesView: React.FC<SalesViewProps> = ({ appData, onUpdateData, sho
     if (selectedBranchFilter !== 'all' && inv.branchId && inv.branchId !== selectedBranchFilter) {
       return false;
     }
+    if (selectedYearFilter !== 'all' && !(inv.date || '').startsWith(selectedYearFilter)) {
+      return false;
+    }
     const s = searchTerm.toLowerCase();
+    if (!s) return true;
     return (
       inv.id.toString().includes(s) ||
       inv.customerName?.toLowerCase().includes(s) ||
@@ -150,6 +167,16 @@ export const SalesView: React.FC<SalesViewProps> = ({ appData, onUpdateData, sho
       inv.notes?.toLowerCase().includes(s)
     );
   });
+
+  const totalPages = Math.max(1, Math.ceil(filteredInvoices.length / pageSize));
+  const safeCurrentPage = Math.min(Math.max(1, currentPage), totalPages);
+  const startIndex = (safeCurrentPage - 1) * pageSize;
+  const paginatedInvoices = filteredInvoices.slice(startIndex, startIndex + pageSize);
+
+  // Available fiscal years extracted dynamically for high-speed period partitioning
+  const availableInvoiceYears = Array.from(
+    new Set((appData.salesInvoices || []).map((inv) => (inv.date || '').substring(0, 4)).filter(Boolean))
+  ).sort((a, b) => b.localeCompare(a));
 
   const openCreateModal = (
     type: 'nagdi' | 'ajel' | 'return_nagdi' | 'return_ajel',
@@ -991,12 +1018,45 @@ export const SalesView: React.FC<SalesViewProps> = ({ appData, onUpdateData, sho
             printTitle="طباعة سجل فواتير المبيعات"
             exportTitle="تصدير المبيعات إلى Excel"
           />
+
+          {/* ⚡ زر فحص النزاهة وصحة البيانات الضخمة (10M+) */}
+          <button
+            onClick={() => setIsDiagnosticsModalOpen(true)}
+            className="min-h-[40px] bg-slate-800 hover:bg-slate-900 text-white px-3 py-2 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 shadow-xs border border-slate-700"
+            title="فحص النزاهة المحاسبية ومراقبة أداء وسعة قاعدة البيانات الضخمة"
+          >
+            <Activity className="w-4 h-4 text-emerald-400" />
+            <span className="hidden xl:inline">صحة البيانات (10M+)</span>
+          </button>
         </div>
         <div className="w-full sm:w-auto flex flex-col sm:flex-row items-stretch sm:items-center gap-2 min-w-[220px]">
+          {/* فلتر الفترات والسنوات المالية (Sharding Partition Filter) */}
+          {availableInvoiceYears.length > 0 && (
+            <select
+              value={selectedYearFilter}
+              onChange={(e) => {
+                setSelectedYearFilter(e.target.value);
+                setCurrentPage(1);
+              }}
+              className="min-h-[40px] px-3 py-2 border border-indigo-300 bg-white text-indigo-950 font-bold rounded-lg text-xs focus:ring-2 focus:ring-indigo-600/30 focus:border-indigo-600 focus:outline-none cursor-pointer"
+              title="تجزئة وعرض الفواتير حسب السنة المالية"
+            >
+              <option value="all">كافة السنوات ({appData.salesInvoices?.length || 0})</option>
+              {availableInvoiceYears.map((yr) => (
+                <option key={yr} value={yr}>
+                  سنة {yr} ({appData.salesInvoices?.filter((i) => (i.date || '').startsWith(yr)).length || 0})
+                </option>
+              ))}
+            </select>
+          )}
+
           {appData.branches && appData.branches.length > 1 && (
             <select
               value={selectedBranchFilter}
-              onChange={(e) => setSelectedBranchFilter(e.target.value)}
+              onChange={(e) => {
+                setSelectedBranchFilter(e.target.value);
+                setCurrentPage(1);
+              }}
               className="min-h-[40px] px-3 py-2 border border-indigo-300 bg-white text-indigo-950 font-semibold rounded-lg text-xs focus:ring-2 focus:ring-indigo-600/30 focus:border-indigo-600 focus:outline-none cursor-pointer"
             >
               <option value="all">جميع الفروع ({appData.salesInvoices?.length || 0})</option>
@@ -1013,7 +1073,10 @@ export const SalesView: React.FC<SalesViewProps> = ({ appData, onUpdateData, sho
               type="text"
               placeholder="بحث برقم الفاتورة أو اسم العميل..."
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                setCurrentPage(1);
+              }}
               className="w-full min-h-[40px] pr-9 pl-3 py-2 border border-indigo-300 bg-white rounded-lg text-xs focus:ring-2 focus:ring-indigo-600/30 focus:border-indigo-600 focus:outline-none placeholder:text-slate-400"
             />
           </div>
@@ -1022,12 +1085,12 @@ export const SalesView: React.FC<SalesViewProps> = ({ appData, onUpdateData, sho
 
       {/* Mobile Card List View (< md) */}
       <div className="block md:hidden space-y-3">
-        {filteredInvoices.length === 0 ? (
+        {paginatedInvoices.length === 0 ? (
           <div className="bg-white rounded-2xl p-6 text-center text-black font-bold text-sm border-2 border-slate-300">
             لا توجد فواتير مبيعات مسجلة
           </div>
         ) : (
-          filteredInvoices.map((inv) => {
+          paginatedInvoices.map((inv) => {
             const isPaidFull = inv.paidAmount >= inv.total;
             return (
               <div
@@ -1195,14 +1258,14 @@ export const SalesView: React.FC<SalesViewProps> = ({ appData, onUpdateData, sho
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-300 bg-white">
-            {filteredInvoices.length === 0 ? (
+            {paginatedInvoices.length === 0 ? (
               <tr>
                 <td colSpan={8} className="text-center py-8 text-black font-bold">
                   لا توجد فواتير مبيعات مسجلة
                 </td>
               </tr>
             ) : (
-              filteredInvoices.map((inv) => {
+              paginatedInvoices.map((inv) => {
                 const isPaidFull = inv.paidAmount >= inv.total;
                 return (
                   <tr key={inv.id} className="bg-white hover:bg-slate-100 transition border-b border-slate-300">
@@ -1344,6 +1407,80 @@ export const SalesView: React.FC<SalesViewProps> = ({ appData, onUpdateData, sho
         </table>
       </div>
 
+      {/* ⚡ High-Speed Big Data Pagination Controls Bar */}
+      {filteredInvoices.length > 0 && (
+        <div className="bg-white rounded-xl border border-slate-300 p-3 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-xs text-xs">
+          <div className="flex items-center gap-2 text-slate-600 font-medium">
+            <span>
+              عرض <strong className="text-indigo-950 font-bold">{startIndex + 1}</strong> إلى{' '}
+              <strong className="text-indigo-950 font-bold">
+                {Math.min(startIndex + pageSize, filteredInvoices.length)}
+              </strong>{' '}
+              من إجمالي{' '}
+              <strong className="text-indigo-600 font-black">{filteredInvoices.length.toLocaleString()}</strong> فاتورة
+            </span>
+            <span className="hidden md:inline-block text-slate-300">|</span>
+            <div className="flex items-center gap-1.5">
+              <span>لكل صفحة:</span>
+              <select
+                value={pageSize}
+                onChange={(e) => {
+                  setPageSize(Number(e.target.value));
+                  setCurrentPage(1);
+                }}
+                className="bg-slate-50 border border-slate-300 rounded-lg px-2 py-1 font-bold text-slate-800 focus:outline-none focus:ring-1 focus:ring-indigo-500 cursor-pointer"
+              >
+                <option value={25}>25</option>
+                <option value={50}>50</option>
+                <option value={100}>100</option>
+                <option value={250}>250</option>
+                <option value={500}>500</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setCurrentPage(1)}
+              disabled={safeCurrentPage <= 1}
+              className="p-1.5 rounded-lg border border-slate-300 hover:bg-slate-100 disabled:opacity-30 disabled:pointer-events-none transition cursor-pointer"
+              title="الصفحة الأولى"
+            >
+              <ChevronsRight className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+              disabled={safeCurrentPage <= 1}
+              className="p-1.5 rounded-lg border border-slate-300 hover:bg-slate-100 disabled:opacity-30 disabled:pointer-events-none transition cursor-pointer"
+              title="الصفحة السابقة"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </button>
+
+            <span className="px-3 py-1 font-bold text-slate-800">
+              صفحة {safeCurrentPage} من {totalPages}
+            </span>
+
+            <button
+              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+              disabled={safeCurrentPage >= totalPages}
+              className="p-1.5 rounded-lg border border-slate-300 hover:bg-slate-100 disabled:opacity-30 disabled:pointer-events-none transition cursor-pointer"
+              title="الصفحة التالية"
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => setCurrentPage(totalPages)}
+              disabled={safeCurrentPage >= totalPages}
+              className="p-1.5 rounded-lg border border-slate-300 hover:bg-slate-100 disabled:opacity-30 disabled:pointer-events-none transition cursor-pointer"
+              title="الصفحة الأخيرة"
+            >
+              <ChevronsLeft className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* 🏛️ واجهة تسجيل الفواتير المعتمدة - ركيزة (مطابقة كلياً للتصميم الأصلي بالصورة) */}
       {(activeModal === 'create' || activeModal === 'edit') && (
         <RakeezaInvoiceWorkspace
@@ -1464,6 +1601,15 @@ export const SalesView: React.FC<SalesViewProps> = ({ appData, onUpdateData, sho
           </div>
         )}
       </Modal>
+
+      {/* ⚡ Big Data Diagnostics & Health Modal */}
+      <BigDataDiagnosticsModal
+        isOpen={isDiagnosticsModalOpen}
+        onClose={() => setIsDiagnosticsModalOpen(false)}
+        appData={appData}
+        onUpdateData={onUpdateData}
+        showToast={showToast}
+      />
     </div>
   );
 };

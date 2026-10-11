@@ -548,6 +548,57 @@ async function startServer() {
   });
 
   // ----------------------------------------------------
+  // High-Volume 10M+ Scalable Paginated & Filtered Query Endpoint
+  // ----------------------------------------------------
+  app.get('/api/tenant/invoices/paged', requireAuth, (req, res) => {
+    const auth = (req as any).auth;
+    let targetCompanyId = auth.session.companyId;
+    if (auth.session.role === 'owner' && req.query.companyId) {
+      targetCompanyId = req.query.companyId as string;
+    }
+    if (targetCompanyId === 'OWNER') targetCompanyId = 'COMP-000001';
+
+    const tenantData = getTenantDataStrict(targetCompanyId);
+    const invoices = tenantData?.salesInvoices || [];
+
+    const page = Math.max(1, parseInt((req.query.page as string) || '1', 10));
+    const pageSize = Math.min(500, Math.max(1, parseInt((req.query.pageSize as string) || '50', 10)));
+    const search = ((req.query.search as string) || '').trim().toLowerCase();
+    const year = (req.query.year as string) || 'all';
+    const branch = (req.query.branchId as string) || 'all';
+
+    let filtered = invoices;
+    if (branch !== 'all') {
+      filtered = filtered.filter((i: any) => i.branchId === branch);
+    }
+    if (year !== 'all') {
+      filtered = filtered.filter((i: any) => (i.date || '').startsWith(year));
+    }
+    if (search) {
+      filtered = filtered.filter(
+        (i: any) =>
+          String(i.id).includes(search) ||
+          (i.customerName || '').toLowerCase().includes(search) ||
+          (i.phone || '').includes(search)
+      );
+    }
+
+    const totalCount = filtered.length;
+    const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
+    const start = (page - 1) * pageSize;
+    const items = filtered.slice(start, start + pageSize);
+
+    res.json({
+      success: true,
+      items,
+      totalCount,
+      totalPages,
+      page,
+      pageSize,
+    });
+  });
+
+  // ----------------------------------------------------
   // Instant Real-time Synchronization Stream (SSE)
   // ----------------------------------------------------
   app.get('/api/tenant/sync-stream', (req, res) => {

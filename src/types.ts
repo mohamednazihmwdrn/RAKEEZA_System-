@@ -6,6 +6,7 @@ export interface Settings {
   phone3: string;
   taxNumber: string;
   notes: string;
+  invoiceFooterNote?: string;
   defaultTaxRate: number;
   currencySymbol: string;
   commercialReg?: string;
@@ -206,6 +207,7 @@ export interface Item {
   movements?: ItemMovement[];
   lastPriceUpdate?: string;
   lastPriceUpdatedBy?: string;
+  lastPurchaseDate?: string; // تاريخ آخر شراء للصنف
 
   // Online Catalog & Multi-Company Specifics
   material?: string; // نوع الخامة أو القماش أو المادة أو المواصفة المحددة (قطن، صوف، خشب، حديد...)
@@ -229,8 +231,10 @@ export interface InvoiceItem {
   itemId?: string;
   code?: string; // كود الصنف
   name: string; // اسم الصنف
+  category?: string; // التصنيف / المجموعة
   qty: number; // الكمية
   price: number; // السعر
+  salePrice?: number; // سعر البيع المقترح / المعتمد
   costPrice?: number;
   total: number; // الإجمالي
   spec?: string; // البيان / تفاصيل المنتج (مختصر)

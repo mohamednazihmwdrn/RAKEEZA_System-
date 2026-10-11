@@ -1,6 +1,8 @@
 import { AppData, AccountNode } from '../types';
 import { ensureProductPricesSynced } from './priceService';
 import { DEFAULT_COMPANIES } from './multiTenantService';
+import { saveToIndexedDB } from './indexedDbStorage';
+import { PDF_CATALOG_ITEMS_1001 } from '../data/pdfMasterItems';
 
 export const STORAGE_KEY = 'accounting_system_v8';
 
@@ -117,7 +119,7 @@ export function getDefaultData(companyId?: string): AppData {
     currentUser: 'user1',
     customers: [],
     suppliers: [],
-    items: [],
+    items: PDF_CATALOG_ITEMS_1001.map((i) => ({ ...i, companyId: 'COMP-000001' })),
     salesInvoices: [],
     purchaseInvoices: [],
     cashTransactions: [],
@@ -399,7 +401,28 @@ export function loadAppData(companyId?: string): AppData {
         loaded.users = defaults.users;
       }
 
-      // Ensure all items have a valid companyId without auto-seeding demo items
+      // Merge PDF 1,001 items without numbers, categories, or prices unless cleared manually
+      if (!loaded.deletedRecords?.['items_all_cleared']) {
+        if (!loaded.items || loaded.items.length === 0) {
+          loaded.items = PDF_CATALOG_ITEMS_1001.map((it) => ({
+            ...it,
+            companyId: loaded.companyId || 'COMP-000001',
+          }));
+        } else {
+          const existingNames = new Set(loaded.items.map((i) => i.name.trim().toLowerCase()));
+          const missingPdfItems = PDF_CATALOG_ITEMS_1001.filter(
+            (pdfItem) => !existingNames.has(pdfItem.name.trim().toLowerCase())
+          ).map((it) => ({
+            ...it,
+            companyId: loaded.companyId || 'COMP-000001',
+          }));
+          if (missingPdfItems.length > 0) {
+            loaded.items = [...loaded.items, ...missingPdfItems];
+          }
+        }
+      }
+
+      // Ensure all items have a valid companyId
       if (loaded.items && loaded.items.length > 0) {
         loaded.items = loaded.items.map((it) => ({
           ...it,
@@ -418,6 +441,14 @@ export function loadAppData(companyId?: string): AppData {
 export function saveAppData(data: AppData, companyId?: string): void {
   const targetCompId = (companyId || data.companyId || 'COMP-000001').trim().toUpperCase();
   data.companyId = targetCompId;
+
+  // ⚡ Enterprise Async IndexedDB High-Capacity Storage (Supports 10M+ records)
+  try {
+    saveToIndexedDB(data, targetCompId).catch((err) => {
+      console.warn('[IndexedDB Sync Error]', err);
+    });
+  } catch {}
+
   try {
     localStorage.setItem(`rakeeza_tenant_data_${targetCompId}`, JSON.stringify(data));
     // Also update current active storage key

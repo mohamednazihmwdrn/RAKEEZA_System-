@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import { registerModalBackHandler } from '../utils/navigationHistory';
 
 interface ModalProps {
   isOpen: boolean;
@@ -10,17 +11,22 @@ interface ModalProps {
 }
 
 export const Modal: React.FC<ModalProps> = ({ isOpen, title, onClose, children, footer, maxWidth = 'max-w-4xl' }) => {
-  // Prevent body scroll when modal is open on mobile
+  // Prevent body scroll and register phone back button listener when modal is open
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = 'hidden';
+      const unregister = registerModalBackHandler(() => {
+        onClose();
+        return true;
+      });
+      return () => {
+        document.body.style.overflow = 'unset';
+        unregister();
+      };
     } else {
       document.body.style.overflow = 'unset';
     }
-    return () => {
-      document.body.style.overflow = 'unset';
-    };
-  }, [isOpen]);
+  }, [isOpen, onClose]);
 
   if (!isOpen) return null;
 

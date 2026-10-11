@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { AppData, Item } from '../types';
 import { exportToExcel } from '../utils/excelExport';
+import { registerModalBackHandler } from '../utils/navigationHistory';
 
 interface CompanyPriceCatalogViewProps {
   appData: AppData;
@@ -115,6 +116,38 @@ export const CompanyPriceCatalogView: React.FC<CompanyPriceCatalogViewProps> = (
   // Long press / Action Menu State
   const [isActionMenuOpen, setIsActionMenuOpen] = useState(false);
   const [selectedItemForMenu, setSelectedItemForMenu] = useState<Item | null>(null);
+
+  // Phone Back Button interception for Modals inside CompanyPriceCatalogView
+  useEffect(() => {
+    if (isCompanyModalOpen || isCategoryModalOpen || isItemModalOpen || isBulkPriceModalOpen || isActionMenuOpen) {
+      const unregister = registerModalBackHandler(() => {
+        if (isActionMenuOpen) {
+          setIsActionMenuOpen(false);
+          setSelectedItemForMenu(null);
+          return true;
+        }
+        if (isCompanyModalOpen) {
+          setIsCompanyModalOpen(false);
+          return true;
+        }
+        if (isCategoryModalOpen) {
+          setIsCategoryModalOpen(false);
+          return true;
+        }
+        if (isItemModalOpen) {
+          setIsItemModalOpen(false);
+          setEditingItemIndex(-1);
+          return true;
+        }
+        if (isBulkPriceModalOpen) {
+          setIsBulkPriceModalOpen(false);
+          return true;
+        }
+        return false;
+      });
+      return () => unregister();
+    }
+  }, [isCompanyModalOpen, isCategoryModalOpen, isItemModalOpen, isBulkPriceModalOpen, isActionMenuOpen]);
 
   // Synchronize filterCompany if empty
   useEffect(() => {

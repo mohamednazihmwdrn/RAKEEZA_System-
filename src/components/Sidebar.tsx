@@ -138,37 +138,37 @@ export const Sidebar: React.FC<SidebarProps> = ({
     if (isActive) {
       return (
         extraActiveStyle ||
-        'bg-blue-50 text-blue-700 font-bold border-r-4 border-blue-600 shadow-2xs'
+        'bg-slate-100 text-black font-black border-r-4 border-black shadow-xs'
       );
     }
-    return 'text-slate-800 hover:text-slate-950 hover:bg-slate-100 active:bg-slate-200 font-semibold';
+    return 'text-black hover:text-black hover:bg-slate-100 active:bg-slate-200 font-bold';
   };
 
   return (
     <nav
-      className={`fixed top-0 md:top-[56px] right-0 bottom-0 w-[85vw] max-w-[320px] md:w-[280px] bg-white text-slate-900 overflow-y-auto transition-all duration-300 z-50 md:z-40 py-0 md:py-1 shadow-2xl border-l border-slate-200 no-print ${
+      className={`fixed top-0 md:top-[56px] right-0 bottom-0 w-[85vw] max-w-[320px] md:w-[280px] bg-white text-black overflow-y-auto transition-all duration-300 z-50 md:z-40 py-0 md:py-1 shadow-2xl border-l border-slate-200 no-print ${
         isOpen ? 'translate-x-0' : 'translate-x-full'
       }`}
       dir="rtl"
     >
       <div className="flex flex-col text-sm">
         {/* Mobile Drawer Top Bar */}
-        <div className="md:hidden flex items-center justify-between px-4 py-3 bg-slate-50 border-b border-slate-200 sticky top-0 z-10">
+        <div className="md:hidden flex items-center justify-between px-4 py-3 bg-white border-b border-slate-200 sticky top-0 z-10">
           <div className="flex items-center gap-2.5">
             <img
               src="/pwa-192x192.png"
               alt="شعار ركيزة"
-              className="w-8 h-8 rounded-lg object-contain bg-white p-0.5 border border-slate-200"
+              className="w-8 h-8 rounded-lg object-contain bg-white p-0.5 border border-slate-300"
             />
             <div onClick={handleSecretRakeezaClicks} className="cursor-pointer select-none">
-              <span className="font-black text-slate-900 text-sm tracking-wide block">RAKEEZA | ركيزة</span>
-              <span className="text-[10px] text-slate-500 block">منظومة الإدارة والمحاسبة</span>
+              <span className="font-black text-black text-sm tracking-wide block">RAKEEZA | ركيزة</span>
+              <span className="text-[10px] text-black font-medium block">منظومة الإدارة والمحاسبة</span>
             </div>
           </div>
           {onClose && (
             <button
               onClick={onClose}
-              className="w-8 h-8 rounded-lg bg-slate-100 hover:bg-slate-200 active:bg-slate-300 text-slate-700 flex items-center justify-center transition cursor-pointer"
+              className="w-8 h-8 rounded-lg bg-slate-100 hover:bg-slate-200 active:bg-slate-300 text-black flex items-center justify-center transition cursor-pointer font-bold"
               aria-label="إغلاق القائمة"
             >
               <X className="w-4 h-4" />
@@ -177,15 +177,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </div>
 
         {/* Desktop Sidebar System Branding Header */}
-        <div className="hidden md:flex items-center gap-2.5 px-4 py-3 bg-slate-50 border-b border-slate-200 mb-1">
+        <div className="hidden md:flex items-center gap-2.5 px-4 py-3 bg-white border-b border-slate-200 mb-1">
           <img
             src="/pwa-192x192.png"
             alt="شعار ركيزة"
-            className="w-7 h-7 rounded-lg object-contain bg-white p-0.5 border border-slate-200"
+            className="w-7 h-7 rounded-lg object-contain bg-white p-0.5 border border-slate-300"
           />
           <div onClick={handleSecretRakeezaClicks} className="cursor-pointer select-none">
-            <span className="font-black text-slate-900 text-sm tracking-wider block">RAKEEZA ERP</span>
-            <span className="text-[10px] text-slate-500 block">منظومة ركيزة المحاسبية</span>
+            <span className="font-black text-black text-sm tracking-wider block">RAKEEZA ERP</span>
+            <span className="text-[10px] text-black font-semibold block">منظومة ركيزة المحاسبية</span>
           </div>
         </div>
 
@@ -197,8 +197,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
               'home'
             )}`}
           >
-            <LayoutDashboard className="w-4 h-4 shrink-0 text-blue-600" />
-            <span className="font-medium text-xs sm:text-sm">الرئيسية ولوحة التحكم</span>
+            <LayoutDashboard className="w-4 h-4 shrink-0 text-slate-800" />
+            <span className="font-bold text-xs sm:text-sm text-black">الرئيسية ولوحة التحكم</span>
           </div>
         )}
 
@@ -211,10 +211,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
             )}`}
           >
             <div className="flex items-center gap-2.5">
-              <Zap className="w-4 h-4 shrink-0 text-amber-400" />
-              <span className="font-medium text-xs sm:text-sm">نقطة البيع (POS)</span>
+              <Zap className="w-4 h-4 shrink-0 text-slate-800" />
+              <span className="font-bold text-xs sm:text-sm text-black">نقطة البيع (POS)</span>
             </div>
-            <span className="bg-amber-400 text-slate-950 text-[10px] px-1.5 py-0.5 rounded font-black">سريع</span>
+            <span className="bg-slate-900 text-white text-[10px] px-1.5 py-0.5 rounded font-black">سريع</span>
           </div>
         )}
 
@@ -226,8 +226,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
               'sales'
             )}`}
           >
-            <ShoppingCart className="w-4 h-4 shrink-0 text-blue-600" />
-            <span className="font-medium text-xs sm:text-sm">إدارة المبيعات والفواتير</span>
+            <ShoppingCart className="w-4 h-4 shrink-0 text-slate-800" />
+            <span className="font-bold text-xs sm:text-sm text-black">إدارة المبيعات والفواتير</span>
           </div>
         )}
 
@@ -240,10 +240,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
             )}`}
           >
             <div className="flex items-center gap-2.5">
-              <Tag className="w-4 h-4 shrink-0 text-emerald-400" />
-              <span className="font-medium text-xs sm:text-sm">إدارة الأسعار والتسعير</span>
+              <Tag className="w-4 h-4 shrink-0 text-slate-800" />
+              <span className="font-bold text-xs sm:text-sm text-black">إدارة الأسعار والتسعير</span>
             </div>
-            <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] px-1.5 py-0.5 rounded font-bold">تسعير</span>
+            <span className="bg-slate-100 text-black border border-slate-300 text-[10px] px-1.5 py-0.5 rounded font-bold">تسعير</span>
           </div>
         )}
 
@@ -256,10 +256,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
             )}`}
           >
             <div className="flex items-center gap-2.5">
-              <Building2 className="w-4 h-4 shrink-0 text-purple-400" />
-              <span className="font-medium text-xs sm:text-sm">أسعار الشركات والتصنيفات</span>
+              <Building2 className="w-4 h-4 shrink-0 text-slate-800" />
+              <span className="font-bold text-xs sm:text-sm text-black">أسعار الشركات والتصنيفات</span>
             </div>
-            <span className="bg-purple-50 text-purple-700 border border-purple-200 text-[10px] px-1.5 py-0.5 rounded font-bold">شركات</span>
+            <span className="bg-slate-100 text-black border border-slate-300 text-[10px] px-1.5 py-0.5 rounded font-bold">شركات</span>
           </div>
         )}
 
@@ -271,8 +271,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
               'quotes_orders'
             )}`}
           >
-            <FileText className="w-4 h-4 shrink-0 text-blue-600" />
-            <span className="font-medium text-xs sm:text-sm">عروض الأسعار والطلبيات</span>
+            <FileText className="w-4 h-4 shrink-0 text-slate-800" />
+            <span className="font-bold text-xs sm:text-sm text-black">عروض الأسعار والطلبيات</span>
           </div>
         )}
 
@@ -285,10 +285,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
             )}`}
           >
             <div className="flex items-center gap-2.5">
-              <Target className="w-4 h-4 shrink-0 text-indigo-400" />
-              <span className="font-medium text-xs sm:text-sm">علاقات العملاء (CRM)</span>
+              <Target className="w-4 h-4 shrink-0 text-slate-800" />
+              <span className="font-bold text-xs sm:text-sm text-black">علاقات العملاء (CRM)</span>
             </div>
-            <span className="bg-indigo-50 text-indigo-700 border border-indigo-200 text-[10px] px-1.5 py-0.5 rounded font-bold">فرص</span>
+            <span className="bg-slate-100 text-black border border-slate-300 text-[10px] px-1.5 py-0.5 rounded font-bold">فرص</span>
           </div>
         )}
 
@@ -301,15 +301,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
             )}`}
           >
             <div className="flex items-center gap-2.5">
-              <Inbox className="w-4 h-4 shrink-0 text-rose-400" />
-              <span className="font-medium text-xs sm:text-sm">طلبات الويب سايت</span>
+              <Inbox className="w-4 h-4 shrink-0 text-slate-800" />
+              <span className="font-bold text-xs sm:text-sm text-black">طلبات الويب سايت</span>
             </div>
             {(pendingWebOrdersCount ?? 0) > 0 ? (
-              <span className="bg-rose-500 text-white text-[10px] px-2 py-0.5 rounded font-black animate-pulse">
+              <span className="bg-black text-white text-[10px] px-2 py-0.5 rounded font-black animate-pulse">
                 {pendingWebOrdersCount} جديد
               </span>
             ) : (
-              <span className="bg-slate-100 text-slate-700 text-[10px] px-1.5 py-0.5 rounded font-medium">وارد</span>
+              <span className="bg-slate-100 text-black text-[10px] px-1.5 py-0.5 rounded font-bold">وارد</span>
             )}
           </div>
         )}
@@ -323,10 +323,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
             )}`}
           >
             <div className="flex items-center gap-2.5">
-              <ShoppingBag className="w-4 h-4 shrink-0 text-amber-400" />
-              <span className="font-medium text-xs sm:text-sm">المتجر والكتالوج الإلكتروني</span>
+              <ShoppingBag className="w-4 h-4 shrink-0 text-slate-800" />
+              <span className="font-bold text-xs sm:text-sm text-black">المتجر والكتالوج الإلكتروني</span>
             </div>
-            <span className="bg-amber-50 text-amber-800 border border-amber-200 text-[10px] px-1.5 py-0.5 rounded font-bold">متجر</span>
+            <span className="bg-slate-100 text-black border border-slate-300 text-[10px] px-1.5 py-0.5 rounded font-bold">متجر</span>
           </div>
         )}
 
@@ -338,8 +338,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
               'purchases'
             )}`}
           >
-            <Package className="w-4 h-4 shrink-0 text-blue-600" />
-            <span className="font-medium text-xs sm:text-sm">إدارة المشتريات والتوريد</span>
+            <Package className="w-4 h-4 shrink-0 text-slate-800" />
+            <span className="font-bold text-xs sm:text-sm text-black">إدارة المشتريات والتوريد</span>
           </div>
         )}
 
@@ -352,10 +352,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
             )}`}
           >
             <div className="flex items-center gap-2.5">
-              <Users className="w-4 h-4 shrink-0 text-blue-600" />
-              <span className="font-medium text-xs sm:text-sm">حسابات العملاء والموردين</span>
+              <Users className="w-4 h-4 shrink-0 text-slate-800" />
+              <span className="font-bold text-xs sm:text-sm text-black">حسابات العملاء والموردين</span>
             </div>
-            <span className="bg-blue-500/20 text-blue-600 border border-blue-500/40 text-[10px] px-1.5 py-0.5 rounded font-bold">دليل</span>
+            <span className="bg-slate-100 text-black border border-slate-300 text-[10px] px-1.5 py-0.5 rounded font-bold">دليل</span>
           </div>
         )}
 
@@ -367,8 +367,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
               'customers'
             )}`}
           >
-            <Users className="w-3.5 h-3.5 shrink-0 text-blue-400" />
-            <span className="font-medium text-xs">إدارة العملاء</span>
+            <Users className="w-3.5 h-3.5 shrink-0 text-slate-800" />
+            <span className="font-bold text-xs text-black">إدارة العملاء</span>
           </div>
         )}
 
@@ -380,8 +380,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
               'suppliers'
             )}`}
           >
-            <Building2 className="w-3.5 h-3.5 shrink-0 text-indigo-400" />
-            <span className="font-medium text-xs">إدارة الموردين</span>
+            <Building2 className="w-3.5 h-3.5 shrink-0 text-slate-800" />
+            <span className="font-bold text-xs text-black">إدارة الموردين</span>
           </div>
         )}
 
@@ -395,10 +395,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
             )}`}
           >
             <div className="flex items-center gap-2.5">
-              <Wallet className="w-4 h-4 shrink-0 text-emerald-400" />
-              <span className="font-medium text-xs sm:text-sm">سندات القبض والصرف والخزينة</span>
+              <Wallet className="w-4 h-4 shrink-0 text-slate-800" />
+              <span className="font-bold text-xs sm:text-sm text-black">سندات القبض والصرف والخزينة</span>
             </div>
-            <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] px-1.5 py-0.5 rounded font-bold">خزينة</span>
+            <span className="bg-slate-100 text-black border border-slate-300 text-[10px] px-1.5 py-0.5 rounded font-bold">خزينة</span>
           </div>
         )}
 
@@ -410,8 +410,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
               'receipts'
             )}`}
           >
-            <ArrowDownLeft className="w-3.5 h-3.5 shrink-0 text-emerald-400" />
-            <span className="font-medium text-xs">سندات القبض (التحصيل)</span>
+            <ArrowDownLeft className="w-3.5 h-3.5 shrink-0 text-slate-800" />
+            <span className="font-bold text-xs text-black">سندات القبض (التحصيل)</span>
           </div>
         )}
 
@@ -423,8 +423,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
               'payments'
             )}`}
           >
-            <ArrowUpRight className="w-3.5 h-3.5 shrink-0 text-rose-400" />
-            <span className="font-medium text-xs">سندات الصرف والمصروفات</span>
+            <ArrowUpRight className="w-3.5 h-3.5 shrink-0 text-slate-800" />
+            <span className="font-bold text-xs text-black">سندات الصرف والمصروفات</span>
           </div>
         )}
 
@@ -437,10 +437,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
             )}`}
           >
             <div className="flex items-center gap-2.5">
-              <Landmark className="w-4 h-4 shrink-0 text-emerald-400" />
-              <span className="font-medium text-xs sm:text-sm">أرصدة الخزائن والبنوك</span>
+              <Landmark className="w-4 h-4 shrink-0 text-slate-800" />
+              <span className="font-bold text-xs sm:text-sm text-black">أرصدة الخزائن والبنوك</span>
             </div>
-            <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] px-1.5 py-0.5 rounded font-bold">أرصدة</span>
+            <span className="bg-slate-100 text-black border border-slate-300 text-[10px] px-1.5 py-0.5 rounded font-bold">أرصدة</span>
           </div>
         )}
 
@@ -453,10 +453,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
             )}`}
           >
             <div className="flex items-center gap-2.5">
-              <CreditCard className="w-4 h-4 shrink-0 text-emerald-400" />
-              <span className="font-medium text-xs sm:text-sm">الشيكات وأوراق الدفع والقبض</span>
+              <CreditCard className="w-4 h-4 shrink-0 text-slate-800" />
+              <span className="font-bold text-xs sm:text-sm text-black">الشيكات وأوراق الدفع والقبض</span>
             </div>
-            <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] px-1.5 py-0.5 rounded font-bold">شيكات</span>
+            <span className="bg-slate-100 text-black border border-slate-300 text-[10px] px-1.5 py-0.5 rounded font-bold">شيكات</span>
           </div>
         )}
 
@@ -468,8 +468,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
               'bank_reconciliation'
             )}`}
           >
-            <Scale className="w-4 h-4 shrink-0 text-emerald-400" />
-            <span className="font-medium text-xs sm:text-sm">التسوية البنكية والاعتمادات</span>
+            <Scale className="w-4 h-4 shrink-0 text-slate-800" />
+            <span className="font-bold text-xs sm:text-sm text-black">التسوية البنكية والاعتمادات</span>
           </div>
         )}
 
@@ -478,20 +478,20 @@ export const Sidebar: React.FC<SidebarProps> = ({
           <div>
             <div
               onClick={() => toggleItem('items')}
-              className="min-h-[42px] px-4 py-2.5 cursor-pointer border-b border-slate-100 transition hover:bg-slate-100 flex justify-between items-center text-slate-800"
+              className="min-h-[42px] px-4 py-2.5 cursor-pointer border-b border-slate-100 transition hover:bg-slate-100 flex justify-between items-center text-black"
             >
               <div className="flex items-center gap-2.5">
-                <Boxes className="w-4 h-4 shrink-0 text-amber-400" />
-                <span className="font-medium text-xs sm:text-sm">المخزون والأصناف والمستودعات</span>
+                <Boxes className="w-4 h-4 shrink-0 text-slate-800" />
+                <span className="font-bold text-xs sm:text-sm text-black">المخزون والأصناف والمستودعات</span>
               </div>
               <ChevronDown
-                className={`w-4 h-4 transition-transform text-slate-500 ${
-                  openItems.items ? 'rotate-180 text-amber-300' : ''
+                className={`w-4 h-4 transition-transform text-slate-800 ${
+                  openItems.items ? 'rotate-180 text-black' : ''
                 }`}
               />
             </div>
             {openItems.items && (
-              <div className="bg-slate-50/90 border-y border-slate-200/60 text-xs">
+              <div className="bg-slate-50 border-y border-slate-200 text-xs">
                 {canAccessPage(currentUser, 'items') && (
                   <div
                     onClick={() => onNavigate('items')}
@@ -499,7 +499,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       'items'
                     )}`}
                   >
-                    دليل الأصناف والباركود
+                    <span className="font-bold text-black">دليل الأصناف والباركود</span>
                   </div>
                 )}
                 {canAccessPage(currentUser, 'items') && (
@@ -509,7 +509,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       'item_movement'
                     )}`}
                   >
-                    سجل حركة الصنف
+                    <span className="font-bold text-black">سجل حركة الصنف</span>
                   </div>
                 )}
                 {canAccessPage(currentUser, 'inventory') && (
@@ -519,7 +519,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       'inventory'
                     )}`}
                   >
-                    تقييم المخزون الإجمالي
+                    <span className="font-bold text-black">تقييم المخزون الإجمالي</span>
                   </div>
                 )}
                 {canAccessPage(currentUser, 'physical_inventory') && (
@@ -529,7 +529,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       'physical_inventory'
                     )}`}
                   >
-                    الجرد الفعلي وتسوية المخازن
+                    <span className="font-bold text-black">الجرد الفعلي وتسوية المخازن</span>
                   </div>
                 )}
                 {canAccessPage(currentUser, 'serial_warranty') && (
@@ -539,8 +539,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       'serial_warranty'
                     )}`}
                   >
-                    <span>الأرقام التسلسلية وتتبع الضمان (S/N)</span>
-                    <span className="bg-amber-400 text-slate-950 text-[9px] px-1.5 py-0.5 rounded font-bold">سيريال</span>
+                    <span className="font-bold text-black">الأرقام التسلسلية وتتبع الضمان (S/N)</span>
+                    <span className="bg-slate-200 text-black text-[9px] px-1.5 py-0.5 rounded font-bold">سيريال</span>
                   </div>
                 )}
                 {canAccessPage(currentUser, 'manufacturing') && (
@@ -550,8 +550,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       'manufacturing'
                     )}`}
                   >
-                    <span>التصنيع ومعادلات الإنتاج (BOM)</span>
-                    <span className="bg-amber-50 text-amber-800 border border-amber-200 text-[9px] px-1.5 py-0.5 rounded font-bold">BOM</span>
+                    <span className="font-bold text-black">التصنيع ومعادلات الإنتاج (BOM)</span>
+                    <span className="bg-slate-200 text-black border border-slate-300 text-[9px] px-1.5 py-0.5 rounded font-bold">BOM</span>
                   </div>
                 )}
               </div>
@@ -567,8 +567,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
               'branches'
             )}`}
           >
-            <GitBranch className="w-4 h-4 shrink-0 text-blue-600" />
-            <span className="font-medium text-xs sm:text-sm">الفروع والتحويلات المخزنية</span>
+            <GitBranch className="w-4 h-4 shrink-0 text-slate-800" />
+            <span className="font-bold text-xs sm:text-sm text-black">الفروع والتحويلات المخزنية</span>
           </div>
         )}
 
@@ -577,20 +577,20 @@ export const Sidebar: React.FC<SidebarProps> = ({
           <div>
             <div
               onClick={() => toggleItem('operations')}
-              className="min-h-[42px] px-4 py-2.5 cursor-pointer border-b border-slate-100 transition hover:bg-slate-100 flex justify-between items-center text-slate-800"
+              className="min-h-[42px] px-4 py-2.5 cursor-pointer border-b border-slate-100 transition hover:bg-slate-100 flex justify-between items-center text-black"
             >
               <div className="flex items-center gap-2.5">
-                <BookOpen className="w-4 h-4 shrink-0 text-cyan-400" />
-                <span className="font-medium text-xs sm:text-sm">المحاسبة والقيود والقوائم المالية</span>
+                <BookOpen className="w-4 h-4 shrink-0 text-slate-800" />
+                <span className="font-bold text-xs sm:text-sm text-black">المحاسبة والقيود والقوائم المالية</span>
               </div>
               <ChevronDown
-                className={`w-4 h-4 transition-transform text-slate-500 ${
-                  openItems.operations ? 'rotate-180 text-amber-300' : ''
+                className={`w-4 h-4 transition-transform text-slate-800 ${
+                  openItems.operations ? 'rotate-180 text-black' : ''
                 }`}
               />
             </div>
             {openItems.operations && (
-              <div className="bg-slate-50/90 border-y border-slate-200/60 text-xs">
+              <div className="bg-slate-50 border-y border-slate-200 text-xs">
                 {canAccessPage(currentUser, 'accounts_tree') && (
                   <div
                     onClick={() => onNavigate('accounts_tree')}
@@ -598,8 +598,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       'accounts_tree'
                     )}`}
                   >
-                    <FolderTree className="w-3.5 h-3.5 text-blue-600 shrink-0" />
-                    <span>دليل الحسابات ومراكز التكلفة</span>
+                    <FolderTree className="w-3.5 h-3.5 text-slate-800 shrink-0" />
+                    <span className="font-bold text-black">دليل الحسابات ومراكز التكلفة</span>
                   </div>
                 )}
                 {(canAccessPage(currentUser, 'daily_operations') || canAccessPage(currentUser, 'daily_entries')) && (
@@ -609,7 +609,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       'daily_operations'
                     )}`}
                   >
-                    العمليات اليومية ودفتر القيود
+                    <span className="font-bold text-black">العمليات اليومية ودفتر القيود</span>
                   </div>
                 )}
                 {canAccessPage(currentUser, 'trial_balance') && (
@@ -619,7 +619,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       'trial_balance'
                     )}`}
                   >
-                    ميزان المراجعة
+                    <span className="font-bold text-black">ميزان المراجعة</span>
                   </div>
                 )}
                 {canAccessPage(currentUser, 'income_statement') && (
@@ -629,7 +629,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       'income_statement'
                     )}`}
                   >
-                    قائمة الدخل والأرباح والخسائر (P&L)
+                    <span className="font-bold text-black">قائمة الدخل والأرباح والخسائر (P&L)</span>
                   </div>
                 )}
                 {canAccessPage(currentUser, 'balance_sheet') && (
@@ -639,7 +639,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       'balance_sheet'
                     )}`}
                   >
-                    الميزانية العمومية
+                    <span className="font-bold text-black">الميزانية العمومية</span>
                   </div>
                 )}
                 {canAccessPage(currentUser, 'monthly_profit_report') && (
@@ -649,8 +649,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       'monthly_profit_report'
                     )}`}
                   >
-                    <span>تقرير الأرباح وتكلفة المبيعات (COGS)</span>
-                    <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 text-[9px] px-1.5 py-0.5 rounded font-bold">معتمد</span>
+                    <span className="font-bold text-black">تقرير الأرباح وتكلفة المبيعات (COGS)</span>
+                    <span className="bg-slate-200 text-black border border-slate-300 text-[9px] px-1.5 py-0.5 rounded font-bold">معتمد</span>
                   </div>
                 )}
                 {canAccessPage(currentUser, 'cash_flow_closing') && (
@@ -660,8 +660,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       'cash_flow_closing'
                     )}`}
                   >
-                    <span>قائمة التدفقات النقدية المعيارية</span>
-                    <span className="bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 text-[9px] px-1.5 py-0.5 rounded font-bold">EAS</span>
+                    <span className="font-bold text-black">قائمة التدفقات النقدية المعيارية</span>
+                    <span className="bg-slate-200 text-black border border-slate-300 text-[9px] px-1.5 py-0.5 rounded font-bold">EAS</span>
                   </div>
                 )}
                 {canAccessPage(currentUser, 'fixed_assets') && (
@@ -671,7 +671,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       'fixed_assets'
                     )}`}
                   >
-                    الأصول الثابتة والإهلاكات
+                    <span className="font-bold text-black">الأصول الثابتة والإهلاكات</span>
                   </div>
                 )}
                 {canAccessPage(currentUser, 'year_end_closing') && (
@@ -681,8 +681,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       'year_end_closing'
                     )}`}
                   >
-                    <span>الإقفال السنوي والترحيل المالي</span>
-                    <span className="bg-amber-400 text-slate-950 text-[9px] px-1.5 py-0.5 rounded font-bold">الختامي</span>
+                    <span className="font-bold text-black">الإقفال السنوي والترحيل المالي</span>
+                    <span className="bg-slate-200 text-black text-[9px] px-1.5 py-0.5 rounded font-bold">الختامي</span>
                   </div>
                 )}
               </div>
@@ -698,8 +698,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
               'e_invoicing'
             )}`}
           >
-            <Receipt className="w-4 h-4 shrink-0 text-blue-600" />
-            <span className="font-medium text-xs sm:text-sm">الفاتورة الإلكترونية والضرائب</span>
+            <Receipt className="w-4 h-4 shrink-0 text-slate-800" />
+            <span className="font-bold text-xs sm:text-sm text-black">الفاتورة الإلكترونية والضرائب</span>
           </div>
         )}
 
@@ -711,8 +711,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
               'sales_reps'
             )}`}
           >
-            <UserCheck className="w-4 h-4 shrink-0 text-blue-600" />
-            <span className="font-medium text-xs sm:text-sm">المندوبين والعمولات وسقف الائتمان</span>
+            <UserCheck className="w-4 h-4 shrink-0 text-slate-800" />
+            <span className="font-bold text-xs sm:text-sm text-black">المندوبين والعمولات وسقف الائتمان</span>
           </div>
         )}
 
@@ -725,10 +725,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
             )}`}
           >
             <div className="flex items-center gap-2.5">
-              <Briefcase className="w-4 h-4 shrink-0 text-blue-600" />
-              <span className="font-medium text-xs sm:text-sm">الموارد البشرية والرواتب (HR)</span>
+              <Briefcase className="w-4 h-4 shrink-0 text-slate-800" />
+              <span className="font-bold text-xs sm:text-sm text-black">الموارد البشرية والرواتب (HR)</span>
             </div>
-            <span className="bg-blue-50 text-blue-700 border border-blue-200 text-[10px] px-1.5 py-0.5 rounded font-bold">HR</span>
+            <span className="bg-slate-100 text-black border border-slate-300 text-[10px] px-1.5 py-0.5 rounded font-bold">HR</span>
           </div>
         )}
 
@@ -740,8 +740,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
               'bi_analytics'
             )}`}
           >
-            <TrendingUp className="w-4 h-4 shrink-0 text-emerald-400" />
-            <span className="font-medium text-xs sm:text-sm">ذكاء الأعمال والتحليلات (BI)</span>
+            <TrendingUp className="w-4 h-4 shrink-0 text-slate-800" />
+            <span className="font-bold text-xs sm:text-sm text-black">ذكاء الأعمال والتحليلات (BI)</span>
           </div>
         )}
 
@@ -750,28 +750,28 @@ export const Sidebar: React.FC<SidebarProps> = ({
           <div>
             <div
               onClick={() => toggleItem('reports_group')}
-              className="min-h-[42px] px-4 py-2.5 cursor-pointer border-b border-slate-100 transition hover:bg-slate-100 flex justify-between items-center text-slate-800"
+              className="min-h-[42px] px-4 py-2.5 cursor-pointer border-b border-slate-100 transition hover:bg-slate-100 flex justify-between items-center text-black"
             >
               <div className="flex items-center gap-2.5">
-                <BarChart3 className="w-4 h-4 shrink-0 text-blue-600" />
-                <span className="font-medium text-xs sm:text-sm">التقارير الشاملة والمصنفة</span>
+                <BarChart3 className="w-4 h-4 shrink-0 text-slate-800" />
+                <span className="font-bold text-xs sm:text-sm text-black">التقارير الشاملة والمصنفة</span>
               </div>
               <ChevronDown
-                className={`w-4 h-4 transition-transform text-slate-500 ${
-                  openItems.reports_group ? 'rotate-180 text-amber-300' : ''
+                className={`w-4 h-4 transition-transform text-slate-800 ${
+                  openItems.reports_group ? 'rotate-180 text-black' : ''
                 }`}
               />
             </div>
             {openItems.reports_group && (
-              <div className="bg-slate-50/90 border-y border-slate-200/60 text-xs">
+              <div className="bg-slate-50 border-y border-slate-200 text-xs">
                 <div
                   onClick={() => onNavigate('reports_group')}
-                  className={`min-h-[38px] pr-9 pl-4 py-2 cursor-pointer border-b border-slate-100 transition flex items-center gap-2 text-amber-300 font-semibold ${
-                    activePage === 'reports_group' ? 'bg-blue-600/30 font-bold border-r-3 border-amber-400' : ''
+                  className={`min-h-[38px] pr-9 pl-4 py-2 cursor-pointer border-b border-slate-100 transition flex items-center gap-2 text-black font-bold ${
+                    activePage === 'reports_group' ? 'bg-slate-200 text-black font-black border-r-4 border-black' : 'hover:bg-slate-100'
                   }`}
                 >
-                  <FileBarChart className="w-3.5 h-3.5 text-amber-300" />
-                  <span>نظرة عامة على جميع التقارير</span>
+                  <FileBarChart className="w-3.5 h-3.5 text-slate-800" />
+                  <span className="font-bold text-black">نظرة عامة على جميع التقارير</span>
                 </div>
                 {reportGroups.map((group) => {
                   const catPageId = `reports_${group.key}`;
@@ -782,15 +782,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       onClick={() => onNavigate(catPageId)}
                       className={`min-h-[36px] pr-9 pl-4 py-1.5 cursor-pointer border-b border-slate-100 transition flex justify-between items-center ${
                         isCatActive
-                          ? 'bg-blue-600/30 text-amber-300 font-bold border-r-2 border-amber-400'
-                          : 'text-slate-300 hover:text-white hover:bg-slate-100'
+                          ? 'bg-slate-200 text-black font-black border-r-4 border-black'
+                          : 'text-black hover:text-black hover:bg-slate-100 font-bold'
                       }`}
                     >
                       <div className="flex items-center gap-2">
-                        <Folder className="w-3.5 h-3.5 text-blue-600 shrink-0" />
-                        <span>{group.label}</span>
+                        <Folder className="w-3.5 h-3.5 text-slate-800 shrink-0" />
+                        <span className="font-bold text-black">{group.label}</span>
                       </div>
-                      <span className="text-[10px] bg-white/10 px-1.5 py-0.5 rounded font-mono text-slate-300">
+                      <span className="text-[10px] bg-slate-200 text-black font-bold px-1.5 py-0.5 rounded font-mono border border-slate-300">
                         {group.reports.length}
                       </span>
                     </div>
@@ -809,8 +809,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
               'audit_trail'
             )}`}
           >
-            <History className="w-4 h-4 shrink-0 text-blue-600" />
-            <span className="font-medium text-xs sm:text-sm">سجل التدقيق والأمان والرقابة</span>
+            <History className="w-4 h-4 shrink-0 text-slate-800" />
+            <span className="font-bold text-xs sm:text-sm text-black">سجل التدقيق والأمان والرقابة</span>
           </div>
         )}
 
@@ -822,8 +822,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
               'settings'
             )}`}
           >
-            <Settings className="w-4 h-4 shrink-0 text-slate-300" />
-            <span className="font-medium text-xs sm:text-sm">الإعدادات العامة للنظام</span>
+            <Settings className="w-4 h-4 shrink-0 text-slate-800" />
+            <span className="font-bold text-xs sm:text-sm text-black">الإعدادات العامة للنظام</span>
           </div>
         )}
 
@@ -835,8 +835,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
               'users'
             )}`}
           >
-            <UserCog className="w-4 h-4 shrink-0 text-blue-600" />
-            <span className="font-medium text-xs sm:text-sm">المستخدمين والصلاحيات</span>
+            <UserCog className="w-4 h-4 shrink-0 text-slate-800" />
+            <span className="font-bold text-xs sm:text-sm text-black">المستخدمين والصلاحيات</span>
           </div>
         )}
 
@@ -848,8 +848,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
               'backup'
             )}`}
           >
-            <ShieldCheck className="w-4 h-4 shrink-0 text-emerald-400" />
-            <span className="font-medium text-xs sm:text-sm">النسخ الاحتياطي والأمان</span>
+            <ShieldCheck className="w-4 h-4 shrink-0 text-slate-800" />
+            <span className="font-bold text-xs sm:text-sm text-black">النسخ الاحتياطي والأمان</span>
           </div>
         )}
       </div>
@@ -857,14 +857,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
       {/* Pinned Bottom User & Logout Section */}
       <div className="sticky bottom-0 mt-auto bg-slate-50 border-t border-slate-200 p-3 shadow-lg z-20">
         <div className="flex items-center gap-2.5 mb-2.5 px-0.5">
-          <div className="w-8 h-8 rounded-lg bg-amber-400 text-slate-950 font-black text-xs flex items-center justify-center shrink-0">
+          <div className="w-8 h-8 rounded-lg bg-black text-white font-black text-xs flex items-center justify-center shrink-0">
             {currentUser?.name ? currentUser.name.charAt(0).toUpperCase() : 'U'}
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-xs font-bold text-slate-900 truncate leading-tight">
+            <p className="text-xs font-black text-black truncate leading-tight">
               {currentUser?.name || 'مدير المنظومة'}
             </p>
-            <p className="text-[10px] text-slate-500 truncate leading-tight mt-0.5">
+            <p className="text-[10px] text-black font-semibold truncate leading-tight mt-0.5">
               {companyName || 'الفرع الرئيسي'}
             </p>
           </div>

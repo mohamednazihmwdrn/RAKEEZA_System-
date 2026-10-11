@@ -68,7 +68,10 @@ export const AccountsView: React.FC<AccountsViewProps> = ({
           {/* Customers Tab */}
           <button
             type="button"
-            onClick={() => setActiveTab('customers')}
+            onClick={() => {
+              setActiveTab('customers');
+              onNavigate?.('customers');
+            }}
             className={`flex-1 sm:flex-initial px-4 py-2 rounded-lg text-xs sm:text-sm font-bold transition flex items-center justify-center gap-2 cursor-pointer ${
               activeTab === 'customers'
                 ? 'bg-blue-600 text-white shadow-xs'
@@ -89,7 +92,10 @@ export const AccountsView: React.FC<AccountsViewProps> = ({
           {/* Suppliers Tab */}
           <button
             type="button"
-            onClick={() => setActiveTab('suppliers')}
+            onClick={() => {
+              setActiveTab('suppliers');
+              onNavigate?.('suppliers');
+            }}
             className={`flex-1 sm:flex-initial px-4 py-2 rounded-lg text-xs sm:text-sm font-bold transition flex items-center justify-center gap-2 cursor-pointer ${
               activeTab === 'suppliers'
                 ? 'bg-indigo-600 text-white shadow-xs'

@@ -27,6 +27,7 @@ import { printStatementWindow, compileStatementData } from '../utils/printStatem
 import { openUnifiedPrintWindow } from '../utils/printUnified';
 import { exportToExcel } from '../utils/excelExport';
 import { generateStatementWhatsAppMessage, openWhatsAppChat } from '../services/whatsappService';
+import { registerModalBackHandler } from '../utils/navigationHistory';
 
 interface SuppliersManagerClassicProps {
   appData: AppData;
@@ -87,6 +88,17 @@ export const SuppliersManagerClassic: React.FC<SuppliersManagerClassicProps> = (
   const [statementSupplier, setStatementSupplier] = useState<Supplier | null>(null);
   const [statementFromDate, setStatementFromDate] = useState('');
   const [statementToDate, setStatementToDate] = useState(new Date().toISOString().split('T')[0]);
+
+  // Phone Back Button interception for Supplier Statement Modal
+  useEffect(() => {
+    if (statementSupplier) {
+      const unregister = registerModalBackHandler(() => {
+        setStatementSupplier(null);
+        return true;
+      });
+      return () => unregister();
+    }
+  }, [statementSupplier]);
 
   // Generate Next Auto Supplier Code (e.g. SUP-001)
   const nextSupplierCode = useMemo(() => {

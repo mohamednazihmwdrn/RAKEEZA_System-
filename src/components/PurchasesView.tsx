@@ -15,6 +15,10 @@ import {
   AlertCircle,
   Save,
   X,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
 } from 'lucide-react';
 import { AppData, PurchaseInvoice, InvoiceItem } from '../types';
 import { Modal } from './Modal';
@@ -44,6 +48,10 @@ export const PurchasesView: React.FC<PurchasesViewProps> = ({ appData, onUpdateD
   const [modalType, setModalType] = useState<'nagdi' | 'ajel' | 'return_nagdi' | 'return_ajel'>('nagdi');
   const [selectedInvoice, setSelectedInvoice] = useState<PurchaseInvoice | null>(null);
   const [editingInvoiceId, setEditingInvoiceId] = useState<number | null>(null);
+
+  // ⚡ 10M+ High-Volume Big Data Pagination States
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [pageSize, setPageSize] = useState<number>(50);
 
   // Form State
   const [supplierName, setSupplierName] = useState('');
@@ -124,6 +132,7 @@ export const PurchasesView: React.FC<PurchasesViewProps> = ({ appData, onUpdateD
       return false;
     }
     const s = searchTerm.toLowerCase();
+    if (!s) return true;
     return (
       inv.id.toString().includes(s) ||
       inv.supplierName?.toLowerCase().includes(s) ||
@@ -132,6 +141,11 @@ export const PurchasesView: React.FC<PurchasesViewProps> = ({ appData, onUpdateD
       inv.notes?.toLowerCase().includes(s)
     );
   });
+
+  const totalPages = Math.max(1, Math.ceil(filteredInvoices.length / pageSize));
+  const safeCurrentPage = Math.min(Math.max(1, currentPage), totalPages);
+  const startIndex = (safeCurrentPage - 1) * pageSize;
+  const paginatedInvoices = filteredInvoices.slice(startIndex, startIndex + pageSize);
 
   const getMethodLabel = (m: string) => {
     switch (m) {
@@ -421,8 +435,10 @@ export const PurchasesView: React.FC<PurchasesViewProps> = ({ appData, onUpdateD
             itemId: ui.itemId || `itm_${idx}_${Date.now()}`,
             code: ui.code,
             name: ui.name,
+            category: ui.category || '',
             qty: ui.qty,
             price: ui.price,
+            salePrice: ui.salePrice,
             costPrice: ui.costPrice || ui.price,
             discount: ui.actualDisc,
             discountType: ui.discType === 'val' ? 'fixed' : 'percent',
@@ -877,12 +893,12 @@ export const PurchasesView: React.FC<PurchasesViewProps> = ({ appData, onUpdateD
 
       {/* Mobile Card List View (< md) */}
       <div className="block md:hidden space-y-3">
-        {filteredInvoices.length === 0 ? (
+        {paginatedInvoices.length === 0 ? (
           <div className="bg-white rounded-xl p-6 text-center text-black font-bold text-sm border-2 border-slate-300">
             لا توجد فواتير مشتريات مسجلة
           </div>
         ) : (
-          filteredInvoices.map((inv) => (
+          paginatedInvoices.map((inv) => (
             <div
               key={inv.id}
               className="bg-white rounded-xl p-4 shadow-xs border-2 border-teal-200/90 space-y-3 hover:border-teal-400 transition"
@@ -1025,14 +1041,14 @@ export const PurchasesView: React.FC<PurchasesViewProps> = ({ appData, onUpdateD
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-300 bg-white">
-            {filteredInvoices.length === 0 ? (
+            {paginatedInvoices.length === 0 ? (
               <tr>
                 <td colSpan={8} className="text-center py-8 text-black font-bold">
                   لا توجد فواتير مشتريات مسجلة
                 </td>
               </tr>
             ) : (
-              filteredInvoices.map((inv) => {
+              paginatedInvoices.map((inv) => {
                 const rem = inv.remainingAmount ?? (inv.type === 'ajel' ? inv.total - (inv.paidAmount || 0) : 0);
                 const paid = inv.paidAmount ?? (inv.type === 'nagdi' ? inv.total : 0);
                 return (
@@ -1159,6 +1175,80 @@ export const PurchasesView: React.FC<PurchasesViewProps> = ({ appData, onUpdateD
           </tbody>
         </table>
       </div>
+
+      {/* ⚡ High-Speed Big Data Pagination Controls Bar for Purchases */}
+      {filteredInvoices.length > 0 && (
+        <div className="bg-white rounded-xl border border-slate-300 p-3 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-xs text-xs">
+          <div className="flex items-center gap-2 text-slate-600 font-medium">
+            <span>
+              عرض <strong className="text-teal-950 font-bold">{startIndex + 1}</strong> إلى{' '}
+              <strong className="text-teal-950 font-bold">
+                {Math.min(startIndex + pageSize, filteredInvoices.length)}
+              </strong>{' '}
+              من إجمالي{' '}
+              <strong className="text-teal-700 font-black">{filteredInvoices.length.toLocaleString()}</strong> فاتورة توريد
+            </span>
+            <span className="hidden md:inline-block text-slate-300">|</span>
+            <div className="flex items-center gap-1.5">
+              <span>لكل صفحة:</span>
+              <select
+                value={pageSize}
+                onChange={(e) => {
+                  setPageSize(Number(e.target.value));
+                  setCurrentPage(1);
+                }}
+                className="bg-slate-50 border border-slate-300 rounded-lg px-2 py-1 font-bold text-slate-800 focus:outline-none focus:ring-1 focus:ring-teal-500 cursor-pointer"
+              >
+                <option value={25}>25</option>
+                <option value={50}>50</option>
+                <option value={100}>100</option>
+                <option value={250}>250</option>
+                <option value={500}>500</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setCurrentPage(1)}
+              disabled={safeCurrentPage <= 1}
+              className="p-1.5 rounded-lg border border-slate-300 hover:bg-slate-100 disabled:opacity-30 disabled:pointer-events-none transition cursor-pointer"
+              title="الصفحة الأولى"
+            >
+              <ChevronsRight className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+              disabled={safeCurrentPage <= 1}
+              className="p-1.5 rounded-lg border border-slate-300 hover:bg-slate-100 disabled:opacity-30 disabled:pointer-events-none transition cursor-pointer"
+              title="الصفحة السابقة"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </button>
+
+            <span className="px-3 py-1 font-bold text-slate-800">
+              صفحة {safeCurrentPage} من {totalPages}
+            </span>
+
+            <button
+              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+              disabled={safeCurrentPage >= totalPages}
+              className="p-1.5 rounded-lg border border-slate-300 hover:bg-slate-100 disabled:opacity-30 disabled:pointer-events-none transition cursor-pointer"
+              title="الصفحة التالية"
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => setCurrentPage(totalPages)}
+              disabled={safeCurrentPage >= totalPages}
+              className="p-1.5 rounded-lg border border-slate-300 hover:bg-slate-100 disabled:opacity-30 disabled:pointer-events-none transition cursor-pointer"
+              title="الصفحة الأخيرة"
+            >
+              <ChevronsLeft className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* 🏛️ واجهة تسجيل فواتير المشتريات والتوريدات المعتمدة - ركيزة (مطابقة كلياً للتصميم الأصلي بالصورة) */}
       {(activeModal === 'create' || activeModal === 'edit') && (

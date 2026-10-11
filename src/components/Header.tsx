@@ -11,6 +11,8 @@ import {
   Crown,
   X,
   KeyRound,
+  Activity,
+  ArrowRight,
 } from 'lucide-react';
 import { loginOwnerApi } from '../services/cloudApi';
 
@@ -105,9 +107,6 @@ export function getCleanPageName(page?: string): string {
       return 'النسخ الاحتياطي';
     case 'owner_panel':
       return 'لوحة المالك';
-    case 'company_prices':
-    case 'company_catalog':
-      return 'قائمة أسعار الشركات والتصنيفات';
     default:
       if (page.startsWith('reports_')) return 'التقارير';
       return 'الرئيسية';
@@ -135,6 +134,9 @@ interface HeaderProps {
   onNavigateReports?: (fiscalYear?: string) => void;
   onNavigate?: (page: string) => void;
   currentPage?: string;
+  onOpenDiagnostics?: () => void;
+  onGoBack?: () => void;
+  canGoBack?: boolean;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -153,6 +155,9 @@ export const Header: React.FC<HeaderProps> = ({
   showToast,
   onNavigate,
   currentPage = 'home',
+  onOpenDiagnostics,
+  onGoBack,
+  canGoBack = false,
 }) => {
   const pageTitle = getCleanPageName(currentPage);
 
@@ -275,6 +280,20 @@ export const Header: React.FC<HeaderProps> = ({
             </button>
           )}
 
+          {/* زر الرجوع الذكي للهواتف والشاشات (يرجع للصفحة السابقة مباشرة) */}
+          {canGoBack && onGoBack && (
+            <button
+              type="button"
+              onClick={onGoBack}
+              className="p-1.5 sm:p-2 rounded-lg bg-blue-50 hover:bg-blue-100 active:bg-blue-200 text-blue-700 border border-blue-200 transition cursor-pointer flex items-center gap-1 select-none shadow-xs"
+              title="الرجوع للصفحة السابقة (أو من أزرار الهاتف)"
+              aria-label="الرجوع للصفحة السابقة"
+            >
+              <ArrowRight className="w-5 h-5 text-blue-700 shrink-0" />
+              <span className="hidden md:inline text-xs font-bold text-blue-800">رجوع</span>
+            </button>
+          )}
+
           {/* شعار واسم المنشأة */}
           <div
             className="flex items-center gap-2 cursor-pointer transition hover:opacity-90"
@@ -342,6 +361,19 @@ export const Header: React.FC<HeaderProps> = ({
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
               </span>
               <span className="hidden xl:inline text-[11px] text-emerald-700">النسخ السحابي</span>
+            </button>
+          )}
+
+          {/* زر فحص النزاهة وصحة البيانات الضخمة (10M+) */}
+          {onOpenDiagnostics && (
+            <button
+              type="button"
+              onClick={onOpenDiagnostics}
+              className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 text-xs font-bold text-indigo-900 transition cursor-pointer"
+              title="مركز فحص النزاهة المحاسبية وإدارة البيانات الضخمة (10M+ Enterprise Hub)"
+            >
+              <Activity className="w-3.5 h-3.5 text-indigo-600" />
+              <span className="hidden xl:inline text-[11px] text-indigo-800">صحة النظام (10M+)</span>
             </button>
           )}
 

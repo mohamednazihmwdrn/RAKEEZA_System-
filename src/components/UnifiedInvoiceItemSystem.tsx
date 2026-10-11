@@ -27,6 +27,7 @@ import { Item } from '../types';
 export interface InvoiceItemUnified {
   code: string;
   name: string;
+  category?: string;
   price: number;
   qty: number;
   discVal: number;
@@ -39,6 +40,7 @@ export interface InvoiceItemUnified {
   total: number;
   itemId?: string;
   costPrice?: number;
+  salePrice?: number;
 }
 
 export interface PaymentRow {
@@ -427,6 +429,7 @@ export const UnifiedInvoiceItemSystem: React.FC<UnifiedInvoiceItemSystemProps> =
     const itemObj: InvoiceItemUnified = {
       code: tempSelectedItem.code,
       name: tempSelectedItem.name,
+      category: tempSelectedItem.category || '',
       price,
       qty,
       discVal,
@@ -439,6 +442,7 @@ export const UnifiedInvoiceItemSystem: React.FC<UnifiedInvoiceItemSystemProps> =
       total,
       itemId: tempSelectedItem.id,
       costPrice: tempSelectedItem.buyPrice,
+      salePrice: tempSelectedItem.cashPrice,
     };
 
     const updated = [...currentInvoiceItems];

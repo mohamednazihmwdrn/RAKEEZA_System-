@@ -3,6 +3,7 @@ import { AppData, SaleInvoice, PurchaseInvoice, Item, Customer, Supplier } from 
 import { calculateCustomerBalance, calculateSupplierBalance } from '../utils/accounting';
 import { postSaleInvoice, postPurchaseInvoice, mapPaymentMethodToKey } from '../utils/posting';
 import { printInvoiceWindow } from '../utils/printInvoice';
+import { registerModalBackHandler } from '../utils/navigationHistory';
 
 export interface RakeezaInvoiceWorkspaceProps {
   isOpen: boolean;
@@ -51,6 +52,17 @@ export const RakeezaInvoiceWorkspace: React.FC<RakeezaInvoiceWorkspaceProps> = (
   onUpdateData,
   showToast,
 }) => {
+  // Register phone back button listener when workspace is open
+  useEffect(() => {
+    if (isOpen) {
+      const unregister = registerModalBackHandler(() => {
+        onClose();
+        return true;
+      });
+      return () => unregister();
+    }
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
   // 🏛️ Current Department (Sales vs Purchases)

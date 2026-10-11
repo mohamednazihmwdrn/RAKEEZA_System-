@@ -32,6 +32,7 @@ interface CashViewProps {
   prefilledCustomerDebt?: number;
   prefilledSupplierName?: string;
   prefilledSupplierPayable?: number;
+  onNavigate?: (page: string) => void;
 }
 
 export const CashView: React.FC<CashViewProps> = ({
@@ -44,6 +45,7 @@ export const CashView: React.FC<CashViewProps> = ({
   prefilledCustomerDebt,
   prefilledSupplierName,
   prefilledSupplierPayable,
+  onNavigate,
 }) => {
   // Determine active tab
   const getInitialActiveTab = (): 'receipt' | 'pay' | 'closing' => {
@@ -145,7 +147,10 @@ export const CashView: React.FC<CashViewProps> = ({
           {/* Receipts Tab */}
           <button
             type="button"
-            onClick={() => setActiveTab('receipt')}
+            onClick={() => {
+              setActiveTab('receipt');
+              onNavigate?.('receipts');
+            }}
             className={`flex-1 sm:flex-initial px-4 py-2 rounded-lg text-xs sm:text-sm font-bold transition flex items-center justify-center gap-2 cursor-pointer ${
               activeTab === 'receipt'
                 ? 'bg-emerald-600 text-white shadow-xs'
@@ -166,7 +171,10 @@ export const CashView: React.FC<CashViewProps> = ({
           {/* Payments Tab */}
           <button
             type="button"
-            onClick={() => setActiveTab('pay')}
+            onClick={() => {
+              setActiveTab('pay');
+              onNavigate?.('payments');
+            }}
             className={`flex-1 sm:flex-initial px-4 py-2 rounded-lg text-xs sm:text-sm font-bold transition flex items-center justify-center gap-2 cursor-pointer ${
               activeTab === 'pay'
                 ? 'bg-rose-600 text-white shadow-xs'
@@ -187,7 +195,10 @@ export const CashView: React.FC<CashViewProps> = ({
           {/* Cashbook & Closing Tab */}
           <button
             type="button"
-            onClick={() => setActiveTab('closing')}
+            onClick={() => {
+              setActiveTab('closing');
+              onNavigate?.('cash_flow_closing');
+            }}
             className={`flex-1 sm:flex-initial px-4 py-2 rounded-lg text-xs sm:text-sm font-bold transition flex items-center justify-center gap-2 cursor-pointer ${
               activeTab === 'closing'
                 ? 'bg-blue-600 text-white shadow-xs'

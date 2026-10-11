@@ -30,6 +30,7 @@ import { printStatementWindow, compileStatementData, formatEnNumber } from '../u
 import { openUnifiedPrintWindow } from '../utils/printUnified';
 import { exportToExcel } from '../utils/excelExport';
 import { generateStatementWhatsAppMessage, openWhatsAppChat } from '../services/whatsappService';
+import { registerModalBackHandler } from '../utils/navigationHistory';
 
 interface CustomersManagerClassicProps {
   appData: AppData;
@@ -90,6 +91,17 @@ export const CustomersManagerClassic: React.FC<CustomersManagerClassicProps> = (
   const [statementCustomer, setStatementCustomer] = useState<Customer | null>(null);
   const [statementFromDate, setStatementFromDate] = useState('');
   const [statementToDate, setStatementToDate] = useState(new Date().toISOString().split('T')[0]);
+
+  // Phone Back Button interception for Customer Statement Modal
+  useEffect(() => {
+    if (statementCustomer) {
+      const unregister = registerModalBackHandler(() => {
+        setStatementCustomer(null);
+        return true;
+      });
+      return () => unregister();
+    }
+  }, [statementCustomer]);
 
   // Generate Next Auto Customer Code (e.g., CUST-001)
   const nextCustomerCode = useMemo(() => {
