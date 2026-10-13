@@ -21,12 +21,30 @@ export const BranchesView: React.FC<BranchesViewProps> = ({
   const [isAddBranchModalOpen, setIsAddBranchModalOpen] = useState(false);
   const [isNewTransferModalOpen, setIsNewTransferModalOpen] = useState(false);
 
+  // Edit Branch state
+  const [isEditBranchModalOpen, setIsEditBranchModalOpen] = useState(false);
+  const [editingBranchId, setEditingBranchId] = useState<string | null>(null);
+  const [editBranchCode, setEditBranchCode] = useState('');
+  const [editBranchName, setEditBranchName] = useState('');
+  const [editBranchLocation, setEditBranchLocation] = useState('');
+  const [editBranchPhone, setEditBranchPhone] = useState('');
+  const [editBranchManager, setEditBranchManager] = useState('');
+  const [editBranchIsMain, setEditBranchIsMain] = useState(false);
+
+  // Delete Branch state
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [branchToDelete, setBranchToDelete] = useState<Branch | null>(null);
+
+  // Filter & Search
+  const [branchSearch, setBranchSearch] = useState('');
+
   // Branch form
   const [branchCode, setBranchCode] = useState('');
   const [branchName, setBranchName] = useState('');
   const [branchLocation, setBranchLocation] = useState('');
   const [branchPhone, setBranchPhone] = useState('');
   const [branchManager, setBranchManager] = useState('');
+  const [branchIsMain, setBranchIsMain] = useState(false);
 
   // Transfer form
   const [fromBranchId, setFromBranchId] = useState(appData.branches[0]?.id || 'br-main');
@@ -35,9 +53,29 @@ export const BranchesView: React.FC<BranchesViewProps> = ({
   const [transferQty, setTransferQty] = useState(1);
   const [transferNote, setTransferNote] = useState('');
 
+  const handleOpenAddBranchModal = () => {
+    const nextNum = (appData.branches?.length || 0) + 1;
+    setBranchCode(`BR-${String(nextNum).padStart(2, '0')}`);
+    setBranchName('');
+    setBranchLocation('');
+    setBranchPhone('');
+    setBranchManager('');
+    setBranchIsMain(appData.branches.length === 0);
+    setIsAddBranchModalOpen(true);
+  };
+
   const handleAddBranch = () => {
     if (!branchCode.trim() || !branchName.trim()) {
-      showToast('يرجى إدخال كود واسم الفرع', 'warning');
+      showToast('يرجى إدخال كود واسم الفرع الجديد', 'warning');
+      return;
+    }
+
+    // Check duplicate code
+    const isDup = (appData.branches || []).some(
+      (b) => b.code.trim().toLowerCase() === branchCode.trim().toLowerCase()
+    );
+    if (isDup) {
+      showToast('كود الفرع مستخدم مسبقاً، يرجى كتابة كود فريد', 'error');
       return;
     }
 
@@ -45,32 +83,150 @@ export const BranchesView: React.FC<BranchesViewProps> = ({
       id: `br-${Date.now()}`,
       code: branchCode.trim(),
       name: branchName.trim(),
-      location: branchLocation.trim() || 'غير محدد',
-      phone: branchPhone.trim() || '01000000000',
-      isMain: false,
+      location: branchLocation.trim() || 'المقر الرئيسي',
+      phone: branchPhone.trim() || '',
+      isMain: branchIsMain,
       manager: branchManager.trim() || undefined,
     };
 
+    let updatedBranches = [...(appData.branches || [])];
+    if (branchIsMain) {
+      updatedBranches = updatedBranches.map((b) => ({ ...b, isMain: false }));
+    }
+    updatedBranches.push(newBranch);
+
     let updatedData: AppData = {
       ...appData,
-      branches: [...(appData.branches || []), newBranch],
+      branches: updatedBranches,
+      activeBranchId: branchIsMain ? newBranch.id : (appData.activeBranchId || newBranch.id),
     };
 
     updatedData = addAuditLog(
       updatedData,
       'create',
       'إدارة الفروع',
-      `تمت إضافة فرع/مخزن جديد: ${newBranch.code} - ${newBranch.name}`
+      `تمت إضافة فرع جديد للشركة: ${newBranch.code} - ${newBranch.name}`
     );
 
     onUpdateData(updatedData);
-    showToast('تمت إضافة الفرع الجديد بنجاح', 'success');
+    showToast(`تمت إضافة فرع "${newBranch.name}" بنجاح للشركة`, 'success');
     setIsAddBranchModalOpen(false);
-    setBranchCode('');
-    setBranchName('');
-    setBranchLocation('');
-    setBranchPhone('');
-    setBranchManager('');
+  };
+
+  const handleOpenEditBranchModal = (br: Branch) => {
+    setEditingBranchId(br.id);
+    setEditBranchCode(br.code);
+    setEditBranchName(br.name);
+    setEditBranchLocation(br.location || '');
+    setEditBranchPhone(br.phone || '');
+    setEditBranchManager(br.manager || '');
+    setEditBranchIsMain(Boolean(br.isMain));
+    setIsEditBranchModalOpen(true);
+  };
+
+  const handleSaveEditBranch = () => {
+    if (!editBranchCode.trim() || !editBranchName.trim()) {
+      showToast('يرجى إدخال كود واسم الفرع', 'warning');
+      return;
+    }
+
+    const updatedBranches = (appData.branches || []).map((b) => {
+      if (b.id === editingBranchId) {
+        return {
+          ...b,
+          code: editBranchCode.trim(),
+          name: editBranchName.trim(),
+          location: editBranchLocation.trim() || 'غير محدد',
+          phone: editBranchPhone.trim(),
+          manager: editBranchManager.trim() || undefined,
+          isMain: editBranchIsMain ? true : b.isMain,
+        };
+      }
+      if (editBranchIsMain) {
+        return { ...b, isMain: false };
+      }
+      return b;
+    });
+
+    let updatedData: AppData = {
+      ...appData,
+      branches: updatedBranches,
+    };
+
+    updatedData = addAuditLog(
+      updatedData,
+      'update',
+      'إدارة الفروع',
+      `تم تحديث بيانات الفرع: ${editBranchCode} - ${editBranchName}`
+    );
+
+    onUpdateData(updatedData);
+    showToast('تم حفظ تعديلات بيانات الفرع بنجاح', 'success');
+    setIsEditBranchModalOpen(false);
+  };
+
+  const handleSetMainBranch = (branchId: string) => {
+    const br = appData.branches.find((b) => b.id === branchId);
+    const updatedBranches = (appData.branches || []).map((b) => ({
+      ...b,
+      isMain: b.id === branchId,
+    }));
+
+    let updatedData: AppData = {
+      ...appData,
+      branches: updatedBranches,
+    };
+
+    updatedData = addAuditLog(
+      updatedData,
+      'update',
+      'إدارة الفروع',
+      `تم تعيين فرع "${br?.name}" كالفرع الرئيسي المعتمد للشركة`
+    );
+
+    onUpdateData(updatedData);
+    showToast(`تم تعيين فرع "${br?.name}" كالفرع الرئيسي المعتمد للمنشأة ⭐`, 'success');
+  };
+
+  const handleDeleteBranchClick = (br: Branch) => {
+    if ((appData.branches || []).length <= 1) {
+      showToast('لا يمكن حذف هذا الفرع! يجب أن تمتلك المنشأة فرعاً واحداً على الأقل للعمل.', 'error');
+      return;
+    }
+    setBranchToDelete(br);
+    setIsDeleteModalOpen(true);
+  };
+
+  const handleConfirmDeleteBranch = () => {
+    if (!branchToDelete) return;
+    const remainingBranches = appData.branches.filter((b) => b.id !== branchToDelete.id);
+
+    if (branchToDelete.isMain && remainingBranches.length > 0) {
+      remainingBranches[0].isMain = true;
+    }
+
+    const newActiveBranchId =
+      appData.activeBranchId === branchToDelete.id
+        ? remainingBranches[0]?.id || 'br-main'
+        : appData.activeBranchId;
+
+    let updatedData: AppData = {
+      ...appData,
+      branches: remainingBranches,
+      activeBranchId: newActiveBranchId,
+    };
+
+    updatedData = addAuditLog(
+      updatedData,
+      'delete',
+      'إدارة الفروع',
+      `تم حذف الفرع: ${branchToDelete.code} - ${branchToDelete.name}`
+    );
+
+    onUpdateData(updatedData);
+    showToast(`تم حذف فرع "${branchToDelete.name}" بنجاح`, 'info');
+    setIsDeleteModalOpen(false);
+    setBranchToDelete(null);
   };
 
   const handleSetActiveBranch = (branchId: string) => {
@@ -356,10 +512,10 @@ export const BranchesView: React.FC<BranchesViewProps> = ({
           />
           {activeTab === 'branches' && (
             <button
-              onClick={() => setIsAddBranchModalOpen(true)}
-              className="bg-[#2e7d32] hover:bg-[#1b5e20] text-white px-4 py-2 rounded-xl text-xs md:text-sm font-bold transition cursor-pointer flex items-center gap-1 shadow-sm"
+              onClick={handleOpenAddBranchModal}
+              className="bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white px-4 py-2 rounded-xl text-xs md:text-sm font-black transition cursor-pointer flex items-center gap-1.5 shadow-xs"
             >
-              ➕ إضافة فرع / مخزن جديد
+              ➕ إضافة فرع جديد للشركة
             </button>
           )}
           {activeTab === 'transfers' && (
@@ -375,63 +531,160 @@ export const BranchesView: React.FC<BranchesViewProps> = ({
 
       {/* Tab 1: Branches List */}
       {activeTab === 'branches' && (
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 space-y-4">
-          <div className="pb-3 border-b border-slate-100">
-            <h3 className="text-base md:text-lg font-bold text-[#1a237e]">
-              إدارة الفروع والمخازن والمعارض (Multi-Branch Management)
-            </h3>
-            <p className="text-xs text-slate-500">
-              يمكنك العمل على مستوى الفرع المحدد أو متابعة المؤشرات المجمعة لكافة فروع ومخازن المؤسسة.
-            </p>
+        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 space-y-5">
+          <div className="pb-3 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div>
+              <h3 className="text-base md:text-lg font-black text-slate-900">
+                🏢 إدارة فروع ومخازن الشركة (Company Branches & Warehouses)
+              </h3>
+              <p className="text-xs text-slate-500 mt-0.5">
+                يمكنك إضافة فروع جديدة للشركة، تبديل الفرع النشط للعمليات، وتخصيص الصلاحيات والمخزون لكل فرع.
+              </p>
+            </div>
+            
+            {/* Search Input */}
+            <div className="w-full sm:w-64">
+              <input
+                type="text"
+                placeholder="🔍 بحث باسم أو كود أو مدير الفرع..."
+                value={branchSearch}
+                onChange={(e) => setBranchSearch(e.target.value)}
+                className="w-full p-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold focus:outline-none focus:border-blue-500"
+              />
+            </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {(appData.branches || []).map((br) => {
-              const isSelected = appData.activeBranchId === br.id;
-              return (
-                <div
-                  key={br.id}
-                  className={`p-5 rounded-2xl border-2 transition space-y-3 ${
-                    isSelected
-                      ? 'border-[#1a237e] bg-indigo-50/40 shadow-md'
-                      : 'border-slate-200 bg-white hover:border-slate-300'
-                  }`}
-                >
-                  <div className="flex justify-between items-center">
-                    <span className="font-mono bg-blue-100 text-blue-900 px-2 py-0.5 rounded text-xs font-bold">
-                      {br.code}
-                    </span>
-                    {br.isMain && (
-                      <span className="bg-amber-100 text-amber-900 text-[11px] px-2 py-0.5 rounded font-bold">
-                        ⭐ الفرع الرئيسي
-                      </span>
-                    )}
-                  </div>
+          {/* Quick Stats Grid */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div className="p-3.5 bg-blue-50 border border-blue-200 rounded-xl">
+              <span className="text-[11px] font-bold text-blue-700 block">إجمالي فروع الشركة</span>
+              <span className="text-xl font-black text-blue-900 font-mono mt-0.5 block">
+                {appData.branches?.length || 0}
+              </span>
+            </div>
+            <div className="p-3.5 bg-emerald-50 border border-emerald-200 rounded-xl">
+              <span className="text-[11px] font-bold text-emerald-700 block">الفرع النشط حالياً</span>
+              <span className="text-sm font-black text-emerald-900 truncate mt-1 block">
+                {appData.branches?.find((b) => b.id === appData.activeBranchId)?.name || 'الفرع الرئيسي'}
+              </span>
+            </div>
+            <div className="p-3.5 bg-amber-50 border border-amber-200 rounded-xl">
+              <span className="text-[11px] font-bold text-amber-700 block">الفرع الرئيسي المعتمد</span>
+              <span className="text-sm font-black text-amber-900 truncate mt-1 block">
+                {appData.branches?.find((b) => b.isMain)?.name || appData.branches?.[0]?.name || 'الفرع الرئيسي'}
+              </span>
+            </div>
+            <div className="p-3.5 bg-purple-50 border border-purple-200 rounded-xl">
+              <span className="text-[11px] font-bold text-purple-700 block">أذون التحويلات المخزنية</span>
+              <span className="text-xl font-black text-purple-900 font-mono mt-0.5 block">
+                {appData.stockTransfers?.length || 0}
+              </span>
+            </div>
+          </div>
 
-                  <div>
-                    <h4 className="font-black text-slate-900 text-base">{br.name}</h4>
-                    <p className="text-xs text-slate-500 mt-1">📍 {br.location}</p>
-                    <p className="text-xs text-slate-500">📞 {br.phone}</p>
-                    {br.manager && <p className="text-xs text-slate-600 font-semibold mt-1">👤 المدير: {br.manager}</p>}
-                  </div>
+          {/* Branches Cards Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pt-2">
+            {(appData.branches || [])
+              .filter((br) => {
+                if (!branchSearch.trim()) return true;
+                const q = branchSearch.trim().toLowerCase();
+                return (
+                  br.name.toLowerCase().includes(q) ||
+                  br.code.toLowerCase().includes(q) ||
+                  (br.location && br.location.toLowerCase().includes(q)) ||
+                  (br.manager && br.manager.toLowerCase().includes(q)) ||
+                  (br.phone && br.phone.includes(q))
+                );
+              })
+              .map((br) => {
+                const isSelected = appData.activeBranchId === br.id;
+                return (
+                  <div
+                    key={br.id}
+                    className={`p-5 rounded-2xl border-2 transition space-y-3 flex flex-col justify-between ${
+                      isSelected
+                        ? 'border-blue-600 bg-blue-50/40 shadow-md ring-2 ring-blue-500/20'
+                        : 'border-slate-200 bg-white hover:border-slate-300'
+                    }`}
+                  >
+                    <div className="space-y-3">
+                      <div className="flex justify-between items-center">
+                        <span className="font-mono bg-blue-100 text-blue-900 px-2 py-0.5 rounded text-xs font-bold">
+                          {br.code}
+                        </span>
+                        <div className="flex items-center gap-1">
+                          {br.isMain && (
+                            <span className="bg-amber-100 text-amber-900 text-[11px] px-2 py-0.5 rounded font-black">
+                              ⭐ الفرع الرئيسي
+                            </span>
+                          )}
+                          {isSelected && (
+                            <span className="bg-emerald-100 text-emerald-800 text-[11px] px-2 py-0.5 rounded font-black">
+                              ✅ النشط
+                            </span>
+                          )}
+                        </div>
+                      </div>
 
-                  <div className="pt-2 border-t border-slate-200/60 flex justify-between items-center">
-                    {isSelected ? (
-                      <span className="text-xs font-bold text-emerald-700 bg-emerald-100 px-2.5 py-1 rounded-lg">
-                        ✅ الفرع النشط حالياً
-                      </span>
-                    ) : (
-                      <button
-                        onClick={() => handleSetActiveBranch(br.id)}
-                        className="bg-[#1a237e] hover:bg-[#0d47a1] text-white px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer"
-                      >
-                        تبديل إلى هذا الفرع 🔄
-                      </button>
-                    )}
+                      <div>
+                        <h4 className="font-black text-slate-900 text-base">{br.name}</h4>
+                        <p className="text-xs text-slate-600 mt-1">📍 {br.location || 'المقر'}</p>
+                        <p className="text-xs text-slate-600 font-mono">📞 {br.phone || 'غير مسجل'}</p>
+                        {br.manager && (
+                          <p className="text-xs text-blue-800 font-bold mt-1">👤 المدير المسؤول: {br.manager}</p>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="pt-3 border-t border-slate-200/80 space-y-2">
+                      <div className="flex items-center justify-between gap-1.5 flex-wrap">
+                        {isSelected ? (
+                          <span className="text-xs font-bold text-emerald-800 bg-emerald-100 px-2.5 py-1 rounded-lg">
+                            جلسة العمل الحالية
+                          </span>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => handleSetActiveBranch(br.id)}
+                            className="bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer"
+                          >
+                            تبديل الجلسة لهذا الفرع 🔄
+                          </button>
+                        )}
+
+                        {!br.isMain && (
+                          <button
+                            type="button"
+                            onClick={() => handleSetMainBranch(br.id)}
+                            className="text-[11px] text-amber-700 hover:bg-amber-50 px-2 py-1 rounded-lg font-bold transition border border-amber-200 cursor-pointer"
+                            title="تعيين هذا الفرع كالفرع الرئيسي للشركة"
+                          >
+                            ⭐ تعيين كرئيسي
+                          </button>
+                        )}
+                      </div>
+
+                      <div className="flex items-center gap-1.5 pt-1 border-t border-slate-100">
+                        <button
+                          type="button"
+                          onClick={() => handleOpenEditBranchModal(br)}
+                          className="flex-1 py-1.5 px-2 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-lg text-xs font-bold transition cursor-pointer text-center"
+                        >
+                          ✏️ تعديل الفرع
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteBranchClick(br)}
+                          className="py-1.5 px-3 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-lg text-xs font-bold transition cursor-pointer text-center"
+                          title="حذف الفرع"
+                        >
+                          🗑️ حذف
+                        </button>
+                      </div>
+                    </div>
                   </div>
-                </div>
-              );
-            })}
+                );
+              })}
           </div>
         </div>
       )}
@@ -701,6 +954,148 @@ export const BranchesView: React.FC<BranchesViewProps> = ({
               />
             </div>
           </div>
+
+          <div className="pt-2">
+            <label className="flex items-center gap-2 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={branchIsMain}
+                onChange={(e) => setBranchIsMain(e.target.checked)}
+                className="w-4 h-4 text-emerald-600 rounded"
+              />
+              <span className="font-bold text-slate-800 text-xs">
+                ⭐ تعيين هذا الفرع كالفرع الرئيسي المعتمد للشركة
+              </span>
+            </label>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Modal: Edit Branch */}
+      <Modal
+        isOpen={isEditBranchModalOpen}
+        onClose={() => setIsEditBranchModalOpen(false)}
+        title="✏️ تعديل بيانات الفرع / المستودع"
+        footer={
+          <div className="flex justify-end gap-2">
+            <button
+              onClick={() => setIsEditBranchModalOpen(false)}
+              className="bg-slate-200 hover:bg-slate-300 text-slate-800 px-4 py-2 rounded-xl text-xs font-bold transition cursor-pointer"
+            >
+              إلغاء
+            </button>
+            <button
+              onClick={handleSaveEditBranch}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-xl text-xs font-bold transition cursor-pointer"
+            >
+              حفظ التعديلات
+            </button>
+          </div>
+        }
+      >
+        <div className="space-y-4 text-xs md:text-sm">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block font-bold text-slate-700 mb-1">كود الفرع *</label>
+              <input
+                type="text"
+                value={editBranchCode}
+                onChange={(e) => setEditBranchCode(e.target.value)}
+                placeholder="كود الفرع"
+                className="w-full p-2.5 border border-slate-300 rounded-xl font-mono font-bold"
+              />
+            </div>
+            <div>
+              <label className="block font-bold text-slate-700 mb-1">اسم الفرع / المخزن *</label>
+              <input
+                type="text"
+                value={editBranchName}
+                onChange={(e) => setEditBranchName(e.target.value)}
+                placeholder="اسم الفرع"
+                className="w-full p-2.5 border border-slate-300 rounded-xl font-bold"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block font-bold text-slate-700 mb-1">الموقع والعنوان</label>
+            <input
+              type="text"
+              value={editBranchLocation}
+              onChange={(e) => setEditBranchLocation(e.target.value)}
+              placeholder="العنوان والموقع"
+              className="w-full p-2.5 border border-slate-300 rounded-xl"
+            />
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block font-bold text-slate-700 mb-1">هاتف الفرع</label>
+              <input
+                type="text"
+                value={editBranchPhone}
+                onChange={(e) => setEditBranchPhone(e.target.value)}
+                placeholder="رقم الهاتف"
+                className="w-full p-2.5 border border-slate-300 rounded-xl font-mono"
+              />
+            </div>
+            <div>
+              <label className="block font-bold text-slate-700 mb-1">المدير المسؤول</label>
+              <input
+                type="text"
+                value={editBranchManager}
+                onChange={(e) => setEditBranchManager(e.target.value)}
+                placeholder="اسم المشرف أو المدير"
+                className="w-full p-2.5 border border-slate-300 rounded-xl"
+              />
+            </div>
+          </div>
+
+          <div className="pt-2">
+            <label className="flex items-center gap-2 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={editBranchIsMain}
+                onChange={(e) => setEditBranchIsMain(e.target.checked)}
+                className="w-4 h-4 text-emerald-600 rounded"
+              />
+              <span className="font-bold text-slate-800 text-xs">
+                ⭐ تعيين هذا الفرع كالفرع الرئيسي المعتمد للشركة
+              </span>
+            </label>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Modal: Delete Branch Confirmation */}
+      <Modal
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+        title="⚠️ تأكيد حذف الفرع"
+        footer={
+          <div className="flex justify-end gap-2">
+            <button
+              onClick={() => setIsDeleteModalOpen(false)}
+              className="bg-slate-200 hover:bg-slate-300 text-slate-800 px-4 py-2 rounded-xl text-xs font-bold transition cursor-pointer"
+            >
+              إلغاء التراجع
+            </button>
+            <button
+              onClick={handleConfirmDeleteBranch}
+              className="bg-rose-600 hover:bg-rose-700 text-white px-5 py-2 rounded-xl text-xs font-bold transition cursor-pointer"
+            >
+              تأكيد حذف الفرع نهائياً
+            </button>
+          </div>
+        }
+      >
+        <div className="p-2 space-y-3 text-right">
+          <p className="text-sm font-bold text-slate-800">
+            هل أنت متأكد من رغبتك في حذف فرع: <span className="text-rose-600 font-black">[{branchToDelete?.name}]</span> ({branchToDelete?.code})؟
+          </p>
+          <p className="text-xs text-slate-500">
+            تنبيه: سيتم إزالة هذا الفرع من قائمة فروع الشركة وسيتم تحويل الجلسة الحالية تلقائياً للفرع الرئيسي المتبقي.
+          </p>
         </div>
       </Modal>
 

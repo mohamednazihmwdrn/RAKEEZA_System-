@@ -64,6 +64,9 @@ interface SidebarProps {
   onLogout?: () => void;
   currentUser?: User;
   companyName?: string;
+  branchesCount?: number;
+  usersCount?: number;
+  activeBranchName?: string;
 }
 
 interface ReportGroupDef {
@@ -95,6 +98,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onLogout,
   currentUser,
   companyName,
+  branchesCount,
+  usersCount,
+  activeBranchName,
 }) => {
   const [openItems, setOpenItems] = useState<Record<string, boolean>>({
     items: false,
@@ -154,15 +160,17 @@ export const Sidebar: React.FC<SidebarProps> = ({
       <div className="flex flex-col text-sm">
         {/* Mobile Drawer Top Bar */}
         <div className="md:hidden flex items-center justify-between px-4 py-3 bg-white border-b border-slate-200 sticky top-0 z-10">
-          <div className="flex items-center gap-2.5">
-            <img
-              src="/pwa-192x192.png"
-              alt="شعار ركيزة"
-              className="w-8 h-8 rounded-lg object-contain bg-white p-0.5 border border-slate-300"
-            />
-            <div onClick={handleSecretRakeezaClicks} className="cursor-pointer select-none">
-              <span className="font-black text-black text-sm tracking-wide block">RAKEEZA | ركيزة</span>
-              <span className="text-[10px] text-black font-medium block">منظومة الإدارة والمحاسبة</span>
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-8 h-8 rounded-lg bg-blue-600 text-white flex items-center justify-center font-black text-sm shrink-0 shadow-xs">
+              <Building2 className="w-4 h-4 text-white" />
+            </div>
+            <div className="min-w-0">
+              <span className="font-black text-black text-xs sm:text-sm tracking-wide block truncate">
+                {companyName || 'المنظومة المحاسبية'}
+              </span>
+              <span className="text-[10px] text-blue-700 font-bold block truncate">
+                🏢 {activeBranchName || 'الفرع الرئيسي'}
+              </span>
             </div>
           </div>
           {onClose && (
@@ -178,14 +186,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
         {/* Desktop Sidebar System Branding Header */}
         <div className="hidden md:flex items-center gap-2.5 px-4 py-3 bg-white border-b border-slate-200 mb-1">
-          <img
-            src="/pwa-192x192.png"
-            alt="شعار ركيزة"
-            className="w-7 h-7 rounded-lg object-contain bg-white p-0.5 border border-slate-300"
-          />
-          <div onClick={handleSecretRakeezaClicks} className="cursor-pointer select-none">
-            <span className="font-black text-black text-sm tracking-wider block">RAKEEZA ERP</span>
-            <span className="text-[10px] text-black font-semibold block">منظومة ركيزة المحاسبية</span>
+          <div className="w-8 h-8 rounded-lg bg-blue-600 text-white flex items-center justify-center font-black text-sm shrink-0 shadow-xs">
+            <Building2 className="w-4 h-4 text-white" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <span className="font-black text-black text-xs sm:text-sm tracking-wider block truncate">
+              {companyName || 'المنظومة المحاسبية'}
+            </span>
+            <span className="text-[10px] text-blue-700 font-bold block truncate">
+              🏢 {activeBranchName || 'الفرع الرئيسي'}
+            </span>
           </div>
         </div>
 
@@ -563,12 +573,19 @@ export const Sidebar: React.FC<SidebarProps> = ({
         {canAccessPage(currentUser, 'branches') && (
           <div
             onClick={() => onNavigate('branches')}
-            className={`min-h-[42px] px-4 py-2.5 cursor-pointer border-b border-slate-100 transition flex items-center gap-2.5 ${navItemClass(
+            className={`min-h-[42px] px-4 py-2.5 cursor-pointer border-b border-slate-100 transition flex justify-between items-center ${navItemClass(
               'branches'
             )}`}
           >
-            <GitBranch className="w-4 h-4 shrink-0 text-slate-800" />
-            <span className="font-bold text-xs sm:text-sm text-black">الفروع والتحويلات المخزنية</span>
+            <div className="flex items-center gap-2.5">
+              <Building2 className="w-4 h-4 shrink-0 text-slate-800" />
+              <span className="font-bold text-xs sm:text-sm text-black">إدارة الفروع والتحويلات</span>
+            </div>
+            {branchesCount !== undefined && (
+              <span className="bg-slate-100 text-black border border-slate-300 text-[10px] px-1.5 py-0.5 rounded font-bold font-mono">
+                {branchesCount} {branchesCount === 1 ? 'فرع' : 'فروع'}
+              </span>
+            )}
           </div>
         )}
 
@@ -831,12 +848,19 @@ export const Sidebar: React.FC<SidebarProps> = ({
         {canAccessPage(currentUser, 'users') && (
           <div
             onClick={() => onNavigate('users')}
-            className={`min-h-[42px] px-4 py-2.5 cursor-pointer border-b border-slate-100 transition flex items-center gap-2.5 ${navItemClass(
+            className={`min-h-[42px] px-4 py-2.5 cursor-pointer border-b border-slate-100 transition flex justify-between items-center ${navItemClass(
               'users'
             )}`}
           >
-            <UserCog className="w-4 h-4 shrink-0 text-slate-800" />
-            <span className="font-bold text-xs sm:text-sm text-black">المستخدمين والصلاحيات</span>
+            <div className="flex items-center gap-2.5">
+              <UserCog className="w-4 h-4 shrink-0 text-slate-800" />
+              <span className="font-bold text-xs sm:text-sm text-black">المستخدمين والصلاحيات</span>
+            </div>
+            {usersCount !== undefined && (
+              <span className="bg-slate-100 text-black border border-slate-300 text-[10px] px-1.5 py-0.5 rounded font-bold font-mono">
+                {usersCount} {usersCount === 1 ? 'مستخدم' : 'مستخدمين'}
+              </span>
+            )}
           </div>
         )}
 

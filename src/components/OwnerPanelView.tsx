@@ -160,7 +160,10 @@ export const OwnerPanelView: React.FC<OwnerPanelViewProps> = ({
 
   // Initial state setup if empty
   const companies: TenantCompany[] = cloudCompanies.length > 0 ? cloudCompanies : (appData.companies || []);
-  const plans: SubscriptionPlan[] = appData.plans || DEFAULT_SUBSCRIPTION_PLANS;
+  const plans: SubscriptionPlan[] =
+    Array.isArray(appData.plans) && appData.plans.length > 0
+      ? appData.plans
+      : DEFAULT_SUBSCRIPTION_PLANS;
   const trialRegistry: TrialRegistryRecord[] = appData.trialRegistry || [];
   const exportAuditLogs: ExportAuditLog[] = appData.exportAuditLogs || [];
   const supportSessions: SupportAccessSession[] = appData.supportSessions || [];
@@ -1514,21 +1517,21 @@ export const OwnerPanelView: React.FC<OwnerPanelViewProps> = ({
                     <div className="border-t border-slate-800 pt-3 space-y-1.5 text-[11px] text-slate-300">
                       <div className="flex justify-between">
                         <span className="text-slate-400">المستخدمين:</span>
-                        <span className="font-bold text-white">{p.limits.maxUsers}</span>
+                        <span className="font-bold text-white">{p.limits?.maxUsers ?? 1}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-slate-400">الفروع والمستودعات:</span>
                         <span className="font-bold text-white">
-                          {p.limits.maxBranches} فرع / {p.limits.maxWarehouses} مخزن
+                          {p.limits?.maxBranches ?? 1} فرع / {p.limits?.maxWarehouses ?? 1} مخزن
                         </span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-slate-400">العمليات الشهرية:</span>
-                        <span className="font-bold text-white">{p.limits.maxTransactionsPerMonth}</span>
+                        <span className="font-bold text-white">{p.limits?.maxTransactionsPerMonth ?? 10000}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-slate-400">المساحة السحابية:</span>
-                        <span className="font-bold text-white">{p.limits.storageMb} MB</span>
+                        <span className="font-bold text-white">{p.limits?.storageMb ?? 1024} MB</span>
                       </div>
                     </div>
                   </div>

@@ -49,6 +49,7 @@ import { CrmPipelineView } from './components/CrmPipelineView';
 import { SerialWarrantyTrackingView } from './components/SerialWarrantyTrackingView';
 import { CashFlowClosingView } from './components/CashFlowClosingView';
 import { BigDataDiagnosticsModal } from './components/BigDataDiagnosticsModal';
+import { CentralizedInvoicePrintModal } from './components/CentralizedInvoicePrintModal';
 import { printWebOrderReceipt } from './utils/printOrderReceipt';
 import { playOrderAlertChime } from './utils/audioChime';
 import {
@@ -1790,7 +1791,10 @@ export default function App() {
         onClose={() => setIsSidebarOpen(false)}
         onLogout={handleLogout}
         currentUser={currentUser}
-        companyName={session?.company?.name || appData.settings?.companyName}
+        companyName={appData.settings?.companyName || session?.company?.name || 'مؤسستنا التجارية'}
+        branchesCount={appData.branches?.length || 1}
+        usersCount={appData.users?.length || 1}
+        activeBranchName={appData.branches?.find((b) => b.id === appData.activeBranchId)?.name || 'الفرع الرئيسي'}
       />
 
       {/* Main Content Area */}
@@ -2021,6 +2025,9 @@ export default function App() {
         onUpdateData={updateData}
         showToast={showToast}
       />
+
+      {/* 🖨️ Centralized Professional Invoice Print & Multi-Size Preview Modal */}
+      <CentralizedInvoicePrintModal defaultSettings={appData.settings} />
     </div>
   );
 }

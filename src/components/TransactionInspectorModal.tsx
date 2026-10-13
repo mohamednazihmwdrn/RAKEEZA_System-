@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { AppData, SaleInvoice, PurchaseInvoice, CashTransaction, JournalEntry, Cheque, Quotation, StockTransfer, PayrollSlip, FixedAsset, ProductionOrder } from '../types';
+import { printInvoiceWindow } from '../utils/printInvoice';
 import { openUnifiedPrintWindow } from '../utils/printUnified';
 import { printCashVoucherWindow } from '../utils/printCash';
 import { printChequesReport, printChequeVoucher } from '../utils/printChequesReport';
@@ -70,40 +71,7 @@ export const TransactionInspectorModal: React.FC<TransactionInspectorModalProps>
     if (type === 'sale' || type === 'purchase') {
       const inv = data as SaleInvoice | PurchaseInvoice;
       const isSale = type === 'sale';
-      openUnifiedPrintWindow(
-        {
-          title: isSale ? (inv.type?.includes('return') ? 'فاتورة مردود مبيعات' : 'فاتورة مبيعات ضريبية') : 'فاتورة مشتريات وتوريد',
-          docNumber: inv.id,
-          date: inv.date,
-          time: inv.time || inv.createdAt?.substring(11, 16),
-          partyLabel: isSale ? 'العميل' : 'المورد',
-          partyName: isSale ? (inv as SaleInvoice).customerName : (inv as PurchaseInvoice).supplierName,
-          partyPhone: inv.phone,
-          notes: inv.notes,
-          paymentMethod: inv.paymentMethod === 'drawer' ? 'نقدي (الخزينة)' : inv.paymentMethod === 'bank' ? 'حساب بنكي' : inv.paymentMethod,
-          isThermal,
-          items: inv.items?.map((it) => ({
-            name: it.name,
-            qty: it.qty,
-            price: it.price,
-            discount: it.discount,
-            total: it.total,
-            notes: it.notes,
-          })),
-          totals: [
-            { label: 'المجموع قبل الضريبة:', value: inv.subtotal },
-            ...(inv.discount > 0 ? [{ label: 'الخصم التجاري:', value: -inv.discount }] : []),
-            ...(inv.tax > 0 ? [{ label: 'ضريبة القيمة المضافة (VAT):', value: inv.tax }] : []),
-            ...(inv.withholdingTax ? [{ label: 'ضريبة الخصم من المنبع (WHT):', value: -inv.withholdingTax }] : []),
-            ...(inv.fees > 0 ? [{ label: 'مصاريف وخدمات إضافية:', value: inv.fees }] : []),
-            { label: 'الصافي النهائي للفاتورة:', value: inv.total, isBold: true, isHighlight: true },
-            { label: 'المدفوع / المسدد:', value: inv.paidAmount || 0 },
-            { label: 'المتبقي الآجل:', value: inv.remainingAmount || 0 },
-          ],
-        },
-        appData.settings,
-        showToast
-      );
+      printInvoiceWindow(inv, isSale, appData.settings, showToast, isThermal ? 'thermal' : 'A4');
     } else if (type === 'cash') {
       const c = data as CashTransaction;
       if (!isThermal) {

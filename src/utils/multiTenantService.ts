@@ -399,18 +399,42 @@ export function createNewTenantCompany(
   const subId = `SUB-${new Date().getFullYear()}-${shortNum}`;
   const licId = `LIC-${new Date().getFullYear()}-${shortNum}`;
 
-  const selectedPlan = plans.find((p) => p.id === planId) || plans[0];
+  const availablePlans = Array.isArray(plans) && plans.length > 0 ? plans : DEFAULT_SUBSCRIPTION_PLANS;
+  const defaultFallbackPlan = DEFAULT_SUBSCRIPTION_PLANS[0];
+  const selectedPlan =
+    availablePlans.find((p) => p && p.id === planId) ||
+    availablePlans[0] ||
+    defaultFallbackPlan;
+
   const now = new Date();
   const startDateStr = now.toISOString().split('T')[0];
 
+  const durationDays = selectedPlan?.durationDays || 30;
   const expiryDate = new Date();
-  expiryDate.setDate(now.getDate() + (selectedPlan.durationDays || 30));
+  expiryDate.setDate(now.getDate() + durationDays);
   const expiryDateStr = expiryDate.toISOString().split('T')[0];
 
-  const isTrial = selectedPlan.id === 'trial';
+  const isTrial = selectedPlan?.id === 'trial';
   const status = isTrial ? 'trial' : 'active';
 
   const activationCode = generateLicenseActivationCode();
+
+  const safeFeatures: string[] = Array.isArray(selectedPlan?.features)
+    ? [...selectedPlan.features]
+    : Array.isArray(defaultFallbackPlan?.features)
+    ? [...defaultFallbackPlan.features]
+    : [];
+
+  const safeLimits = selectedPlan?.limits
+    ? { ...selectedPlan.limits }
+    : { ...(defaultFallbackPlan?.limits || {
+        maxUsers: 5,
+        maxBranches: 2,
+        maxWarehouses: 3,
+        maxTransactionsPerMonth: 100000,
+        storageMb: 1024,
+        maxSalesReps: 5,
+      }) };
 
   const newCompany: TenantCompany = {
     id: companyId,
@@ -431,8 +455,8 @@ export function createNewTenantCompany(
     adminUsername: companyInput.adminUsername || 'admin',
     adminPassword: companyInput.adminPassword || '',
     status,
-    planId: selectedPlan.id,
-    planName: selectedPlan.name,
+    planId: selectedPlan?.id || 'trial',
+    planName: selectedPlan?.name || 'التجربة المجانية',
     subscriptionId: subId,
     licenseId: licId,
     createdAt: new Date().toISOString().replace('T', ' ').substring(0, 16),
@@ -440,8 +464,8 @@ export function createNewTenantCompany(
     trialExpiresAt: isTrial ? expiryDateStr : undefined,
     subscriptionStartedAt: !isTrial ? startDateStr : undefined,
     subscriptionExpiresAt: !isTrial ? expiryDateStr : undefined,
-    limits: { ...selectedPlan.limits },
-    features: [...selectedPlan.features],
+    limits: safeLimits,
+    features: safeFeatures,
     usersCount: 1,
     branchesCount: 1,
     warehousesCount: 1,
@@ -454,13 +478,13 @@ export function createNewTenantCompany(
     activationCode,
     companyId,
     companyName: newCompany.name,
-    planId: selectedPlan.id,
-    planName: selectedPlan.name,
+    planId: selectedPlan?.id || 'trial',
+    planName: selectedPlan?.name || 'التجربة المجانية',
     startDate: startDateStr,
     expiryDate: expiryDateStr,
     status: 'active',
-    features: [...selectedPlan.features],
-    limits: { ...selectedPlan.limits },
+    features: safeFeatures,
+    limits: safeLimits,
     generatedAt: new Date().toISOString().replace('T', ' ').substring(0, 16),
     generatedBy: 'RAKEEZA OWNER',
     activationCount: 1,

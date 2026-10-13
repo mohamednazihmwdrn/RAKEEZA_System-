@@ -43,13 +43,12 @@ export const UsersView: React.FC<UsersViewProps> = ({ appData, onUpdateData, sho
   const [password, setPassword] = useState('');
   const [phone, setPhone] = useState('');
   const [role, setRole] = useState<UserRole>('user');
+  const [assignedBranchId, setAssignedBranchId] = useState<string>('');
   const [userStatus, setUserStatus] = useState<'active' | 'disabled'>('active');
   const [userPermissions, setUserPermissions] = useState<Record<string, boolean>>({});
 
-  // Filter users strictly by the current company
-  const companyUsers = appData.users.filter(
-    (u) => !u.companyId || u.companyId === currentCompanyId
-  );
+  // Display all users in the company
+  const companyUsers = appData.users || [];
 
   // Reset Form
   const handleOpenNewUserModal = () => {
@@ -59,6 +58,7 @@ export const UsersView: React.FC<UsersViewProps> = ({ appData, onUpdateData, sho
     setPassword('');
     setPhone('');
     setRole('user');
+    setAssignedBranchId('');
     setUserStatus('active');
 
     // Default basic permissions
@@ -81,6 +81,7 @@ export const UsersView: React.FC<UsersViewProps> = ({ appData, onUpdateData, sho
     setPassword(user.password || '');
     setPhone(user.phone || '');
     setRole(user.role);
+    setAssignedBranchId(user.branchId || '');
     setUserStatus(user.status || 'active');
 
     // Convert stored permissions
@@ -209,6 +210,8 @@ export const UsersView: React.FC<UsersViewProps> = ({ appData, onUpdateData, sho
             password: password.trim(),
             phone: phone.trim(),
             role,
+            branchId: assignedBranchId ? assignedBranchId : undefined,
+            allowedBranches: assignedBranchId ? [assignedBranchId] : undefined,
             status: userStatus,
             permissions: permissionPayload,
           };
@@ -255,6 +258,8 @@ export const UsersView: React.FC<UsersViewProps> = ({ appData, onUpdateData, sho
         password: password.trim(),
         phone: phone.trim(),
         role,
+        branchId: assignedBranchId ? assignedBranchId : undefined,
+        allowedBranches: assignedBranchId ? [assignedBranchId] : undefined,
         status: userStatus,
         permissions: permissionPayload,
         createdAt: new Date().toISOString().split('T')[0],
@@ -545,6 +550,9 @@ export const UsersView: React.FC<UsersViewProps> = ({ appData, onUpdateData, sho
                       >
                         {isAdmin ? 'مدير عام الشركة' : 'مستخدم مصرح'}
                       </span>
+                      <span className="text-[11px] font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 px-2 py-0.5 rounded-md">
+                        🏢 {u.branchId ? (appData.branches?.find((b) => b.id === u.branchId)?.name || u.branchId) : 'كافة الفروع 🌐'}
+                      </span>
                       <span className="text-[11px] text-slate-500 bg-white border border-slate-200 px-2 py-0.5 rounded-md font-medium">
                         {isAdmin ? 'كامل الصلاحيات (37)' : `${permsCount} صلاحية مفعلة`}
                       </span>
@@ -586,6 +594,7 @@ export const UsersView: React.FC<UsersViewProps> = ({ appData, onUpdateData, sho
               <th className="p-3 rounded-r-xl">الاسم ومسمى الحساب</th>
               <th className="p-3">اسم المستخدم للدخول</th>
               <th className="p-3">رقم الهاتف</th>
+              <th className="p-3">فرع العمل المخصص</th>
               <th className="p-3">الدور والصلاحيات</th>
               <th className="p-3 text-center">الحالة</th>
               <th className="p-3 rounded-l-xl text-center">الإجراءات</th>
@@ -620,6 +629,12 @@ export const UsersView: React.FC<UsersViewProps> = ({ appData, onUpdateData, sho
                   </td>
                   <td className="p-3 font-mono text-slate-600 font-semibold">{u.username}</td>
                   <td className="p-3 text-slate-600">{u.phone || '—'}</td>
+                  <td className="p-3">
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold bg-indigo-50 text-indigo-800 border border-indigo-200">
+                      <Building2 className="w-3 h-3 text-indigo-600 shrink-0" />
+                      <span>{u.branchId ? (appData.branches?.find((b) => b.id === u.branchId)?.name || u.branchId) : 'كافة الفروع 🌐'}</span>
+                    </span>
+                  </td>
                   <td className="p-3">
                     <div className="flex items-center gap-1.5 flex-wrap">
                       <span
@@ -778,6 +793,25 @@ export const UsersView: React.FC<UsersViewProps> = ({ appData, onUpdateData, sho
                   <option value="sales_rep">مندوب مبيعات</option>
                 </select>
               </div>
+            </div>
+
+            <div className="pt-2 border-t border-slate-200">
+              <label className="block font-bold mb-1 text-slate-800">🏢 فرع العمل المخصص للمستخدم</label>
+              <select
+                value={assignedBranchId}
+                onChange={(e) => setAssignedBranchId(e.target.value)}
+                className="w-full p-2.5 bg-white border border-slate-300 rounded-xl text-xs font-bold text-slate-900 focus:outline-none focus:border-blue-600"
+              >
+                <option value="">🌐 كافة فروع الشركة (غير مقيد بفرع محدد - للمدراء والمحاسبين)</option>
+                {appData.branches?.map((b) => (
+                  <option key={b.id} value={b.id}>
+                    🏢 {b.name} ({b.code}) {b.isMain ? '⭐ الفرع الرئيسي' : ''}
+                  </option>
+                ))}
+              </select>
+              <p className="text-[10px] text-slate-500 mt-1 font-medium">
+                تحديد الفرع يربط فواتير وعمليات هذا المستخدم بفرعه، أو اتركه &apos;كافة الفروع&apos; للمدير والمحاسب العام.
+              </p>
             </div>
           </div>
 

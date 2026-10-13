@@ -13,6 +13,10 @@ import {
   KeyRound,
   Activity,
   ArrowRight,
+  ChevronDown,
+  CheckCircle2,
+  GitBranch,
+  Plus,
 } from 'lucide-react';
 import { loginOwnerApi } from '../services/cloudApi';
 
@@ -158,8 +162,29 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenDiagnostics,
   onGoBack,
   canGoBack = false,
+  appData,
+  onUpdateData,
 }) => {
   const pageTitle = getCleanPageName(currentPage);
+
+  // 🏢 Active Branch Dropdown state
+  const [isBranchDropdownOpen, setIsBranchDropdownOpen] = useState(false);
+  const branchDropdownRef = React.useRef<HTMLDivElement>(null);
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (branchDropdownRef.current && !branchDropdownRef.current.contains(event.target as Node)) {
+        setIsBranchDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const branches = appData?.branches || [];
+  const activeBranchId = appData?.activeBranchId || branches[0]?.id || 'br-main';
+  const currentActiveBranch = branches.find((b) => b.id === activeBranchId) || branches[0];
 
   // 👑 Secret 5-clicks state for Owner Panel under "RAKEEZA"
   const [clickCount, setClickCount] = useState(0);
@@ -306,21 +331,8 @@ export const Header: React.FC<HeaderProps> = ({
             <div className="flex flex-col text-right">
               <div className="flex items-center gap-1.5">
                 <span className="font-extrabold text-xs sm:text-sm text-slate-900 tracking-wide truncate max-w-[120px] sm:max-w-[200px]">
-                  {companyName || 'Remix المحاسب الخاص'}
+                  {companyName || 'المنظومة المحاسبية'}
                 </span>
-
-                {/* 👑 زر كلمة RAKEEZA السري لفتح لوحة تحكم المالك بعد 5 ضغطات متتالية */}
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleRakeezaClicks();
-                  }}
-                  className="text-[10px] px-1.5 py-0.5 rounded bg-blue-50 hover:bg-blue-100 active:scale-95 text-blue-800 border border-blue-200 font-black tracking-wider cursor-pointer transition select-none shadow-xs"
-                  title="نظام ركيزة RAKEEZA ERP"
-                >
-                  RAKEEZA
-                </button>
 
                 {companyCode && (
                   <span className="hidden md:inline-flex items-center text-[9px] px-1.5 py-0.2 rounded bg-slate-100 text-slate-700 border border-slate-200 font-mono">
@@ -328,14 +340,96 @@ export const Header: React.FC<HeaderProps> = ({
                   </span>
                 )}
               </div>
-              {subscriptionPlan && (
-                <span className="hidden lg:flex items-center gap-1 text-[9px] text-emerald-600 font-medium leading-none">
-                  <Sparkles className="w-2.5 h-2.5 text-emerald-600" />
-                  {subscriptionPlan}
-                </span>
-              )}
+              <span className="hidden sm:inline-flex items-center gap-1 text-[10px] text-slate-500 font-semibold leading-none">
+                نظام إدارة الفروع والمستخدمين
+              </span>
             </div>
           </div>
+
+          {/* 🏢 مبدل واختيار فروع الشركة التفاعلي */}
+          {branches.length > 0 && (
+            <div className="relative mr-1" ref={branchDropdownRef}>
+              <button
+                type="button"
+                onClick={() => setIsBranchDropdownOpen(!isBranchDropdownOpen)}
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 active:bg-slate-300 text-slate-900 border border-slate-300 text-xs font-black transition cursor-pointer shadow-xs select-none"
+                title="الفرع النشط حالياً - انقر لاختيار فرع آخر أو إضافة فرع جديد"
+              >
+                <GitBranch className="w-3.5 h-3.5 text-blue-700 shrink-0" />
+                <span className="truncate max-w-[100px] sm:max-w-[150px]">
+                  {currentActiveBranch?.name || 'الفرع الرئيسي'}
+                </span>
+                {currentActiveBranch?.isMain && (
+                  <span className="text-[10px] text-amber-500 hidden sm:inline" title="فرع رئيسي">
+                    ⭐
+                  </span>
+                )}
+                <ChevronDown className="w-3 h-3 text-slate-700 shrink-0" />
+              </button>
+
+              {isBranchDropdownOpen && (
+                <div className="absolute right-0 top-full mt-2 w-64 bg-white border border-slate-300 rounded-2xl shadow-2xl z-50 p-2 text-right text-slate-900 animate-in fade-in zoom-in-95 duration-150">
+                  <div className="px-2.5 py-1.5 border-b border-slate-200 text-xs font-bold text-slate-600 flex justify-between items-center">
+                    <span>🏢 فروع الشركة ({branches.length})</span>
+                    <span className="text-[10px] bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded font-black">
+                      الفرع النشط
+                    </span>
+                  </div>
+
+                  <div className="max-h-56 overflow-y-auto py-1.5 space-y-1">
+                    {branches.map((b) => {
+                      const isCurrent = (appData?.activeBranchId || branches[0]?.id) === b.id;
+                      return (
+                        <button
+                          key={b.id}
+                          type="button"
+                          onClick={() => {
+                            if (onUpdateData && appData) {
+                              onUpdateData({ ...appData, activeBranchId: b.id });
+                            }
+                            setIsBranchDropdownOpen(false);
+                            showToast?.(`تم تبديل فرع العمل بنجاح إلى: ${b.name}`, 'info');
+                          }}
+                          className={`w-full text-right px-2.5 py-2 rounded-xl text-xs font-bold flex items-center justify-between transition cursor-pointer ${
+                            isCurrent
+                              ? 'bg-blue-600 text-white font-black shadow-xs'
+                              : 'hover:bg-slate-100 text-slate-900'
+                          }`}
+                        >
+                          <div className="flex items-center gap-2 truncate">
+                            <span
+                              className={`text-[10px] font-mono px-1.5 py-0.5 rounded ${
+                                isCurrent ? 'bg-blue-700 text-white' : 'bg-slate-200 text-slate-800'
+                              }`}
+                            >
+                              {b.code}
+                            </span>
+                            <span className="truncate">{b.name}</span>
+                            {b.isMain && <span title="الفرع الرئيسي">⭐</span>}
+                          </div>
+                          {isCurrent && <CheckCircle2 className="w-4 h-4 text-white shrink-0" />}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  <div className="border-t border-slate-200 pt-1.5 mt-1">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsBranchDropdownOpen(false);
+                        onNavigate?.('branches');
+                      }}
+                      className="w-full py-2 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white text-xs font-black transition cursor-pointer flex items-center justify-center gap-1.5 shadow-xs"
+                    >
+                      <Plus className="w-3.5 h-3.5 shrink-0" />
+                      <span>إدارة وإضافة فرع جديد للشركة</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* مسار الصفحة الحالية */}
           <div className="hidden sm:flex items-center gap-1.5 border-r border-slate-200 pr-2.5 mr-1">
@@ -405,11 +499,22 @@ export const Header: React.FC<HeaderProps> = ({
                 {currentUser?.name || 'مدير النظام'}
               </span>
               <span className="text-[9px] text-slate-500 leading-none">
-                {currentUser?.role === 'admin'
+                {currentUser?.role === 'admin' || currentUser?.role === 'company_admin'
                   ? 'مدير عام'
-                  : currentUser?.role === 'owner'
-                  ? 'مالك المنظومة'
+                  : currentUser?.role === 'cashier'
+                  ? 'كاشير'
+                  : currentUser?.role === 'accountant'
+                  ? 'محاسب'
+                  : currentUser?.role === 'warehouse_keeper'
+                  ? 'أمين مخزن'
+                  : currentUser?.role === 'sales_rep'
+                  ? 'مندوب مبيعات'
                   : currentUser?.role || 'مستخدم'}
+                {currentUser?.branchId && (
+                  <span className="text-blue-700 font-bold mr-1">
+                    • {branches.find((b) => b.id === currentUser?.branchId)?.name || 'فرع مخصص'}
+                  </span>
+                )}
               </span>
             </div>
           </div>

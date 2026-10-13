@@ -1,4 +1,5 @@
 import { SaleInvoice, PurchaseInvoice, Settings } from '../types';
+import { openCentralizedInvoicePrint, PaperSize } from '../services/centralizedPrintService';
 
 export function generateInvoicePrintHtml(
   inv: SaleInvoice | PurchaseInvoice,
@@ -665,70 +666,27 @@ export function printInvoiceWindow(
   showToast?: (msg: string, type: 'warning' | 'error' | 'success' | 'info') => void,
   preferredPaperSize?: 'A4' | 'A5' | 'thermal' | '80mm'
 ) {
-  if (preferredPaperSize && typeof window !== 'undefined') {
-    try {
-      localStorage.setItem('sys_print_pref_size', preferredPaperSize === '80mm' ? 'thermal' : preferredPaperSize);
-    } catch {}
+  const normPaperSize: PaperSize =
+    preferredPaperSize === '80mm' || preferredPaperSize === 'thermal'
+      ? 'thermal'
+      : preferredPaperSize === 'A5'
+      ? 'A5'
+      : 'A4';
+
+  if (typeof window === 'undefined') {
+    return;
   }
 
-  const chosenSize = preferredPaperSize || (typeof window !== 'undefined' ? (localStorage.getItem('sys_print_pref_size') as any) : 'A4') || 'A4';
-  const html = generateInvoicePrintHtml(inv, isSales, settings, chosenSize);
-  let printWin: Window | null = null;
   try {
-    printWin = window.open('', '_blank', 'width=920,height=980');
-  } catch (e) {
-    printWin = null;
-  }
+    localStorage.setItem('sys_print_pref_size', normPaperSize);
+  } catch {}
 
-  if (printWin) {
-    try {
-      printWin.document.open();
-      printWin.document.write(html);
-      printWin.document.close();
-      return;
-    } catch {
-      // Fall through to iframe
-    }
-  }
-
-  // Fallback: Invisible iframe printing
-  try {
-    let iframe = document.getElementById('rakeeza-invoice-print-frame') as HTMLIFrameElement;
-    if (!iframe) {
-      iframe = document.createElement('iframe');
-      iframe.id = 'rakeeza-invoice-print-frame';
-      iframe.style.position = 'fixed';
-      iframe.style.right = '0';
-      iframe.style.bottom = '0';
-      iframe.style.width = '0';
-      iframe.style.height = '0';
-      iframe.style.border = '0';
-      iframe.style.visibility = 'hidden';
-      document.body.appendChild(iframe);
-    }
-    const frameDoc = iframe.contentWindow?.document || iframe.contentDocument;
-    if (frameDoc) {
-      frameDoc.open();
-      frameDoc.write(html);
-      frameDoc.close();
-      setTimeout(() => {
-        try {
-          iframe.contentWindow?.focus();
-          iframe.contentWindow?.print();
-          if (showToast) {
-            showToast('تم إرسال أمر الطباعة بنجاح', 'success');
-          }
-        } catch (err) {
-          console.error('Iframe print error:', err);
-        }
-      }, 500);
-      return;
-    }
-  } catch (err) {
-    console.error('Fallback printing error:', err);
-  }
-
-  if (showToast) {
-    showToast('يرجى السماح بالنوافذ المنبثقة لمعاينة وطباعة الفاتورة', 'warning');
-  }
+  // 1. Centralized in-app high-fidelity preview modal (Preferred & sandbox-friendly)
+  openCentralizedInvoicePrint({
+    invoice: inv,
+    isSales,
+    settings,
+    preferredPaperSize: normPaperSize,
+  });
 }
+
