@@ -21,7 +21,12 @@ async function testConnection() {
   }
 }
 
+import { signInAnonymously } from 'firebase/auth';
+
 if (typeof window !== 'undefined') {
+  signInAnonymously(auth).catch((e) => {
+    console.debug('Firebase Auth notice:', e?.message);
+  });
   testConnection();
 }
 

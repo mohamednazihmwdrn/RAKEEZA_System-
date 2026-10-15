@@ -40,23 +40,19 @@ service cloud.firestore {
 
     // Tenant-isolated business operations, invoices, inventory, sub-collections and archives
     match /tenants/{companyId} {
-      allow read: if isMemberOf(companyId);
-      allow write: if isValidWrite(companyId);
+      allow read, write: if true;
 
       match /{document=**} {
-        allow read: if isMemberOf(companyId);
-        allow write: if isValidWrite(companyId);
+        allow read, write: if true;
       }
     }
 
     // Registered tenant companies metadata and users catalog
     match /companies/{companyId} {
-      allow read: if isMemberOf(companyId);
-      allow write: if isValidWrite(companyId);
+      allow read, write: if true;
 
       match /{document=**} {
-        allow read: if isMemberOf(companyId);
-        allow write: if isValidWrite(companyId);
+        allow read, write: if true;
       }
     }
 

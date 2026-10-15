@@ -29,6 +29,7 @@ import {
   registerNewCompanyDeviceApi,
   loginToCloud,
   verifyOwnerSecretApi,
+  normalizeArabicNumerals,
   BoundDeviceData,
 } from '../services/cloudApi';
 import { TenantCompany, User as AppUser } from '../types';
@@ -253,21 +254,23 @@ export const LoginView: React.FC<LoginViewProps> = ({
     }
   };
 
-  /**
-   * 🔗 Handler: Bind to Existing Company using Company Code or ID
-   */
-  const handleBindExistingCompanySubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setErrorMessage(null);
-    setSuccessMessage(null);
+  const lookupTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-    const cleanCode = existingCompanyCode.trim().toUpperCase();
+  /**
+   * 🔍 Lookup and bind company by code or ID
+   */
+  const handleLookupCompany = async (codeToLookup?: string): Promise<boolean> => {
+    const rawCode = codeToLookup !== undefined ? codeToLookup : existingCompanyCode;
+    const cleanCode = normalizeArabicNumerals(rawCode || '').trim().toUpperCase();
     if (!cleanCode) {
-      setErrorMessage('يرجى إدخال كود المنشأة أو معرّفها السحابي أو كود المستخدم.');
-      return;
+      setErrorMessage('يرجى إدخال كود المنشأة (مثل: 101 أو 108 أو معرّف الشركة).');
+      return false;
     }
 
     setIsLoading(true);
+    setErrorMessage(null);
+    setSuccessMessage(null);
+
     try {
       const res = await fetchCompanyPublicDetailsApi(cleanCode);
 
@@ -299,21 +302,33 @@ export const LoginView: React.FC<LoginViewProps> = ({
         if (res.preselectedUsername) {
           setSelectedUsername(res.preselectedUsername);
         } else if (boundData.users?.length > 0) {
-          setSelectedUsername(boundData.users[0].username);
+          setSelectedUsername(boundData.users[0].username || boundData.users[0].name);
         }
 
         const displayCode = res.company.code || res.company.companyCode || res.company.id;
         setSuccessMessage(
-          `تم التعرف على منشأة: "${res.company.name}" (كود: ${displayCode}) بنجاح! تم اعتماد ربط هذا الجهاز، يمكنك الآن إدخال كلمة المرور لتسجيل الدخول.`
+          `✓ تم التعرف على منشأة: "${res.company.name}" (كود: ${displayCode}) بنجاح! تم تحميل (${boundData.users.length}) مستخدمين. اختر اسمك وأدخل كلمة المرور.`
         );
+        setTimeout(() => setSuccessMessage(null), 4000);
+        return true;
       } else {
-        setErrorMessage(res.error || `لم يتم العثور على منشأة بالكود "${cleanCode}".`);
+        setErrorMessage(res.error || `لم يتم العثور على منشأة بالكود "${cleanCode}". يرجى التأكد من كتابة كود الشركة بشكل صحيح.`);
+        return false;
       }
     } catch {
-      setErrorMessage('تعذر التحقق من كود المنشأة عبر السحابة.');
+      setErrorMessage('تعذر التحقق من كود المنشأة، يرجى التحقق من الاتصال.');
+      return false;
     } finally {
       setIsLoading(false);
     }
+  };
+
+  /**
+   * 🔗 Handler: Bind to Existing Company using Company Code or ID
+   */
+  const handleBindExistingCompanySubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await handleLookupCompany(existingCompanyCode);
   };
 
   /**
@@ -579,16 +594,27 @@ export const LoginView: React.FC<LoginViewProps> = ({
                     </div>
                   </div>
 
-                  <button
-                    type="button"
-                    id="btn-refresh-company-users"
-                    onClick={handleRefreshMetadata}
-                    disabled={isRefreshingMetadata}
-                    className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors cursor-pointer shrink-0"
-                    title="تحديث بيانات الفروع والمستخدمين من السحابة"
-                  >
-                    <RefreshCw className={`w-4 h-4 ${isRefreshingMetadata ? 'animate-spin text-blue-400' : ''}`} />
-                  </button>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => setShowUnbindConfirmModal(true)}
+                      className="text-[11px] text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 px-2.5 py-1.5 rounded-lg border border-slate-700 transition flex items-center gap-1 cursor-pointer"
+                      title="تغيير كود الشركة والدخول لشركة أخرى"
+                    >
+                      <Unlink className="w-3.5 h-3.5 text-amber-400" />
+                      <span>تغيير الشركة</span>
+                    </button>
+                    <button
+                      type="button"
+                      id="btn-refresh-company-users"
+                      onClick={handleRefreshMetadata}
+                      disabled={isRefreshingMetadata}
+                      className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors cursor-pointer shrink-0"
+                      title="تحديث بيانات الفروع والمستخدمين من السحابة"
+                    >
+                      <RefreshCw className={`w-4 h-4 ${isRefreshingMetadata ? 'animate-spin text-blue-400' : ''}`} />
+                    </button>
+                  </div>
                 </div>
 
                 {/* Quick Login Form */}
@@ -822,23 +848,66 @@ export const LoginView: React.FC<LoginViewProps> = ({
                         htmlFor="input-existing-company-code"
                         className="block text-xs sm:text-sm font-semibold text-slate-200 mb-1 text-right"
                       >
-                        كود أو معرّف المنشأة / كود المستخدم <span className="text-rose-400">*</span>
+                        كود المنشأة أو الشركة <span className="text-rose-400">*</span>
                       </label>
-                      <div className="relative">
-                        <div className="absolute inset-y-0 right-0 pr-3.5 flex items-center pointer-events-none text-slate-400">
-                          <Building2 className="w-4 h-4" />
+                      <p className="text-[11px] text-slate-400 mb-2 text-right">
+                        أدخل كود شركتك الذي أعطاه لك المدير (مثال: <span className="text-amber-300 font-mono font-bold">101</span> أو <span className="text-amber-300 font-mono font-bold">108</span>)، وسيتم تحميل أسماء المستخدمين فوراً لاختيار اسمك وإدخال الباسورد.
+                      </p>
+                      <div className="flex gap-2">
+                        <div className="relative flex-1">
+                          <div className="absolute inset-y-0 right-0 pr-3.5 flex items-center pointer-events-none text-slate-400">
+                            <Building2 className="w-4 h-4 text-blue-400" />
+                          </div>
+                          <input
+                            id="input-existing-company-code"
+                            type="text"
+                            value={existingCompanyCode}
+                            onChange={(e) => {
+                              const val = e.target.value.toUpperCase();
+                              setExistingCompanyCode(val);
+                              setErrorMessage(null);
+                              if (lookupTimeoutRef.current) clearTimeout(lookupTimeoutRef.current);
+                              if (val.trim().length >= 3) {
+                                lookupTimeoutRef.current = setTimeout(() => {
+                                  handleLookupCompany(val);
+                                }, 600);
+                              }
+                            }}
+                            placeholder="اكتب كود الشركة (مثال: 101)"
+                            dir="ltr"
+                            className="w-full pl-3 pr-10 py-3 bg-slate-950 border border-slate-700 rounded-xl text-white placeholder-slate-500 font-mono text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all text-left uppercase font-bold"
+                            disabled={isLoading}
+                            required
+                          />
                         </div>
-                        <input
-                          id="input-existing-company-code"
-                          type="text"
-                          value={existingCompanyCode}
-                          onChange={(e) => setExistingCompanyCode(e.target.value.toUpperCase())}
-                          placeholder="مثال: 108 أو COMP-672842 أو U-COMP-672842-ADMIN"
-                          dir="ltr"
-                          className="w-full pl-3 pr-10 py-3 bg-slate-950 border border-slate-700 rounded-xl text-white placeholder-slate-500 font-mono text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all text-left uppercase"
-                          disabled={isLoading}
-                          required
-                        />
+                        <button
+                          type="button"
+                          onClick={() => handleLookupCompany(existingCompanyCode)}
+                          disabled={isLoading || !existingCompanyCode.trim()}
+                          className="px-4 py-3 bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs sm:text-sm rounded-xl transition cursor-pointer flex items-center gap-1.5 shrink-0 disabled:opacity-50 shadow-md shadow-blue-600/20"
+                        >
+                          {isLoading ? (
+                            <RefreshCw className="w-4 h-4 animate-spin" />
+                          ) : (
+                            <span>🔍</span>
+                          )}
+                          <span>عرض المستخدمين</span>
+                        </button>
+                      </div>
+
+                      {/* Quick Code Pill for demo */}
+                      <div className="flex items-center gap-2 pt-2 text-xs text-slate-400">
+                        <span>أكواد سريعة:</span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setExistingCompanyCode('101');
+                            handleLookupCompany('101');
+                          }}
+                          className="px-2.5 py-1 rounded-lg bg-slate-800 text-blue-300 hover:bg-slate-700 font-mono text-xs cursor-pointer border border-slate-700 transition"
+                        >
+                          101 (شركة ركيزة الافتراضية)
+                        </button>
                       </div>
                     </div>
 
@@ -846,17 +915,17 @@ export const LoginView: React.FC<LoginViewProps> = ({
                       type="submit"
                       id="btn-submit-bind-existing"
                       disabled={isLoading}
-                      className="w-full py-3 px-4 bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 active:scale-[0.99] text-white font-bold text-sm sm:text-base rounded-xl shadow-lg shadow-blue-600/25 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed mt-2"
+                      className="w-full py-3.5 px-4 bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 active:scale-[0.99] text-white font-bold text-sm sm:text-base rounded-xl shadow-lg shadow-blue-600/25 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed mt-2"
                     >
                       {isLoading ? (
                         <>
                           <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                          <span>جاري التحقق من المنشأة وربط الجهاز...</span>
+                          <span>جاري جلب بيانات الشركة والمستخدمين...</span>
                         </>
                       ) : (
                         <>
                           <ShieldCheck className="w-5 h-5" />
-                          <span>اعتماد ربط هذا الجهاز بالمنشأة</span>
+                          <span>تحقق واعتماد المنشأة على هذا الجهاز</span>
                         </>
                       )}
                     </button>

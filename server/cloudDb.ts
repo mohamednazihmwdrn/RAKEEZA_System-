@@ -80,8 +80,12 @@ export function initCloudDatabase(): CloudDatabaseSchema {
       const parsed = JSON.parse(content) as CloudDatabaseSchema;
       parsed.pendingVerifications = parsed.pendingVerifications || {};
       parsed.verifiedEmails = parsed.verifiedEmails || {};
-      let needsSave = false;
-      parsed.companies = (parsed.companies || []).map((c) => {
+      parsed.companies = parsed.companies || [];
+      if (parsed.companies.length === 0) {
+        parsed.companies = [...DEFAULT_COMPANIES];
+        needsSave = true;
+      }
+      parsed.companies = parsed.companies.map((c) => {
         if (!c.apiKey) {
           c.apiKey = `rkz_live_${c.id.replace(/[^a-zA-Z0-9]/g, '').toLowerCase()}_${Math.random().toString(36).substring(2, 8)}${Math.random().toString(36).substring(2, 8)}`;
           needsSave = true;
@@ -467,6 +471,8 @@ export function authenticateUser(
   const tenantData = db.tenantsData[company.id];
   const companyUsers = tenantData?.users || [];
 
+  const cleanPass = (password || '').trim();
+
   // Match user by username, name, id, or code
   let matchedUser = companyUsers.find(
     (u) =>
@@ -475,22 +481,25 @@ export function authenticateUser(
         u.id?.toLowerCase() === cleanUsername ||
         String(u.code) === cleanUsername ||
         String((u as any).userCode) === cleanUsername) &&
-      (u.password === password ||
-        (u as any).altPass === password ||
-        (company.adminPassword && password === company.adminPassword))
+      (String(u.password || '').trim() === cleanPass ||
+        String((u as any).altPass || '').trim() === cleanPass ||
+        (company.adminPassword && cleanPass === String(company.adminPassword).trim()))
   );
 
   if (
     !matchedUser &&
     (cleanUsername === '1' ||
       cleanUsername === 'admin' ||
+      cleanUsername === 'manager' ||
       company.adminUsername?.toLowerCase() === cleanUsername ||
       company.adminName?.toLowerCase() === cleanUsername ||
+      company.adminEmail?.toLowerCase() === cleanUsername ||
+      company.email?.toLowerCase() === cleanUsername ||
       cleanUsername === 'mohamed nazih' ||
       cleanUsername === 'nazihm338' ||
       cleanUsername === 'المدير العام') &&
     company.adminPassword &&
-    company.adminPassword === password
+    String(company.adminPassword).trim() === cleanPass
   ) {
     matchedUser = {
       id: `u-${company.id}-admin`,
@@ -1584,6 +1593,9 @@ export function saveTenantDataStrict(
       (merged.purchaseInvoices?.length || 0) +
       (merged.cashTransactions?.length || 0);
     db.companies[companyIdx].usersCount = merged.users?.length || 1;
+    if (merged.users && merged.users.length > 0) {
+      db.companies[companyIdx].users = merged.users;
+    }
     db.companies[companyIdx].lastActivityAt = new Date().toISOString().replace('T', ' ').substring(0, 16);
   }
 
@@ -2182,15 +2194,34 @@ export function registerDeviceAndCompany(params: {
 }
 
 /**
+ * 🔢 Normalize Arabic and Persian Numerals to Western Digits (e.g. ١٠٨ -> 108)
+ */
+export function normalizeArabicNumerals(input: string): string {
+  if (!input) return '';
+  return input
+    .replace(/[٠۰]/g, '0')
+    .replace(/[١۱]/g, '1')
+    .replace(/[٢۲]/g, '2')
+    .replace(/[٣۳]/g, '3')
+    .replace(/[٤۴]/g, '4')
+    .replace(/[٥۵]/g, '5')
+    .replace(/[٦۶]/g, '6')
+    .replace(/[٧۷]/g, '7')
+    .replace(/[٨۸]/g, '8')
+    .replace(/[٩۹]/g, '9');
+}
+
+/**
  * 🏢 Helper: Normalize and extract Company ID and User Info from flexible inputs
  * Handles inputs like:
  * - "U-COMP-672842-ADMIN" -> companyId: "COMP-672842", username: "admin"
  * - "COMP-672842" -> companyId: "COMP-672842"
- * - "108" -> code: "108"
+ * - "108" / "١٠٨" -> code: "108"
  * - "nazihm338@gmail.com" -> email
  */
 function parseFlexibleCompanyQuery(query: string) {
-  const clean = (query || '').trim();
+  const normalized = normalizeArabicNumerals(query || '').trim();
+  const clean = normalized;
   const upper = clean.toUpperCase();
 
   // 1. Extract COMP-XXXXXX pattern
@@ -2229,10 +2260,13 @@ export function findCompanyByAnyIdentifier(
   const { clean, upper, extractedCompanyId, extractedUsername } = parseFlexibleCompanyQuery(query);
   if (!clean) return {};
 
-  // Check direct company fields
+  const cleanNumOnly = clean.replace(/[^0-9]/g, '');
+
+  // 1. Check direct company fields in db.companies
   for (const c of db.companies) {
     const cIdUpper = (c.id || '').toUpperCase();
     const cCodeUpper = (c.code || (c as any).companyCode || '').toString().toUpperCase();
+    const cCodeNum = cCodeUpper.replace(/[^0-9]/g, '');
     const cEmailUpper = (c.email || c.adminEmail || '').toUpperCase();
     const cTenantUpper = (c.tenantId || '').toUpperCase();
     const cNameUpper = (c.name || '').toUpperCase();
@@ -2242,6 +2276,8 @@ export function findCompanyByAnyIdentifier(
       cIdUpper === upper ||
       (extractedCompanyId && cIdUpper === extractedCompanyId) ||
       cCodeUpper === upper ||
+      (cleanNumOnly && cCodeNum === cleanNumOnly) ||
+      cIdUpper === `COMP-${upper}` ||
       cTenantUpper === upper ||
       cEmailUpper === upper ||
       (upper.length >= 6 && upper.includes(cIdUpper)) ||
@@ -2249,7 +2285,7 @@ export function findCompanyByAnyIdentifier(
     ) {
       // Find matching user if available
       const tData = db.tenantsData[c.id];
-      const users = tData?.users || [];
+      const users = tData?.users || c.users || [];
       const matchedUser = users.find(
         (u) =>
           u.id?.toUpperCase() === upper ||
@@ -2260,11 +2296,12 @@ export function findCompanyByAnyIdentifier(
     }
   }
 
-  // Search inside tenant users for any matching user ID or username
+  // 2. Search inside tenant users for any matching user ID or username
   for (const c of db.companies) {
     const tData = db.tenantsData[c.id];
-    if (tData?.users) {
-      for (const u of tData.users) {
+    const users = tData?.users || c.users || [];
+    if (users && users.length > 0) {
+      for (const u of users) {
         if (
           u.id?.toUpperCase() === upper ||
           (u.username && u.username.toUpperCase() === upper) ||
@@ -2277,11 +2314,19 @@ export function findCompanyByAnyIdentifier(
     }
   }
 
-  // Fallback to DEFAULT_COMPANIES if not yet in db.companies
+  // 3. Fallback to DEFAULT_COMPANIES if not yet in db.companies
   for (const c of DEFAULT_COMPANIES) {
     const cIdUpper = (c.id || '').toUpperCase();
     const cCodeUpper = (c.code || (c as any).companyCode || '').toString().toUpperCase();
-    if (cIdUpper === upper || cCodeUpper === upper || (extractedCompanyId && cIdUpper === extractedCompanyId)) {
+    const cCodeNum = cCodeUpper.replace(/[^0-9]/g, '');
+
+    if (
+      cIdUpper === upper ||
+      cCodeUpper === upper ||
+      (cleanNumOnly && cCodeNum === cleanNumOnly) ||
+      cIdUpper === `COMP-${upper}` ||
+      (extractedCompanyId && cIdUpper === extractedCompanyId)
+    ) {
       if (!db.companies.some((existing) => existing.id === c.id)) {
         db.companies.push(c);
         getTenantDataStrict(c.id);

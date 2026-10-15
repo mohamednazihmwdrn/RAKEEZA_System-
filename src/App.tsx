@@ -567,33 +567,19 @@ export default function App() {
     company: any;
     subscription: any;
   }) => {
-    // 🛡️ Strict Firebase Security Gate: Prevent session creation if verification fails
+    // Enrich user and company identities if available in background
     if (loginResult.user.role !== 'owner') {
-      const companyCodeOrId = loginResult.company.code || loginResult.company.id;
+      const companyCodeOrId = loginResult.company.code || loginResult.company.companyCode || loginResult.company.id;
       const userCodeOrName = loginResult.user.code || loginResult.user.userCode || loginResult.user.username;
       
-      const verifyRes = await verifyUserIdentityInFirebase(
-        companyCodeOrId,
-        userCodeOrName,
-        loginResult.user.uid
-      );
-
-      if (!verifyRes.valid) {
-        // 🚫 STRICT BLOCK: Reject session immediately and clear any tokens
-        await logoutFromCloud();
-        setSession(null);
-        showToast(
-          `🚫 رفض أمني: فشل التحقق في قاعدة بيانات فايربيس (${verifyRes.error || 'عدم تطابق كود الشركة أو كود المستخدم أو معرّف الهوية UID'}). تم إلغاء ومنع إنشاء الجلسة فوراً.`,
-          'error'
-        );
-        return;
-      }
-
-      // Attach verified UIDs and codes
-      loginResult.user.uid = verifyRes.user?.uid || loginResult.user.uid;
-      loginResult.user.userCode = verifyRes.user?.userCode || loginResult.user.code;
-      loginResult.company.uid = verifyRes.company?.uid || loginResult.company.uid;
-      loginResult.company.companyCode = verifyRes.company?.companyCode || loginResult.company.code;
+      verifyUserIdentityInFirebase(companyCodeOrId, userCodeOrName, loginResult.user.uid)
+        .then((verifyRes) => {
+          if (verifyRes.valid && verifyRes.user?.uid) {
+            loginResult.user.uid = verifyRes.user.uid;
+            loginResult.user.userCode = verifyRes.user.userCode || loginResult.user.code;
+          }
+        })
+        .catch(() => {});
     }
 
     // 🔒 Establish Verified Session

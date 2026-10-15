@@ -12,11 +12,13 @@ export const SYSTEM_PERMISSIONS: PermissionDefinition[] = [
   // 1. لوحة التحكم (Dashboard)
   { id: 'dashboard', name: 'استعراض لوحة التحكم والمؤشرات المالية', category: 'لوحة التحكم', description: 'عرض بطاقات الموقف المالي وحركة المبيعات والمشتريات', actionType: 'view' },
 
-  // 2. المبيعات (Sales)
+  // 2. المبيعات والفواتير (Sales & Invoicing)
   { id: 'sales_view', name: 'استعراض فواتير المبيعات', category: 'المبيعات', description: 'استعراض جدول وفواتير المبيعات وقوائمها', actionType: 'view' },
   { id: 'sales_create', name: 'إنشاء وإصدار فواتير المبيعات', category: 'المبيعات', description: 'إمكانية إصدار فواتير بيع نقدي وآجل للعملاء', actionType: 'create' },
   { id: 'sales_edit', name: 'تعديل فواتير المبيعات القائمة', category: 'المبيعات', description: 'تعديل أصناف وكميات الفاتورة بعد إنشائها', actionType: 'edit' },
-  { id: 'sales_delete', name: 'حذف وإلغاء فواتير المبيعات', category: 'المبيعات', description: 'إلغاء وحذف فواتير المبيعات مع تسوية المخزن', actionType: 'delete' },
+  { id: 'sales_delete', name: 'حذف وإلغاء فواتير المبيعات (منع/سماح)', category: 'المبيعات', description: 'صلاحية حذف أو إلغاء فواتير المبيعات واسترجاع المخزون', actionType: 'delete' },
+  { id: 'apply_discounts', name: 'تطبيق الخصومات اليدوية بالفاتورة', category: 'المبيعات', description: 'منح خصومات إضافية على بنود أو إجمالي الفاتورة', actionType: 'edit' },
+  { id: 'change_prices', name: 'تعديل سعر البيع يدوياً بالفاتورة', category: 'المبيعات', description: 'تغيير سعر بيع الصنف عن السعر المحدد في السيستم', actionType: 'edit' },
   { id: 'sales_returns', name: 'تسجيل واعتماد مرتجعات المبيعات', category: 'المبيعات', description: 'إصدار مرتجع بيع نقدي أو آجل واسترجاع المخزون', actionType: 'approve' },
   { id: 'sales_export', name: 'تصدير وطباعة فواتير المبيعات', category: 'المبيعات', description: 'طباعة وتصدير فواتير البيع إلى Excel و PDF', actionType: 'export' },
   { id: 'quotes_orders', name: 'عروض الأسعار والطلبيات', category: 'المبيعات', description: 'إنشاء ومتابعة عروض الأسعار وأوامر التوريد', actionType: 'create' },
@@ -44,7 +46,8 @@ export const SYSTEM_PERMISSIONS: PermissionDefinition[] = [
   { id: 'suppliers_delete', name: 'حذف حساب مورد', category: 'الموردين', description: 'حذف حساب مورد من الدليل', actionType: 'delete' },
   { id: 'suppliers_export', name: 'تصدير كشوف حسابات الموردين', category: 'الموردين', description: 'تصدير مستحقات وكشوف الموردين إلى Excel و PDF', actionType: 'export' },
 
-  // 6. المنتجات والأصناف (Products)
+  // 6. المنتجات والأصناف والتكاليف (Products & Cost Prices)
+  { id: 'view_cost_price', name: 'رؤية أسعار التكلفة والشراء وهامش الربح', category: 'المنتجات والأصناف', description: 'إظهار سعر التكلفة/الشراء وقيمة المخزون وهامش الربح (إلغاؤها يحجب التكلفة)', actionType: 'view' },
   { id: 'items_view', name: 'استعراض كروت الأصناف والمنتجات', category: 'المنتجات والأصناف', description: 'عرض قائمة الأصناف وأسعارها وباركوداتها', actionType: 'view' },
   { id: 'items_create', name: 'إضافة صنف ومنتج جديد', category: 'المنتجات والأصناف', description: 'تعريف أصناف وباركود ووحدات جديدة', actionType: 'create' },
   { id: 'items_edit', name: 'تعديل بيانات وأسعار صنف', category: 'المنتجات والأصناف', description: 'تعديل اسم الصنف وتصنيفه وسعر تكلفته وبيعه', actionType: 'edit' },
@@ -58,9 +61,10 @@ export const SYSTEM_PERMISSIONS: PermissionDefinition[] = [
   { id: 'inventory_stocktaking', name: 'الجرد الفعلي واعتماد التسويات', category: 'المخزون', description: 'مطابقة الرصيد الدفتري والفعلي وتسوية العجز والزيادة', actionType: 'approve' },
   { id: 'inventory_export', name: 'تصدير تقارير حركة المخزون', category: 'المخزون', description: 'تصدير كشوف جرد المخازن إلى Excel و PDF', actionType: 'export' },
 
-  // 8. المستودعات والفروع (Warehouses)
+  // 8. المستودعات والفروع (Warehouses & Branches)
   { id: 'warehouses_view', name: 'استعراض قائمة المستودعات والفروع', category: 'المستودعات والفروع', description: 'عرض قائمة الفروع والمخازن التابعة للمنشأة', actionType: 'view' },
   { id: 'warehouses_manage', name: 'إدارة وإنشاء وتعديل المستودعات', category: 'المستودعات والفروع', description: 'إضافة وتعديل بيانات المخازن والفروع ومسؤوليها', actionType: 'edit' },
+  { id: 'branches_manage', name: 'إدارة وإضافة فروع الشركة', category: 'المستودعات والفروع', description: 'صلاحية فتح وتعديل فروع إضافية للشركة', actionType: 'create' },
 
   // 9. الخزينة والسيولة (Cash)
   { id: 'treasury_view', name: 'استعراض أرصدة الخزائن والسيولة', category: 'الخزينة والسيولة', description: 'عرض رصيد الدرج، فودافون كاش، إنستاباي، والعهدة', actionType: 'view' },
@@ -130,25 +134,49 @@ export function isAdminUser(user: User | undefined): boolean {
 
 /**
  * Checks whether a user possesses a specific permission.
- * Admins, company admins, and owners automatically have all permissions.
+ * Respects explicit user-level permission toggles (e.g. denying view_cost_price or sales_delete).
  */
 export function hasPermission(user: User | undefined, permissionId: string): boolean {
   if (!user) return false;
 
-  // 1. Owner & Company Admin & Admin always have all company permissions
-  if (isAdminUser(user)) return true;
+  // 1. Explicit denial at the user-permission level overrides roles (except super-owner)
+  if (user.role !== 'owner' && user.permissions) {
+    const explicitDenial = user.permissions[permissionId];
+    if (explicitDenial === false) return false;
 
-  // 2. Full access flag in permissions
+    // Check aliased denial for sales delete
+    if ((permissionId === 'sales_delete' || permissionId === 'delete_invoices') &&
+        (user.permissions['sales_delete'] === false || user.permissions['delete_invoices'] === false)) {
+      return false;
+    }
+
+    // Check aliased denial for cost price
+    if (permissionId === 'view_cost_price' && user.permissions['view_cost_price'] === false) {
+      return false;
+    }
+  }
+
+  // 2. Owner always has all permissions
+  if (user.role === 'owner') return true;
+
+  // 3. Company Admin / Admin have all permissions UNLESS explicitly revoked above
+  if (user.role === 'company_admin' || user.role === 'admin') {
+    return true;
+  }
+
+  // 4. Full access flag in permissions
   if (user.permissions?.all === true) return true;
 
-  // 3. Direct boolean or object permission
+  // 5. Direct boolean or object permission explicitly granted
   const permValue = user.permissions?.[permissionId];
   if (typeof permValue === 'boolean') return permValue;
   if (typeof permValue === 'object' && permValue !== null) {
     return !!(permValue as any).view || !!(permValue as any).create || !!(permValue as any).edit || !!(permValue as any).delete;
   }
 
-  // 4. Aliased permission checks (e.g. customers_manage grants customers_view/create/edit)
+  // 6. Aliased permission checks
+  if (permissionId === 'delete_invoices') return !!user.permissions?.['sales_delete'];
+  if (permissionId === 'sales_delete') return !!user.permissions?.['delete_invoices'];
   if (permissionId.startsWith('customers_') && user.permissions?.['customers_manage']) return true;
   if (permissionId.startsWith('suppliers_') && user.permissions?.['suppliers_manage']) return true;
   if (permissionId.startsWith('sales_') && user.permissions?.['sales_create'] && permissionId === 'sales_view') return true;
@@ -157,10 +185,15 @@ export function hasPermission(user: User | undefined, permissionId: string): boo
   if (permissionId === 'receipts_create' && user.permissions?.['cash_receipt']) return true;
   if (permissionId === 'payments_create' && user.permissions?.['cash_payment']) return true;
   if (permissionId === 'expenses_create' && user.permissions?.['cash_payment']) return true;
+  if (permissionId === 'branches_manage' && user.permissions?.['warehouses_manage']) return true;
 
-  // 5. Default role-based fallbacks if granular permissions not explicitly saved yet
+  // 7. Default role-based fallbacks if granular permissions not explicitly saved yet
   const role = user.role;
   if (role === 'cashier') {
+    // By default, cashier CANNOT view cost price and CANNOT delete invoices!
+    if (permissionId === 'view_cost_price' || permissionId === 'sales_delete' || permissionId === 'delete_invoices') {
+      return false;
+    }
     const cashierAllowed = [
       'dashboard',
       'pos_access',
@@ -171,10 +204,15 @@ export function hasPermission(user: User | undefined, permissionId: string): boo
       'cash_receipt',
       'receipts_create',
       'customers_view',
+      'apply_discounts',
     ];
     return cashierAllowed.includes(permissionId);
   }
-  if (role === 'warehouse_keeper') {
+  if (role === 'warehouse_keeper' || role === 'storekeeper') {
+    // Warehouse keeper cannot delete sales invoices
+    if (permissionId === 'sales_delete' || permissionId === 'delete_invoices') {
+      return false;
+    }
     const warehouseAllowed = [
       'dashboard',
       'inventory_view',
@@ -194,6 +232,10 @@ export function hasPermission(user: User | undefined, permissionId: string): boo
     return !accountantDisallowed.includes(permissionId);
   }
   if (role === 'sales_rep') {
+    // Sales rep cannot view cost price and cannot delete invoices by default
+    if (permissionId === 'view_cost_price' || permissionId === 'sales_delete' || permissionId === 'delete_invoices') {
+      return false;
+    }
     const repAllowed = [
       'dashboard',
       'sales_create',

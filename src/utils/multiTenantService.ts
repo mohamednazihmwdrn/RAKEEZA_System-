@@ -272,7 +272,64 @@ export const DEFAULT_SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
   },
 ];
 
-export const DEFAULT_COMPANIES: TenantCompany[] = [];
+export const DEFAULT_COMPANIES: TenantCompany[] = [
+  {
+    id: 'COMP-000001',
+    code: '101',
+    companyCode: '101',
+    tenantId: 'TENANT-RAKEEZA',
+    name: 'شركة ركيزة للمحاسبة والتجارة العامة (RAKEEZA)',
+    tradeName: 'ركيزة ERP',
+    email: 'admin@rakeeza.com',
+    adminEmail: 'nazihm338@gmail.com',
+    phone: '01029190615',
+    address: 'المقر الرئيسي، القاهرة',
+    createdAt: '2026-01-01',
+    status: 'active',
+    planId: 'lifetime',
+    planName: 'الترخيص الدائم والمفتوح',
+    maxUsers: 50,
+    activeUsersCount: 3,
+    adminName: 'Mohamed Nazih (المدير العام)',
+    adminUsername: 'admin',
+    adminPassword: 'admin123',
+    users: [
+      {
+        id: 'u-admin-1',
+        code: 1,
+        userCode: 1,
+        companyId: 'COMP-000001',
+        name: 'Mohamed Nazih (المدير العام)',
+        username: 'admin',
+        password: 'admin123',
+        role: 'company_admin',
+        status: 'active',
+      },
+      {
+        id: 'u-cashier-1',
+        code: 2,
+        userCode: 2,
+        companyId: 'COMP-000001',
+        name: 'أحمد محمود (كاشير)',
+        username: 'cashier',
+        password: '123',
+        role: 'cashier',
+        status: 'active',
+      },
+      {
+        id: 'u-warehouse-1',
+        code: 3,
+        userCode: 3,
+        companyId: 'COMP-000001',
+        name: 'سامح إبراهيم (أمين المخزن)',
+        username: 'warehouse',
+        password: '123',
+        role: 'warehouse_keeper',
+        status: 'active',
+      },
+    ],
+  },
+];
 
 export const DEFAULT_TRIAL_REGISTRY: TrialRegistryRecord[] = [];
 

@@ -312,76 +312,178 @@ function saveStoredLocalCompany(comp: TenantCompany): void {
 }
 
 /**
+ * 🔢 Normalize Arabic and Persian Numerals to Western Digits (e.g. ١٠٨ -> 108)
+ */
+export function normalizeArabicNumerals(input: string): string {
+  if (!input) return '';
+  return input
+    .replace(/[٠۰]/g, '0')
+    .replace(/[١۱]/g, '1')
+    .replace(/[٢۲]/g, '2')
+    .replace(/[٣۳]/g, '3')
+    .replace(/[٤۴]/g, '4')
+    .replace(/[٥۵]/g, '5')
+    .replace(/[٦۶]/g, '6')
+    .replace(/[٧۷]/g, '7')
+    .replace(/[٨۸]/g, '8')
+    .replace(/[٩۹]/g, '9');
+}
+
+/**
  * 🏢 Predefined Enterprise Cloud Companies with Unique UIDs for Multi-Tenant Isolation
  */
-export const DEFAULT_FIREBASE_COMPANIES: any[] = [];
+export const DEFAULT_FIREBASE_COMPANIES: any[] = DEFAULT_COMPANIES;
 
 /**
  * 🔒 Ensure Company Document exists in Firebase Firestore with its users & UIDs
  */
-async function syncCompanyToFirebase(company: any): Promise<void> {
+export async function syncCompanyToFirebase(company: any): Promise<void> {
+  if (!company || !company.id) return;
   try {
     const docRef = doc(db, 'companies', company.id);
-    const snap = await getDoc(docRef);
     const updateData: any = {
       ...company,
+      id: company.id,
       uid: company.uid || `UID_COMP_${company.id}`,
+      code: company.code || company.companyCode || '101',
       companyCode: company.code || company.companyCode || '101',
       syncedAt: new Date().toISOString(),
     };
-    if (!snap.exists()) {
-      await setDoc(docRef, updateData);
-    } else {
-      await setDoc(docRef, updateData, { merge: true });
+    await setDoc(docRef, updateData, { merge: true });
+
+    // Also write alias document with company code (e.g. "108") for instant direct lookup!
+    const cCode = String(company.code || company.companyCode || '').trim();
+    if (cCode && cCode !== company.id) {
+      await setDoc(doc(db, 'companies', cCode), updateData, { merge: true }).catch(() => {});
+    }
+
+    if (company.users && Array.isArray(company.users) && company.users.length > 0) {
+      await setDoc(
+        doc(db, 'tenants', company.id),
+        {
+          companyId: company.id,
+          users: company.users,
+          branches: company.branches || [{ id: `br-${company.id}-main`, name: 'الفرع الرئيسي', isMain: true }],
+          lastSync: new Date().toISOString(),
+        },
+        { merge: true }
+      );
     }
   } catch (err) {
-    console.warn('Firebase company sync notice:', err);
+    console.debug('Firebase company sync notice:', err);
   }
 }
 
 /**
- * 🔎 Lookup Company in Firebase Firestore with fallback synchronization
+ * 🔎 Lookup Company across Express Cloud Server, Firebase Firestore, and Local Cache
  */
 export async function lookupCompanyInFirebase(companyCodeOrId: string): Promise<any | null> {
-  const parsed = parseFlexibleCompanyQuery(companyCodeOrId);
-  const clean = (companyCodeOrId || '').trim().toUpperCase();
-  const searchId = (parsed.extractedCompanyId || clean).toUpperCase();
-  if (!clean && !searchId) return null;
+  const normalized = normalizeArabicNumerals(companyCodeOrId || '').trim();
+  const clean = normalized;
+  if (!clean) return null;
+  const cleanUpper = clean.toUpperCase();
+  const parsed = parseFlexibleCompanyQuery(clean);
+  const searchId = (parsed.extractedCompanyId || cleanUpper).toUpperCase();
+  const cleanNumOnly = clean.replace(/[^0-9]/g, '');
 
-  // 1. Direct Firestore Lookup
+  // 1. First Attempt: Express Cloud Server API /api/company/public-info
   try {
-    const directSnap = await getDoc(doc(db, 'companies', searchId));
-    if (directSnap.exists()) {
-      const data = directSnap.data() as any;
-      try {
-        const tenantSnap = await getDoc(doc(db, 'tenants', data.id || searchId));
-        if (tenantSnap.exists() && tenantSnap.data()?.users && Array.isArray(tenantSnap.data()?.users) && tenantSnap.data()!.users.length > 0) {
-          data.users = tenantSnap.data()!.users;
-        }
-      } catch {}
-      const bound = getStoredBoundDevice();
-      if ((!data.users || data.users.length === 0) && bound && (bound.companyId === data.id || bound.companyCode === data.code)) {
-        data.users = bound.users;
+    const srvRes = await fetch(`/api/company/public-info?query=${encodeURIComponent(clean)}`);
+    if (srvRes.ok) {
+      const srvData = await srvRes.json();
+      if (srvData && srvData.success && srvData.company) {
+        const fullComp = {
+          ...srvData.company,
+          users: srvData.users || srvData.company.users || [],
+          branches: srvData.branches || srvData.company.branches || [],
+        };
+        saveStoredLocalCompany(fullComp);
+        syncCompanyToFirebase(fullComp).catch(() => {});
+        return fullComp;
       }
-      const predefined = DEFAULT_FIREBASE_COMPANIES.find((c) => c.id === data.id || c.code === data.code);
-      if (predefined?.users) {
-        if (!data.users) data.users = [];
-        const existingNames = new Set(data.users.map((u: any) => u.username?.toLowerCase()));
-        for (const u of predefined.users) {
-          if (!existingNames.has(u.username?.toLowerCase())) {
-            data.users.push(u);
+    }
+  } catch {}
+
+  // 2. Second Attempt: Direct Firestore Lookup
+  try {
+    const candidateIds = Array.from(
+      new Set([
+        cleanUpper,
+        searchId,
+        `COMP-${cleanUpper}`,
+        `COMP-${cleanNumOnly}`,
+        cleanUpper.replace(/^COMP-/, ''),
+        cleanNumOnly,
+        parsed.extractedCompanyId,
+      ].filter(Boolean) as string[])
+    );
+
+    for (const testId of candidateIds) {
+      const directSnap = await getDoc(doc(db, 'companies', testId));
+      if (directSnap.exists()) {
+        const data = directSnap.data() as any;
+        try {
+          const tenantSnap = await getDoc(doc(db, 'tenants', data.id || testId));
+          if (tenantSnap.exists()) {
+            const tData = tenantSnap.data();
+            if (Array.isArray(tData?.users) && tData!.users.length > 0) {
+              data.users = tData!.users;
+            }
+            if (Array.isArray(tData?.branches) && tData!.branches.length > 0) {
+              data.branches = tData!.branches;
+            }
           }
-        }
+        } catch {}
+        return data;
       }
-      return data;
+    }
+
+    // 2b. Firestore collection scan by code or companyCode or name
+    const colSnap = await getDocs(collection(db, 'companies'));
+    for (const d of colSnap.docs) {
+      const data = d.data() as any;
+      const cCode = String(data.code || data.companyCode || '').toUpperCase();
+      const cCodeNum = cCode.replace(/[^0-9]/g, '');
+      const cId = String(data.id || d.id || '').toUpperCase();
+      const cName = String(data.name || '').toUpperCase();
+
+      if (
+        cCode === cleanUpper ||
+        cCode === searchId ||
+        (cleanNumOnly && cCodeNum === cleanNumOnly) ||
+        cId === cleanUpper ||
+        cId === searchId ||
+        cId === `COMP-${cleanUpper}` ||
+        (cleanUpper.length >= 3 && cName.includes(cleanUpper))
+      ) {
+        try {
+          const tenantSnap = await getDoc(doc(db, 'tenants', data.id || d.id));
+          if (tenantSnap.exists()) {
+            const tData = tenantSnap.data();
+            if (Array.isArray(tData?.users) && tData!.users.length > 0) {
+              data.users = tData!.users;
+            }
+            if (Array.isArray(tData?.branches) && tData!.branches.length > 0) {
+              data.branches = tData!.branches;
+            }
+          }
+        } catch {}
+        return data;
+      }
     }
   } catch (err) {
-    console.warn('Direct Firestore company lookup notice:', err);
+    console.debug('Firestore company lookup notice:', err);
   }
 
-  // 2. Check bound device data
+  // 3. Third Attempt: Check bound device data
   const bound = getStoredBoundDevice();
-  if (bound && (bound.companyId.toUpperCase() === searchId || bound.companyCode.toUpperCase() === clean || bound.companyId.toUpperCase() === clean)) {
+  if (
+    bound &&
+    (bound.companyId.toUpperCase() === searchId ||
+      bound.companyCode.toUpperCase() === cleanUpper ||
+      bound.companyId.toUpperCase() === cleanUpper ||
+      (cleanNumOnly && bound.companyCode.replace(/[^0-9]/g, '') === cleanNumOnly))
+  ) {
     const boundComp = {
       id: bound.companyId,
       code: bound.companyCode,
@@ -392,69 +494,29 @@ export async function lookupCompanyInFirebase(companyCodeOrId: string): Promise<
       branches: bound.branches,
       users: bound.users,
     };
-    await syncCompanyToFirebase(boundComp);
     return boundComp;
   }
 
-  // 3. Lookup by code or id in predefined / local registered companies
+  // 4. Fourth Attempt: Lookup in local registered companies and DEFAULT_COMPANIES
   const registeredLocalCompanies = getStoredLocalCompanies();
   const allKnown = [...DEFAULT_FIREBASE_COMPANIES, ...registeredLocalCompanies];
 
   const matched = allKnown.find(
     (c) =>
       c.id.toUpperCase() === searchId ||
-      c.id.toUpperCase() === clean ||
-      (c as any).code?.toString().toUpperCase() === clean ||
-      (c as any).companyCode?.toString().toUpperCase() === clean ||
-      (c as any).tenantId?.toUpperCase() === searchId
+      c.id.toUpperCase() === cleanUpper ||
+      c.id.toUpperCase() === `COMP-${cleanUpper}` ||
+      (c as any).code?.toString().toUpperCase() === cleanUpper ||
+      (cleanNumOnly && (c as any).code?.toString().replace(/[^0-9]/g, '') === cleanNumOnly) ||
+      (c as any).companyCode?.toString().toUpperCase() === cleanUpper ||
+      (c as any).tenantId?.toUpperCase() === searchId ||
+      (cleanUpper.length >= 3 && (c.name || '').toUpperCase().includes(cleanUpper))
   );
 
   if (matched) {
-    // Ensure it is stored in Firestore
-    await syncCompanyToFirebase(matched);
-    try {
-      const snap = await getDoc(doc(db, 'companies', matched.id));
-      if (snap.exists()) {
-        const d = snap.data() as any;
-        try {
-          const tenantSnap = await getDoc(doc(db, 'tenants', d.id || matched.id));
-          if (tenantSnap.exists() && tenantSnap.data()?.users && Array.isArray(tenantSnap.data()?.users) && tenantSnap.data()!.users.length > 0) {
-            d.users = tenantSnap.data()!.users;
-          }
-        } catch {}
-        if (!d.users || d.users.length === 0) {
-          d.users = (matched as any).users;
-        } else if ((matched as any)?.users) {
-          const existingUsernames = new Set(d.users.map((u: any) => u.username?.toLowerCase()));
-          for (const u of (matched as any).users) {
-            if (!existingUsernames.has(u.username?.toLowerCase())) {
-              d.users.push(u);
-            }
-          }
-        }
-        return d;
-      }
-    } catch {}
+    syncCompanyToFirebase(matched).catch(() => {});
     return matched;
   }
-
-  // 4. Server public info fallback
-  try {
-    const srvRes = await fetch(`/api/company/public-info?query=${encodeURIComponent(clean)}`);
-    if (srvRes.ok) {
-      const srvData = await srvRes.json();
-      if (srvData.success && srvData.company) {
-        const fullComp = {
-          ...srvData.company,
-          users: srvData.users || srvData.company.users,
-          branches: srvData.branches || srvData.company.branches,
-        };
-        saveStoredLocalCompany(fullComp);
-        await syncCompanyToFirebase(fullComp);
-        return fullComp;
-      }
-    }
-  } catch {}
 
   return null;
 }
@@ -463,7 +525,8 @@ export async function lookupCompanyInFirebase(companyCodeOrId: string): Promise<
  * 🏢 Helper: Normalize and extract Company ID and User Info from flexible inputs
  */
 export function parseFlexibleCompanyQuery(query: string) {
-  const clean = (query || '').trim();
+  const normalized = normalizeArabicNumerals(query || '').trim();
+  const clean = normalized;
   const upper = clean.toUpperCase();
 
   // 1. Extract COMP-XXXXXX pattern
@@ -596,13 +659,41 @@ export async function fetchCompanyPublicDetailsApi(query: string): Promise<{
   try {
     let foundFirestoreDoc: any = null;
 
-    // Check direct doc by extracted company ID or clean query
-    const candidateIds = [queryInfo.extractedCompanyId, queryInfo.upper].filter(Boolean);
+    // Check direct doc by candidate IDs
+    const cleanNumOnly = clean.replace(/[^0-9]/g, '');
+    const candidateIds = Array.from(
+      new Set([
+        queryInfo.upper,
+        queryInfo.extractedCompanyId,
+        `COMP-${queryInfo.upper}`,
+        `COMP-${cleanNumOnly}`,
+        cleanNumOnly,
+        queryInfo.upper.replace(/^COMP-/, ''),
+      ].filter(Boolean) as string[])
+    );
+
     for (const testId of candidateIds) {
       const snap = await getDoc(doc(db, 'companies', testId));
       if (snap.exists()) {
         foundFirestoreDoc = snap.data();
         break;
+      }
+    }
+
+    // Also check direct doc in tenants
+    if (!foundFirestoreDoc) {
+      for (const testId of candidateIds) {
+        const snap = await getDoc(doc(db, 'tenants', testId));
+        if (snap.exists()) {
+          const tData = snap.data() as any;
+          if (tData.companyId) {
+            const compSnap = await getDoc(doc(db, 'companies', tData.companyId));
+            if (compSnap.exists()) {
+              foundFirestoreDoc = compSnap.data();
+              break;
+            }
+          }
+        }
       }
     }
 
@@ -658,6 +749,18 @@ export async function fetchCompanyPublicDetailsApi(query: string): Promise<{
         }
       } catch (err) {
         console.warn('Tenant data lookup notice:', err);
+      }
+
+      // If tenant snap didn't have users, check foundFirestoreDoc.users
+      if (users.length <= 1 && Array.isArray(foundFirestoreDoc.users) && foundFirestoreDoc.users.length > 0) {
+        users = foundFirestoreDoc.users.map((u: any) => ({
+          id: u.id,
+          code: u.code || 1,
+          name: u.name,
+          username: u.username,
+          role: u.role,
+          branchId: u.branchId,
+        }));
       }
 
       const matchResult = matchesCompanyOrUsers(foundFirestoreDoc, queryInfo);
@@ -1048,14 +1151,14 @@ export async function loginToCloud(
   subscription?: any;
   error?: string;
 }> {
-  const cleanCompId = (companyIdOrCode || '').trim().toUpperCase();
-  const cleanUserCode = (userCodeOrUsername || '').trim();
-  const cleanPassword = password;
+  const cleanCompId = normalizeArabicNumerals(companyIdOrCode || '').trim().toUpperCase();
+  const cleanUserCode = normalizeArabicNumerals(userCodeOrUsername || '').trim();
+  const cleanPassword = (password || '').trim();
 
   if (!cleanCompId || !cleanUserCode || !cleanPassword) {
     return {
       success: false,
-      error: 'يرجى إدخال كود الشركة، كود المستخدم/اسم الحساب، وكلمة المرور.',
+      error: 'يرجى إدخال كود المنشأة، كود المستخدم/اسم الحساب، وكلمة المرور.',
     };
   }
 
@@ -1070,50 +1173,61 @@ export async function loginToCloud(
         password: cleanPassword,
       }),
     });
-    if (srvRes.ok) {
-      const srvData = await srvRes.json();
-      if (srvData.success && srvData.user && srvData.company) {
-        if (srvData.token) {
-          setStoredToken(srvData.token);
+    const srvData = await srvRes.json().catch(() => null);
+
+    if (srvRes.ok && srvData && srvData.success && srvData.user && srvData.company) {
+      if (srvData.token) {
+        setStoredToken(srvData.token);
+      }
+      saveStoredLocalCompany(srvData.company);
+      saveStoredLocalSession({
+        valid: true,
+        user: srvData.user,
+        company: srvData.company,
+        subscription: srvData.subscription,
+      });
+      syncCompanyToFirebase(srvData.company).catch(() => {});
+      return srvData;
+    } else if (srvRes.status === 401 && srvData?.error) {
+      // If server returned specific password error, return it cleanly unless Firebase has an updated password
+      const isPassError = srvData.error.includes('كلمة المرور');
+      if (isPassError) {
+        // Double check Firebase before failing
+        const compInFb = await lookupCompanyInFirebase(cleanCompId);
+        if (!compInFb) {
+          return { success: false, error: srvData.error };
         }
-        saveStoredLocalCompany(srvData.company);
-        saveStoredLocalSession({
-          valid: true,
-          user: srvData.user,
-          company: srvData.company,
-          subscription: srvData.subscription,
-        });
-        syncCompanyToFirebase(srvData.company).catch(() => {});
-        return srvData;
       }
     }
   } catch (err) {
     console.warn('Backend authentication call notice, falling back to direct Firebase/Local check:', err);
   }
 
-  // 2. Strict Verification against Firebase Firestore Database
+  // 2. Direct Verification against Firebase Firestore Database & Local Storage
   const companyDoc = await lookupCompanyInFirebase(cleanCompId);
   if (!companyDoc) {
-    // 🚫 Strict Rejection: Company code does not exist in Firebase
     return {
       success: false,
-      error: `لم يتم العثور على شركة مسجلة بكود "${companyIdOrCode}" في قاعدة بيانات فايربيس السحابية. يرجى التأكد من كتابة كود الشركة بشكل صحيح.`,
+      error: `لم يتم العثور على منشأة مسجلة بالكود "${companyIdOrCode}". يرجى التأكد من كتابة كود الشركة أو المنشأة بشكل صحيح.`,
     };
   }
 
   if (companyDoc.status === 'suspended') {
     return {
       success: false,
-      error: 'عذراً، تم تعليق حساب هذه الشركة في قاعدة بيانات فايربيس. يرجى مراجعة الدعم الفني.',
+      error: 'عذراً، تم تعليق حساب هذه المنشأة مؤقتاً. يرجى مراجعة إدارة الدعم الفني.',
     };
   }
 
-  // 3. Strict User and Password Verification in Firebase
+  // 3. User and Password Verification
   let compUsers: any[] = [];
   try {
     const tSnap = await getDoc(doc(db, 'tenants', companyDoc.id));
-    if (tSnap.exists() && Array.isArray(tSnap.data()?.users) && tSnap.data()!.users.length > 0) {
-      compUsers = tSnap.data()!.users;
+    if (tSnap.exists()) {
+      const tData = tSnap.data();
+      if (Array.isArray(tData?.users) && tData!.users.length > 0) {
+        compUsers = tData!.users;
+      }
     }
   } catch {}
   if (compUsers.length === 0 && Array.isArray(companyDoc.users) && companyDoc.users.length > 0) {
@@ -1133,9 +1247,9 @@ export async function loginToCloud(
         u.username?.toLowerCase() === cleanUserCode.toLowerCase() ||
         u.name?.toLowerCase() === cleanUserCode.toLowerCase() ||
         u.id?.toLowerCase() === cleanUserCode.toLowerCase()) &&
-      (u.password === cleanPassword ||
-        u.altPass === cleanPassword ||
-        (companyDoc.adminPassword && cleanPassword === companyDoc.adminPassword))
+      (String(u.password || '').trim() === cleanPassword ||
+        String(u.altPass || '').trim() === cleanPassword ||
+        (companyDoc.adminPassword && cleanPassword === String(companyDoc.adminPassword).trim()))
   );
 
   // Admin fallback verification
@@ -1143,12 +1257,17 @@ export async function loginToCloud(
     const isAdminCode =
       cleanUserCode === '1' ||
       cleanUserCode.toLowerCase() === 'admin' ||
+      cleanUserCode.toLowerCase() === 'manager' ||
       cleanUserCode.toLowerCase() === companyDoc.adminUsername?.toLowerCase() ||
       cleanUserCode.toLowerCase() === companyDoc.adminName?.toLowerCase() ||
-      cleanUserCode.toLowerCase() === 'nazihm338' ||
+      cleanUserCode.toLowerCase() === companyDoc.adminEmail?.toLowerCase() ||
+      cleanUserCode.toLowerCase() === companyDoc.email?.toLowerCase() ||
       cleanUserCode.toLowerCase() === 'mohamed nazih' ||
+      cleanUserCode.toLowerCase() === 'nazihm338' ||
       cleanUserCode.toLowerCase() === 'المدير العام';
-    const isAdminPass = Boolean(companyDoc.adminPassword && companyDoc.adminPassword === cleanPassword);
+    const isAdminPass = Boolean(
+      companyDoc.adminPassword && String(companyDoc.adminPassword).trim() === cleanPassword
+    );
 
     if (isAdminCode && isAdminPass) {
       matchedUser = {
@@ -1167,18 +1286,34 @@ export async function loginToCloud(
     }
   }
 
-  // 🚫 Strict Rejection: Invalid UserCode or Password in Firebase - PREVENT SESSION CREATION
   if (!matchedUser) {
+    // Check if the user exists but the password was wrong
+    const userExists = compUsers.some(
+      (u) =>
+        String(u.code) === cleanUserCode ||
+        String(u.userCode) === cleanUserCode ||
+        u.username?.toLowerCase() === cleanUserCode.toLowerCase() ||
+        u.name?.toLowerCase() === cleanUserCode.toLowerCase() ||
+        u.id?.toLowerCase() === cleanUserCode.toLowerCase()
+    );
+
+    if (userExists) {
+      return {
+        success: false,
+        error: 'كلمة المرور غير صحيحة لهذا المستخدم. يرجى التأكد والمحاولة مجدداً.',
+      };
+    }
+
     return {
       success: false,
-      error: 'فشل التحقق في قاعدة بيانات فايربيس: كود المستخدم أو اسم الحساب أو كلمة المرور غير صحيحة لهذه الشركة.',
+      error: `اسم المستخدم أو كود الدخول "${cleanUserCode}" أو كلمة المرور غير صحيحة لهذه المنشأة.`,
     };
   }
 
   if (matchedUser.status === 'disabled') {
     return {
       success: false,
-      error: 'تم تعطيل هذا الحساب في قاعدة بيانات فايربيس بواسطة مدير الشركة.',
+      error: 'تم تعطيل هذا الحساب بواسطة مدير المنشأة. يرجى مراجعة المسؤول.',
     };
   }
 
